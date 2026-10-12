@@ -1,0 +1,112 @@
+import type { Tokens } from "./types";
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+interface Options {
+  method?: "GET" | "POST" | "PUT" | "DELETE";
+  body?: unknown;
+  auth?: boolean;
+  query?: Record<string, string | number | undefined>;
+}
+interface Storage {
+  get(): Promise<Tokens | null>;
+  set(tokens: Tokens): Promise<void>;
+  clear(): Promise<void>;
+}
+export function createTransport(
+  base: string,
+  storage: Storage,
+  request: typeof fetch = fetch,
+) {
+  let refreshing: Promise<boolean> | null = null;
+  const refresh = async () => {
+    const before = await storage.get();
+    if (!before) return false;
+    const response = await request(`${base}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: before.refreshToken }),
+    });
+    const current = await storage.get();
+    if (current?.refreshToken !== before.refreshToken) return false;
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403)
+        await storage.clear();
+      return false;
+    }
+    await storage.set((await response.json()) as Tokens);
+    return true;
+  };
+  return async function api<T>(
+    path: string,
+    options: Options = {},
+  ): Promise<T> {
+    const url = new URL(base + path);
+    Object.entries(options.query || {}).forEach(([k, v]) => {
+      if (v !== undefined) url.searchParams.set(k, String(v));
+    });
+    const send = async () => {
+      const tokens = options.auth === false ? null : await storage.get();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (tokens) headers.Authorization = `Bearer ${tokens.accessToken}`;
+      try {
+        return await request(url.toString(), {
+          method: options.method || "GET",
+          headers,
+          body:
+            options.body === undefined
+              ? undefined
+              : JSON.stringify(options.body),
+        });
+      } catch {
+        throw new ApiError(
+          0,
+          "NETWORK",
+          "서버에 연결할 수 없어요. 네트워크와 API 주소를 확인해 주세요.",
+        );
+      }
+    };
+    let response = await send();
+    if (response.status === 401 && options.auth !== false) {
+      if (!refreshing) {
+        const pending = refresh();
+        refreshing = pending;
+        void pending
+          .finally(() => {
+            if (refreshing === pending) refreshing = null;
+          })
+          .catch(() => {});
+      }
+      if (await refreshing) response = await send();
+    }
+    if (response.status === 204) return undefined as T;
+    const raw = await response.text();
+    let data: any;
+    try {
+      data = raw ? JSON.parse(raw) : undefined;
+    } catch {
+      throw new ApiError(
+        response.status,
+        "INVALID_RESPONSE",
+        "서버 응답을 읽지 못했어요. API 주소를 확인해 주세요.",
+      );
+    }
+    if (!response.ok)
+      throw new ApiError(
+        response.status,
+        data?.code || "UNKNOWN",
+        data?.errors?.map((e: { reason: string }) => e.reason).join("\n") ||
+          data?.message ||
+          "요청을 처리하지 못했어요.",
+      );
+    return data as T;
+  };
+}

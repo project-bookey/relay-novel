@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "relay novel",
+    "slug": "relay-novel",
+    "scheme": "relay-novel",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.relaynovel.mobile"
+    },
+    "android": { "package": "app.relaynovel.mobile" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "extra": { "apiBaseUrl": "http://localhost:8080" }
+  }
+}

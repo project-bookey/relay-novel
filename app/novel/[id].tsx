@@ -286,7 +286,7 @@ export default function Detail() {
                   이야기 완결하기
                 </Button>
               ))}
-            {!!mutation.error && <ErrorBox error={mutation.error} />}{" "}
+            {!!mutation.error && <ErrorBox error={mutation.error} />}
             {!!message && <ErrorBox error={new Error(message)} />}
             <Text style={ui.sectionTitle}>이야기의 목차</Text>
             {chapters.isLoading && <Loading />}

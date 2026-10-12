@@ -211,7 +211,7 @@ function Editor({
             저장하지 않고 나가기
           </Button>
         </>
-      )}{" "}
+      )}
       {!!(save.error || publish.error) && (
         <ErrorBox error={save.error || publish.error} />
       )}

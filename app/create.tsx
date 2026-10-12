@@ -158,7 +158,7 @@ export default function Create() {
         최소 두 명이 모이면 개설자가 릴레이를 시작할 수 있어요. 제한 시간이
         지나면 백엔드 규칙에 따라 다음 작가에게 차례가 넘어가요.
       </Text>
-      {validation && <ErrorBox error={new Error(validation)} />}{" "}
+      {!!validation && <ErrorBox error={new Error(validation)} />}
       {!!mutation.error && <ErrorBox error={mutation.error} />}
       <Button onPress={submit} disabled={mutation.isPending}>
         {mutation.isPending ? "이야기 만드는 중…" : "작가 모집 시작하기"}

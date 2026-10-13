@@ -34,7 +34,7 @@ test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
   expect(errors).toEqual([]);
 });
 
-test("backend contract supports login, relay start, draft save and turn handoff", async ({
+test("backend contract supports login, relay recruitment, draft save and turn handoff", async ({
   page,
 }) => {
   let phase: "recruiting" | "writing" | "published" = "recruiting";
@@ -106,7 +106,10 @@ test("backend contract supports login, relay start, draft save and turn handoff"
     let data: unknown;
     if (path.endsWith("/auth/login"))
       data = { accessToken: "test-access", refreshToken: "test-refresh" };
-    else if (path === "/api/v1/novels")
+    else if (path === "/api/v1/novels" && method === "POST") {
+      expect(body.kind).toBe("RELAY");
+      data = detail();
+    } else if (path === "/api/v1/novels")
       data = {
         content: [summary()],
         page: 0,
@@ -163,8 +166,15 @@ test("backend contract supports login, relay start, draft save and turn handoff"
   await page
     .getByRole("button", { name: "로그인하고 이야기 이어가기" })
     .click();
-  // 홈에는 열매만 있으므로, 내가 개설한 모집 중인 소설의 열매에서 시작한다.
-  await page.getByRole("button", { name: "별사탕 우체국 열매" }).click();
+  // 씨앗주머니를 눌러 새 이야기를 심는다.
+  await page.getByRole("button", { name: "새 이야기 심기" }).click();
+  await page
+    .getByRole("textbox", { name: "이야기 제목" })
+    .fill("별사탕 우체국");
+  await page
+    .getByRole("textbox", { name: "이야기 소개" })
+    .fill("함께 만드는 작은 우주");
+  await page.getByRole("button", { name: "작가 모집 시작하기" }).click();
   await page
     .getByRole("button", { name: "모인 작가들과 릴레이 시작하기" })
     .click();
@@ -189,4 +199,30 @@ test("backend contract supports login, relay start, draft save and turn handoff"
   expect(
     calls.filter((c) => c.path.endsWith("/chapters") && c.body?.turnNumber),
   ).toHaveLength(1);
+});
+
+test("mobile demo moves between home and my page with the bottom buttons", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (/Invalid DOM property|non-boolean attribute/.test(message.text()))
+      errors.push(message.text());
+  });
+  await page.goto("/");
+  await page.getByText("먼저 둘러보기 →").click();
+  await expect(
+    page.getByRole("button", { name: "새 이야기 심기" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "마이", exact: true }).click();
+  await expect(page.getByText("내 작품", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "달빛을 파는 가게 열매" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
 });

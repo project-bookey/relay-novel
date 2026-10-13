@@ -13,11 +13,14 @@ export const colors = {
   bark: "#A0805F",
   ground: "#E8E3CF",
   bud: "#F6E3A1",
-  // 홈의 땅. 나무 그림의 흙빛(ground)을 넓은 면에 맞게 연하게 한 색
-  fieldGround: "#F0EDE0",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
+  // 하단 아이콘과 씨앗주머니의 선
+  black: "#000000",
 };
+
+// 하단 아이콘과 씨앗주머니의 선 굵기. 그림 크기와 상관없이 화면에서 이 굵기(px)로 보이게 한다.
+export const ICON_LINE_PX = 2;
 
 // 결과도 "#RRGGBB"라서 lighten·darken을 겹쳐 쓸 수 있다.
 function mixWith(hexColor: string, target: number, amount: number) {

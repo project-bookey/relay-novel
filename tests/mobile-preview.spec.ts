@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("mobile demo lets a visitor explore, filter and read relay chapters", async ({
+test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -11,25 +11,15 @@ test("mobile demo lets a visitor explore, filter and read relay chapters", async
   });
   await page.goto("/");
   await page.getByText("먼저 둘러보기 →").click();
-  await expect(page.getByText("함께 만드는 이야기")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
-  ).toBeVisible();
+  const fruit = page.getByRole("button", { name: "달빛을 파는 가게 열매" });
+  await expect(fruit).toBeVisible();
+  // 열매가 다 내려앉아 실제로 누를 수 있을 때까지 기다린 뒤 찍는다.
+  await fruit.click({ trial: true });
   await page.screenshot({
     path: "test-results/mobile-home.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "모집 중", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "우리의 여름은 아직, 작가 모집 중" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "전체", exact: true }).click();
-  await page
-    .getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" })
-    .click();
+  await fruit.click();
   await expect(page.getByText("함께 쓰는 작가들")).toBeVisible();
   await page.getByRole("button", { name: /CHAPTER 01/ }).click();
   await expect(
@@ -44,7 +34,7 @@ test("mobile demo lets a visitor explore, filter and read relay chapters", async
   expect(errors).toEqual([]);
 });
 
-test("backend contract supports login, relay recruitment, draft save and turn handoff", async ({
+test("backend contract supports login, relay start, draft save and turn handoff", async ({
   page,
 }) => {
   let phase: "recruiting" | "writing" | "published" = "recruiting";
@@ -116,12 +106,9 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
     let data: unknown;
     if (path.endsWith("/auth/login"))
       data = { accessToken: "test-access", refreshToken: "test-refresh" };
-    else if (path === "/api/v1/novels" && method === "POST") {
-      expect(body.kind).toBe("RELAY");
-      data = detail();
-    } else if (path === "/api/v1/novels")
+    else if (path === "/api/v1/novels")
       data = {
-        content: phase === "recruiting" ? [] : [summary()],
+        content: [summary()],
         page: 0,
         hasNext: false,
         totalElements: 1,
@@ -176,14 +163,8 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
   await page
     .getByRole("button", { name: "로그인하고 이야기 이어가기" })
     .click();
-  await page.getByRole("button", { name: "새 이야기 시작하기" }).click();
-  await page
-    .getByRole("textbox", { name: "이야기 제목" })
-    .fill("별사탕 우체국");
-  await page
-    .getByRole("textbox", { name: "이야기 소개" })
-    .fill("함께 만드는 작은 우주");
-  await page.getByRole("button", { name: "작가 모집 시작하기" }).click();
+  // 홈에는 열매만 있으므로, 내가 개설한 모집 중인 소설의 열매에서 시작한다.
+  await page.getByRole("button", { name: "별사탕 우체국 열매" }).click();
   await page
     .getByRole("button", { name: "모인 작가들과 릴레이 시작하기" })
     .click();

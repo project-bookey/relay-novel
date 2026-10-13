@@ -3,7 +3,7 @@ import { Text, View, Pressable } from "react-native";
 import { router } from "expo-router";
 import { login } from "../src/api/novels";
 import { useSession } from "../src/state/session";
-import { CandyUniverse } from "../src/components/Candy";
+import { HomeTree } from "../src/components/HomeTree";
 import {
   Screen,
   Label,
@@ -34,10 +34,10 @@ export default function Login() {
     <Screen>
       <View style={{ paddingTop: 15 }}>
         <Label>RELAY NOVEL</Label>
-        <CandyUniverse />
+        <HomeTree />
         <Text style={ui.heading}>너의 한 문장,{"\n"}우리의 다음 이야기.</Text>
         <Text style={[ui.body, { marginBottom: 26 }]}>
-          별사탕처럼 작은 상상들이 만나{"\n"}하나의 세계가 되는 곳.
+          {"작은 상상들이 만나\n하나의 세계가 되는 곳."}
         </Text>
         <Field
           label="Bookey 계정 이메일"

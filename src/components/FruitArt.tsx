@@ -91,20 +91,6 @@ export function FruitStem({
   );
 }
 
-// 떨어지는 동안 열매 위에 그려지는 속도선.
-export function SpeedLines({ size }: { size: number }) {
-  return (
-    <Svg width={size} height={size * 0.5} viewBox="0 0 40 20">
-      <Path
-        d="M 13 2 L 13 14 M 20 0 L 20 16 M 27 2 L 27 14"
-        stroke={colors.muted}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
 // 그림자 그림에서 열매가 땅에 닿는 점의 위치(비율). 그림자는 이 점을 기준으로 줄었다 늘어난다.
 export const SHADOW_ORIGIN = {
   x: (20 - SHADOW_BOX.left) / SHADOW_BOX.width,

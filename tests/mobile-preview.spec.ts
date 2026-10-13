@@ -13,8 +13,17 @@ test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
   await page.getByText("먼저 둘러보기 →").click();
   const fruit = page.getByRole("button", { name: "달빛을 파는 가게 열매" });
   await expect(fruit).toBeVisible();
-  // 열매가 다 내려앉아 실제로 누를 수 있을 때까지 기다린 뒤 찍는다.
-  await fruit.click({ trial: true });
+  // 열매가 모두 하늘에서 떨어져 땅에 멈출 때까지 기다린 뒤 찍는다.
+  // 아직 떨어지기 전인 열매는 화면 위 바깥에 멈춰 있으므로, 먼저 모두 땅으로 내려왔는지 본다.
+  const fruits = page.getByRole("button", { name: / 열매$/ });
+  await expect
+    .poll(() =>
+      fruits.evaluateAll((nodes) =>
+        Math.min(...nodes.map((node) => node.getBoundingClientRect().top)),
+      ),
+    )
+    .toBeGreaterThan(250);
+  for (const each of await fruits.all()) await each.click({ trial: true });
   await page.screenshot({
     path: "test-results/mobile-home.png",
     fullPage: true,

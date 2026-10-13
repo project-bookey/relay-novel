@@ -1,13 +1,12 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSession } from "../src/state/session";
-import { novels } from "../src/api/novels";
-import { demoStories } from "../src/api/demo";
-import type { NovelSummary } from "../src/api/types";
-import { BottomBar } from "../src/components/BottomBar";
-import { FruitField } from "../src/components/FruitField";
-import { ErrorBox, Loading, Screen, ui } from "../src/components/ui";
+import { useSession } from "../../src/state/session";
+import { novels } from "../../src/api/novels";
+import { demoStories } from "../../src/api/demo";
+import type { NovelSummary } from "../../src/api/types";
+import { FruitField } from "../../src/components/FruitField";
+import { ErrorBox, Loading, Screen, ui } from "../../src/components/ui";
 
 // 열매 자리는 몇 개뿐이라, 내가 이어 쓸 차례인 소설을 먼저 놓고 나머지를 피드 순서대로 채운다.
 function fruitOrder(myTurns: NovelSummary[], feed: NovelSummary[]) {
@@ -73,7 +72,6 @@ export default function Home() {
               <ErrorBox error={error} retry={retry} />
             </View>
           )}
-          <BottomBar current="home" />
         </View>
       </View>
     </Screen>
@@ -88,7 +86,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     padding: 24,
   },
-  // 열매 밭과 하단 버튼이 같은 영역을 쓴다. 버튼은 이 영역(땅판) 아래쪽 모서리에 붙는다.
+  // 아래쪽 유리 바는 탭 레이아웃이 이 영역 아래쪽에 겹쳐 띄우므로, 열매 밭이 그 자리를 비워 둔다.
   stage: { flex: 1, justifyContent: "center" },
   empty: { textAlign: "center" },
   errorOverlay: { position: "absolute", top: 0, left: 0, right: 0 },

@@ -1,12 +1,11 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { useSession } from "../src/state/session";
-import { novels } from "../src/api/novels";
-import { demoStories } from "../src/api/demo";
-import type { NovelSummary } from "../src/api/types";
-import { BottomBar } from "../src/components/BottomBar";
-import { StoryCard } from "../src/components/home/StoryCard";
+import { useSession } from "../../src/state/session";
+import { novels } from "../../src/api/novels";
+import { demoStories } from "../../src/api/demo";
+import type { NovelSummary } from "../../src/api/types";
+import { StoryCard } from "../../src/components/home/StoryCard";
 import {
   Button,
   Card,
@@ -15,7 +14,7 @@ import {
   Loading,
   Screen,
   ui,
-} from "../src/components/ui";
+} from "../../src/components/ui";
 
 function StorySection({
   title,
@@ -87,47 +86,44 @@ export default function MyPage() {
   return (
     <Screen scroll={false}>
       <View style={styles.frame}>
-        <View style={styles.stage}>
-          <ScrollView contentContainerStyle={styles.content}>
-            <Label>MY PAGE</Label>
-            <Text style={ui.heading}>마이</Text>
-            {isDemo && (
-              <Card>
-                <Text style={ui.body}>
-                  디자인 미리보기예요. 로그인하면 내 차례와 내 작품을 볼 수
-                  있어요.
-                </Text>
-                <Button outline onPress={() => router.push("/login")}>
-                  Bookey 계정으로 로그인
-                </Button>
-              </Card>
-            )}
-            <StorySection
-              title="내 차례"
-              stories={myTurns}
-              query={isDemo ? undefined : turns}
-              emptyMessage="지금 이어 쓸 차례인 이야기가 없어요."
-            />
-            <StorySection
-              title="내 작품"
-              stories={myStories}
-              query={isDemo ? undefined : mine}
-              emptyMessage="아직 함께 쓰는 이야기가 없어요."
-            />
-            <View style={styles.actions}>
-              <Button
-                outline
-                onPress={() => router.push(isDemo ? "/login" : "/join")}
-              >
-                초대 코드로 참가하기
+        <ScrollView contentContainerStyle={styles.content}>
+          <Label>MY PAGE</Label>
+          <Text style={ui.heading}>마이</Text>
+          {isDemo && (
+            <Card>
+              <Text style={ui.body}>
+                디자인 미리보기예요. 로그인하면 내 차례와 내 작품을 볼 수
+                있어요.
+              </Text>
+              <Button outline onPress={() => router.push("/login")}>
+                Bookey 계정으로 로그인
               </Button>
-              <Button outline onPress={leave}>
-                {isDemo ? "둘러보기 끝내기" : "로그아웃"}
-              </Button>
-            </View>
-          </ScrollView>
-          <BottomBar current="my" />
-        </View>
+            </Card>
+          )}
+          <StorySection
+            title="내 차례"
+            stories={myTurns}
+            query={isDemo ? undefined : turns}
+            emptyMessage="지금 이어 쓸 차례인 이야기가 없어요."
+          />
+          <StorySection
+            title="내 작품"
+            stories={myStories}
+            query={isDemo ? undefined : mine}
+            emptyMessage="아직 함께 쓰는 이야기가 없어요."
+          />
+          <View style={styles.actions}>
+            <Button
+              outline
+              onPress={() => router.push(isDemo ? "/login" : "/join")}
+            >
+              초대 코드로 참가하기
+            </Button>
+            <Button outline onPress={leave}>
+              {isDemo ? "둘러보기 끝내기" : "로그아웃"}
+            </Button>
+          </View>
+        </ScrollView>
       </View>
     </Screen>
   );
@@ -141,7 +137,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     padding: 24,
   },
-  stage: { flex: 1 },
   // 아래쪽 버튼에 마지막 내용이 가리지 않도록 여유를 둔다.
   content: { paddingBottom: 120 },
   actions: { marginTop: 24 },

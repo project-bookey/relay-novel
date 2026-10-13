@@ -5,6 +5,7 @@ import { useSession } from "../src/state/session";
 import { novels } from "../src/api/novels";
 import { demoStories } from "../src/api/demo";
 import type { NovelSummary } from "../src/api/types";
+import { BottomBar } from "../src/components/BottomBar";
 import { FruitField } from "../src/components/FruitField";
 import { ErrorBox, Loading, Screen, ui } from "../src/components/ui";
 
@@ -57,34 +58,38 @@ export default function Home() {
 
   return (
     <Screen scroll={false}>
-      <View style={styles.ground}>
-        {isLoading && <Loading />}
-        {isEmpty && (
-          <Text style={[ui.hint, styles.empty]}>
-            아직 떨어진 열매가 없어요.
-          </Text>
-        )}
-        {showFruits && <FruitField stories={stories} onOpen={openStory} />}
-        {!!error && (
-          // 열매가 있을 때는 열매 자리가 흔들리지 않도록 오류 안내를 위에 띄운다.
-          <View style={showFruits ? styles.errorOverlay : undefined}>
-            <ErrorBox error={error} retry={retry} />
-          </View>
-        )}
+      <View style={styles.frame}>
+        <View style={styles.stage}>
+          {isLoading && <Loading />}
+          {isEmpty && (
+            <Text style={[ui.hint, styles.empty]}>
+              아직 떨어진 열매가 없어요.
+            </Text>
+          )}
+          {showFruits && <FruitField stories={stories} onOpen={openStory} />}
+          {!!error && (
+            // 열매가 있을 때는 열매 자리가 흔들리지 않도록 오류 안내를 위에 띄운다.
+            <View style={showFruits ? styles.errorOverlay : undefined}>
+              <ErrorBox error={error} retry={retry} />
+            </View>
+          )}
+          <BottomBar current="home" />
+        </View>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  ground: {
+  frame: {
     flex: 1,
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
-    justifyContent: "center",
     padding: 24,
   },
+  // 열매 밭과 하단 버튼이 같은 영역을 쓴다. 버튼은 이 영역(땅판) 아래쪽 모서리에 붙는다.
+  stage: { flex: 1, justifyContent: "center" },
   empty: { textAlign: "center" },
-  errorOverlay: { position: "absolute", top: 24, left: 24, right: 24 },
+  errorOverlay: { position: "absolute", top: 0, left: 0, right: 0 },
 });

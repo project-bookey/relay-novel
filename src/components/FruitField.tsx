@@ -7,7 +7,7 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { colors, fruitShapeOf, lighten, storyColorOf } from "../theme";
+import { fruitShapeOf, lighten, storyColorOf } from "../theme";
 import {
   FRUIT_BOTTOM,
   FRUIT_CENTER,
@@ -33,7 +33,7 @@ const FRUIT_SIZE = 44;
 
 // 가장 앞쪽 열매에 주는 중력 가속도(픽셀/초²)
 const GRAVITY = 2400;
-// 땅은 화면 위쪽 1/5을 비워 두고 나머지 4/5를 덮는다.
+// 열매가 내려앉는 보이지 않는 땅. 화면 위쪽 1/5을 비워 두고 나머지 4/5에 열매를 놓는다.
 const GROUND_TOP_RATIO = 0.2;
 
 interface RestSpot {
@@ -236,7 +236,6 @@ export function FruitField({
         setArea({ width, height });
       }}
     >
-      <View style={[styles.ground, { top: groundTop }]} />
       {area.width > 0 &&
         backToFront.map(({ story, order, spot }) => (
           <FallingFruit
@@ -258,15 +257,6 @@ const styles = StyleSheet.create({
   // 홈 화면 전체가 땅이다. 위쪽 바깥에서 나타나는 열매는 화면 영역 안으로만 보이게 자른다.
   stage: { flex: 1, width: "100%", overflow: "hidden" },
   layer: { position: "absolute" },
-  // 열매가 내려앉는 땅. 모서리를 살짝 둥글린 판이다.
-  ground: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 28,
-    backgroundColor: colors.fieldGround,
-  },
   // 원근으로 커지거나 땅에 눌릴 때는 바닥을, 구를 때는 몸통 가운데를 축으로 한다.
   // 네이티브의 transformOrigin은 정수 퍼센트만 읽으므로 반올림해 둔다.
   fallingBody: { transformOrigin: `50% ${Math.round(FRUIT_BOTTOM * 100)}%` },

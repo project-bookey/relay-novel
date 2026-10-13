@@ -201,7 +201,7 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
   ).toHaveLength(1);
 });
 
-test("mobile demo moves between home and my page with the bottom buttons", async ({
+test("mobile demo moves between home, my page and fruits with the bottom buttons", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -220,6 +220,17 @@ test("mobile demo moves between home and my page with the bottom buttons", async
   await expect(
     page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "열매", exact: true }).click();
+  const recruiting = page.getByRole("button", {
+    name: "우리의 여름은 아직, 작가 모집 중",
+  });
+  await expect(recruiting).toBeVisible();
+  // 완결만 고르면 다른 상태의 이야기는 목록에서 빠진다.
+  await page.getByRole("button", { name: "완결", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "받는 사람: 내일의 너, 완결된 이야기" }),
+  ).toBeVisible();
+  await expect(recruiting).toHaveCount(0);
   await page.getByRole("button", { name: "홈", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "달빛을 파는 가게 열매" }),

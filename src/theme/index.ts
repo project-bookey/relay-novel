@@ -1,23 +1,66 @@
 export const colors = {
-  background: "#F8F7F2",
+  background: "#FFFFFF",
   paper: "#FFFFFF",
   ink: "#30362F",
   muted: "#868A80",
   line: "#E7E7DD",
   green: "#526552",
-  lavender: "#B9AFE1",
-  peach: "#E7B8AB",
   mint: "#ADCBBE",
-  rose: "#DFB1C4",
+  // 이야기 나무
+  leaf: "#9DBD8F",
+  leafLight: "#C8DDBA",
+  leafDeep: "#6F9668",
+  bark: "#A0805F",
+  ground: "#E8E3CF",
+  bud: "#F6E3A1",
+  // 홈의 땅. 나무 그림의 흙빛(ground)을 넓은 면에 맞게 연하게 한 색
+  fieldGround: "#F0EDE0",
+  // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
+  fruitShadow: "#5B5142",
 };
-export const candyColors = [
-  colors.lavender,
-  colors.peach,
-  colors.mint,
-  colors.rose,
-  "#D8D69C",
-  "#AEC5DC",
+
+// 결과도 "#RRGGBB"라서 lighten·darken을 겹쳐 쓸 수 있다.
+function mixWith(hexColor: string, target: number, amount: number) {
+  const channel = (start: number) => {
+    const value = parseInt(hexColor.slice(start, start + 2), 16);
+    const mixed = Math.round(value + (target - value) * amount);
+    return Math.min(255, Math.max(0, mixed)).toString(16).padStart(2, "0");
+  };
+  return `#${channel(1)}${channel(3)}${channel(5)}`;
+}
+
+// 열매의 그늘진 면과 밝은 면. 2D지만 살짝 입체감을 낼 때 쓴다.
+export function darken(hexColor: string, amount: number) {
+  return mixWith(hexColor, 0, amount);
+}
+export function lighten(hexColor: string, amount: number) {
+  return mixWith(hexColor, 255, amount);
+}
+
+// 소설마다 붙는 색. 소설 id로 골라서 같은 소설은 항상 같은 색이 된다.
+export const storyColors = [
+  "#EE9F8E",
+  "#F2C46D",
+  "#B9AFE1",
+  "#F0A868",
+  "#E9A5C0",
+  "#9DBEDC",
 ];
+
+export function storyColorOf(novelId: number) {
+  const index = Math.abs(novelId - 1) % storyColors.length;
+  return storyColors[index];
+}
+
+// 소설 열매 모양. 모두 면이 보이는 입체(구·정육면체·피라미드·별사탕)이고, 같은 소설은 항상 같은 모양이다.
+export type FruitShape = "sphere" | "cube" | "pyramid" | "star";
+export const fruitShapes: FruitShape[] = ["sphere", "cube", "pyramid", "star"];
+
+export function fruitShapeOf(novelId: number) {
+  const index = Math.abs(novelId - 1) % fruitShapes.length;
+  return fruitShapes[index];
+}
+
 export const statusLabel = {
   RECRUITING: "작가 모집 중",
   ONGOING: "이야기 이어가는 중",

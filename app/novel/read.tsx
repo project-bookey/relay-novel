@@ -2,7 +2,7 @@ import { Text, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
-import { demoChapters, demoDetail } from "../../src/api/demo";
+import { demoChapter, demoDetail } from "../../src/api/demo";
 import { useSession } from "../../src/state/session";
 import {
   Screen,
@@ -26,10 +26,8 @@ export default function Read() {
   });
   const query = useQuery({
     queryKey: ["chapter", id, number, mode],
-    queryFn: () =>
-      mode === "demo"
-        ? Promise.resolve(demoChapters.find((c) => c.chapterNumber === number)!)
-        : novels.chapter(id, number),
+    queryFn: async () =>
+      mode === "demo" ? demoChapter(id, number) : novels.chapter(id, number),
     enabled: mode === "demo" || mode === "authenticated",
   });
   if (mode === "guest") return <Redirect href="/login" />;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text, View, Pressable } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { login } from "../src/api/novels";
 import { useSession } from "../src/state/session";
 import { HomeTree } from "../src/components/HomeTree";
@@ -14,6 +14,8 @@ import {
 } from "../src/components/ui";
 export default function Login() {
   const session = useSession();
+  // 쓰던 원고 화면에서 다시 로그인하러 왔으면 그 화면으로 돌아간다.
+  const { returnBack } = useLocalSearchParams<{ returnBack?: string }>();
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [busy, setBusy] = useState(false),
@@ -23,7 +25,9 @@ export default function Login() {
     setError(undefined);
     try {
       await session.authenticate(await login(email.trim(), password));
-      router.replace("/");
+      const canReturn = returnBack === "1" && router.canGoBack();
+      if (canReturn) router.back();
+      else router.replace("/");
     } catch (e) {
       setError(e);
     } finally {
@@ -74,6 +78,8 @@ export default function Login() {
           accessibilityRole="button"
           onPress={() => {
             session.demo();
+            // 원고 화면에서 왔다면 그 화면이 스택에 남지 않게 처음으로 되돌린다.
+            if (router.canDismiss()) router.dismissAll();
             router.replace("/");
           }}
           style={{ padding: 16, alignItems: "center" }}

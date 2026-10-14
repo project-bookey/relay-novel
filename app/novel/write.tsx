@@ -40,7 +40,9 @@ export default function WriteScreen() {
       !initial.current,
     staleTime: Infinity,
   });
-  if (mode !== "authenticated") return <Redirect href="/login" />;
+  const signedIn = mode === "authenticated";
+  // 쓰는 도중 로그인이 만료돼도 원고를 잃지 않도록 편집기는 그대로 둔다.
+  if (!signedIn && !initial.current) return <Redirect href="/login" />;
   const d = detail.data;
   if (
     !initial.current &&
@@ -50,6 +52,7 @@ export default function WriteScreen() {
   )
     initial.current = { detail: d, draft: draft.data };
   const writable =
+    signedIn &&
     !!d?.canWrite &&
     d.turnNumber === initial.current?.draft.turnNumber &&
     !detail.error;
@@ -61,6 +64,7 @@ export default function WriteScreen() {
           detail={initial.current.detail}
           draft={initial.current.draft}
           writable={writable}
+          sessionExpired={!signedIn}
         />
       ) : detail.isPending ? (
         <Loading />
@@ -104,11 +108,13 @@ function Editor({
   detail,
   draft,
   writable,
+  sessionExpired,
 }: {
   id: number;
   detail: NovelDetail;
   draft: Draft;
   writable: boolean;
+  sessionExpired: boolean;
 }) {
   const [title, setTitle] = useState(draft.title),
     [body, setBody] = useState(draft.body),
@@ -119,6 +125,9 @@ function Editor({
   const client = useQueryClient(),
     navigation = useNavigation();
   const dirty = title !== saved.title || body !== saved.body;
+  const savedStatus = saved.savedAt
+    ? `최근 저장 ${new Date(saved.savedAt).toLocaleTimeString("ko-KR")}`
+    : "아직 저장하지 않았어요";
   const save = useMutation({
     mutationFn: () =>
       novels.saveDraft(id, { turnNumber: draft.turnNumber, title, body }),
@@ -157,6 +166,14 @@ function Editor({
       }),
     [navigation, dirty, publish.isSuccess, discard],
   );
+  // 다시 로그인하고 돌아오면 만료 때문에 실패한 저장 오류는 지운다.
+  const resetSave = save.reset;
+  const resetPublish = publish.reset;
+  useEffect(() => {
+    if (sessionExpired) return;
+    resetSave();
+    resetPublish();
+  }, [sessionExpired, resetSave, resetPublish]);
   useEffect(() => {
     if (discard) router.replace(`/novel/${id}`);
   }, [discard, id]);
@@ -168,7 +185,18 @@ function Editor({
         CHAPTER {String(detail.novel.chapterCount + 1).padStart(2, "0")} ·
         당신의 상상을 더할 차례
       </Text>
-      {!writable && (
+      {sessionExpired && (
+        <Card>
+          <Text style={ui.body}>
+            로그인이 만료됐어요. 원고는 화면에 남겨 두었으니 다시 로그인한 뒤
+            이어서 저장해 주세요.
+          </Text>
+          <Button onPress={() => router.push("/login?returnBack=1")}>
+            다시 로그인
+          </Button>
+        </Card>
+      )}
+      {!writable && !sessionExpired && (
         <Card>
           <Text style={ui.body}>
             집필 차례가 바뀌었거나 서버 확인이 필요해요. 원고는 화면에 남겨
@@ -199,10 +227,7 @@ function Editor({
         placeholder="앞선 작가의 문장을 이어, 새로운 장을 시작해 주세요."
       />
       <Text style={ui.hint}>
-        {body.length.toLocaleString()} / 20,000자 ·{" "}
-        {saved.savedAt
-          ? `최근 저장 ${new Date(saved.savedAt).toLocaleTimeString("ko-KR")}`
-          : "아직 저장하지 않았어요"}
+        {`${body.length.toLocaleString()} / 20,000자 · ${savedStatus}`}
       </Text>
       {!!validation && (
         <>
@@ -212,7 +237,7 @@ function Editor({
           </Button>
         </>
       )}
-      {!!(save.error || publish.error) && (
+      {!sessionExpired && !!(save.error || publish.error) && (
         <ErrorBox error={save.error || publish.error} />
       )}
       <View style={{ flexDirection: "row", gap: 10 }}>

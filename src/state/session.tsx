@@ -26,9 +26,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void tokenStorage
       .get()
-      .then((t) => setMode(t ? "authenticated" : "guest"))
+      .then((tokens) => setMode(tokens ? "authenticated" : "guest"))
       .catch(() => setMode("guest"));
   }, []);
+  // 토큰 갱신이 거절되거나 다른 탭에서 로그아웃해 토큰이 지워지면 로그인 화면으로 돌려보낸다.
+  useEffect(
+    () =>
+      tokenStorage.onClear(() => {
+        client.clear();
+        setMode((current) => (current === "authenticated" ? "guest" : current));
+      }),
+    [client],
+  );
   return (
     <Context.Provider
       value={{

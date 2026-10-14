@@ -6,6 +6,7 @@ import {
   depthAt,
   planHandDrop,
   type HandDropInput,
+  type RestingFruit,
 } from "../src/design/handDrop";
 
 const view = groundViewThrough(
@@ -25,6 +26,7 @@ function inputFor(overrides: Partial<HandDropInput> = {}): HandDropInput {
     fruitSize: 44,
     scale: 1,
     rollsLikeBall: true,
+    others: [],
     ...overrides,
   };
 }
@@ -100,4 +102,36 @@ test("a fruit barely lifted still drops with a valid motion", () => {
       }),
     );
   }
+});
+
+// 하늘에서 떨어진 열매끼리 띄우는 기준(skyDrop.ts)과 같다.
+function overlaps(point: RestingFruit, other: RestingFruit, fruitSize = 44) {
+  const gap = 0.9 * fruitSize * ((point.depth + other.depth) / 2);
+  return Math.hypot(point.x - other.x, (point.y - other.y) * 1.4) < gap;
+}
+
+test("a fruit dropped onto another slides to the nearest open spot", () => {
+  const other = { x: 150, y: 480, depth: depthAt(view, 480) };
+  const { rest, flight } = planHandDrop(inputFor({ others: [other] }));
+  assert.ok(!overlaps(rest, other));
+  // 멀리 날아가지 않고 바로 옆에 멈춘다.
+  assert.ok(Math.hypot(rest.x - 150, rest.y - 480) < 44 * 1.5);
+  // 놓은 자리에서 떨어지기 시작해 밀려난 자리에서 끝난다.
+  assert.ok(Math.abs(rest.x + flight.offsetX[0] - 150) < 1e-6);
+  assert.equal(flight.offsetX.at(-1), 0);
+});
+
+test("a fruit dropped into a crowd stays clear of every other fruit", () => {
+  const others = [
+    { x: 150, y: 480 },
+    { x: 110, y: 480 },
+    { x: 190, y: 480 },
+    { x: 150, y: 455 },
+    { x: 150, y: 505 },
+  ].map((spot) => ({ ...spot, depth: depthAt(view, spot.y) }));
+  const { rest } = planHandDrop(inputFor({ others }));
+  for (const other of others) assert.ok(!overlaps(rest, other));
+  const inside = clampToGround(bounds, rest);
+  assert.ok(Math.abs(inside.x - rest.x) < 1e-6);
+  assert.ok(Math.abs(inside.y - rest.y) < 1e-6);
 });

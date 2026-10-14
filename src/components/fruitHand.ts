@@ -11,6 +11,7 @@ import {
   planHandDrop,
   type GroundBounds,
   type HandDrop,
+  type RestingFruit,
 } from "../design/handDrop";
 import { springTo } from "./fruitMotion";
 
@@ -41,6 +42,8 @@ interface HandOptions {
   rollsLikeBall: boolean;
   // 하늘에서 떨어지거나 굴러가는 중에는 집을 수 없다.
   canGrab: () => boolean;
+  // 땅에 놓여 있는 다른 열매들. 놓을 때 그 위에 겹치지 않게 한다.
+  otherFruits: () => RestingFruit[];
   onDrop: (drop: HandDrop) => void;
 }
 
@@ -100,7 +103,8 @@ export function useFruitHand(options: HandOptions) {
   const release = (velocity: { x: number; y: number }) => {
     if (!heldRef.current) return;
     heldRef.current = false;
-    const { rest, ground, reduced, rollsLikeBall, onDrop } = latest.current;
+    const { rest, ground, reduced, rollsLikeBall, onDrop, otherFruits } =
+      latest.current;
     const groundPoint = {
       x: rest.x + dragOffset.current.x,
       y: rest.y + dragOffset.current.y,
@@ -119,6 +123,7 @@ export function useFruitHand(options: HandOptions) {
           fruitSize: ground.fruitSize,
           scale: ground.scale,
           rollsLikeBall,
+          others: otherFruits(),
         }),
       );
       setHeld(false);
@@ -177,6 +182,7 @@ export function useFruitHand(options: HandOptions) {
   return {
     held,
     holding,
+    lift,
     // 든 열매가 손가락(커서) 위로 떠오르는 높이
     holdHeight: holdHeight(),
     panHandlers: panResponder.panHandlers,

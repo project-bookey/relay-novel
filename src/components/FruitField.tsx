@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import type { NovelSummary } from "../api/types";
 import { fruitShapeOf } from "../theme";
@@ -9,7 +9,12 @@ import {
   toWorld,
 } from "../design/fruitFlight";
 import { flightStyleFor, planDrops } from "../design/skyDrop";
-import { FieldFruit, type PlacedFruit } from "./FieldFruit";
+import {
+  FieldFruit,
+  type FruitNeighbors,
+  type PlacedFruit,
+} from "./FieldFruit";
+import type { RestingFruit } from "../design/handDrop";
 import type { FieldGround } from "./fruitHand";
 import { rollsLikeBall, useReducedMotion } from "./fruitMotion";
 
@@ -145,6 +150,19 @@ export function FruitField({
   const [area, setArea] = useState({ width: 0, height: 0 });
   // 홈에 들어올 때마다 열매가 튀고 굴러간 결과가 달라진다. 한 번 정해지면 화면 크기가 바뀌어도 그대로다.
   const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31));
+  // 열매마다 지금 놓인 자리. 그리기와 상관없는 기록이라 상태 대신 ref에 둔다.
+  const restsById = useRef(new Map<number, RestingFruit>()).current;
+  const neighbors = useMemo<FruitNeighbors>(
+    () => ({
+      report: (id, rest) => restsById.set(id, rest),
+      forget: (id) => restsById.delete(id),
+      othersThan: (id) =>
+        [...restsById.entries()]
+          .filter(([otherId]) => otherId !== id)
+          .map(([, rest]) => rest),
+    }),
+    [restsById],
+  );
   const field = useMemo(
     () =>
       area.width > 0
@@ -166,6 +184,7 @@ export function FruitField({
           key={fruit.story.id}
           fruit={fruit}
           ground={field.ground}
+          neighbors={neighbors}
           reduced={reduced}
           onOpen={onOpen}
         />

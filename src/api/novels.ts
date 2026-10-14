@@ -3,6 +3,7 @@ import type {
   Page,
   NovelSummary,
   NovelDetail,
+  NovelLikeView,
   NovelStatus,
   ChapterSummary,
   Chapter,
@@ -19,6 +20,9 @@ export const novels = {
     api<Page<NovelSummary>>(`${root}/mine`, { query: { kind: "RELAY", page } }),
   turns: () => api<NovelSummary[]>(`${root}/my-turns`),
   get: (id: number) => api<NovelDetail>(`${root}/${id}`),
+  // 누를 때마다 좋아요가 켜지고 꺼진다. 결과는 서버의 실제 상태다.
+  toggleLike: (id: number) =>
+    api<NovelLikeView>(`${root}/${id}/like`, { method: "POST" }),
   create: (body: CreateNovel) =>
     api<NovelDetail>(root, { method: "POST", body }),
   join: (inviteCode: string) =>

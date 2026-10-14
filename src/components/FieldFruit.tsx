@@ -9,20 +9,21 @@ import {
 } from "react-native";
 import type { NovelSummary } from "../api/types";
 import { fruitShapeOf, lighten, storyColorOf } from "../theme";
-import {
-  FRUIT_BOTTOM,
-  FRUIT_CENTER,
-  FruitBody,
-  FruitShadow,
-  FruitStem,
-  SHADOW_ORIGIN,
-} from "./FruitArt";
-import type { FruitFlight } from "../design/fruitFlight";
+import { FRUIT_BOTTOM, FruitShadow, SHADOW_ORIGIN } from "./FruitArt";
+import { FruitFigure } from "./FruitFigure";
 import type { HandDrop, RestingFruit } from "../design/handDrop";
 import { SHADOW_BOX } from "../design/fruitShapes";
+import { isPopular, swayDelayOf } from "../design/fruitGlow";
 import { followFlight, playTimeline, rollsLikeBall } from "./fruitMotion";
 import { useFruitHand, type FieldGround } from "./fruitHand";
 import { FruitBubble } from "./FruitBubble";
+import { FruitHalo, useSway } from "./FruitGlow";
+import {
+  finalAngleOf,
+  placementFrom,
+  type PlacedFruit,
+  type Placement,
+} from "./fruitPlacement";
 
 // 든 열매는 다른 열매보다 앞에 보인다. 말풍선은 그보다 앞이다.
 const HELD_LAYER = 100000;
@@ -33,43 +34,6 @@ export interface FruitNeighbors {
   report: (id: number, rest: RestingFruit) => void;
   forget: (id: number) => void;
   othersThan: (id: number) => RestingFruit[];
-}
-
-export interface PlacedFruit {
-  story: NovelSummary;
-  rest: { x: number; y: number; depth: number };
-  flight: FruitFlight;
-  delayMs: number;
-}
-
-// 지금 놓인 자리와 그 자리로 오는 움직임. 손으로 옮기면 바뀐다.
-interface Placement {
-  rest: PlacedFruit["rest"];
-  flight: FruitFlight;
-  delayMs: number;
-  // 움직이기 전에 이미 기울어 있던 각도
-  startAngle: number;
-  // 손으로 떨어뜨린 것이면 화면 밖 하늘이 아니라 놓은 자리에서 떨어진다.
-  droppedByHand: boolean;
-  // 이 자리를 정할 때의 열매 밭 배치. 화면 크기가 바뀌어 밭을 다시 그리면 처음 자리로 돌아간다.
-  layout: PlacedFruit;
-}
-
-function placementFrom(fruit: PlacedFruit): Placement {
-  return {
-    rest: fruit.rest,
-    flight: fruit.flight,
-    delayMs: fruit.delayMs,
-    startAngle: 0,
-    droppedByHand: false,
-    layout: fruit,
-  };
-}
-
-// 움직임이 끝났을 때 열매가 기울어 있는 각도
-function finalAngleOf(placement: Placement) {
-  const angles = placement.flight.angle;
-  return placement.startAngle + angles[angles.length - 1];
 }
 
 // 웹 브라우저가 열매를 끄는 손가락을 화면 스크롤이나 당겨서 새로고침으로 가져가 끌기가 끊기지 않게 한다.
@@ -83,18 +47,23 @@ const keepTouchOnWeb =
 // 끌거나 길게 누르면 집혀 손가락 아래에 붙어 따라오고, 놓으면 바로 아래 땅으로 떨어져 튄 뒤 멈춘다.
 export function FieldFruit({
   fruit,
+  story,
   ground,
   neighbors,
   reduced,
+  onScreen,
   onOpen,
 }: {
   fruit: PlacedFruit;
+  // 지금 소설 정보. 배치한 뒤 좋아요 수 등이 바뀌어도 최신 것을 보여 준다.
+  story: NovelSummary;
   ground: FieldGround;
   neighbors: FruitNeighbors;
   reduced: boolean;
+  // 홈이 지금 보이는지. 가려져 있으면 인기 열매의 흔들림·숨쉬기를 멈춘다.
+  onScreen: boolean;
   onOpen: (story: NovelSummary) => void;
 }) {
-  const { story } = fruit;
   const shape = fruitShapeOf(story.id);
   const isBall = rollsLikeBall(shape);
 
@@ -108,21 +77,28 @@ export function FieldFruit({
 
   // 진행률 0은 떨어지기 시작하는 처음 자리라, 첫 그리기부터 열매가 땅에 번쩍 보이지 않는다.
   const progress = useRef(new Animated.Value(0)).current;
+  // 집을 수 있는지는 누르는 순간 바로 알아야 해서 ref에 두고, 인기 열매의 후광과 흔들림은
+  // 내려앉았을 때 다시 그려야 켜지므로 같은 값을 상태로도 둔다.
   const landed = useRef(false);
+  const [settled, setSettled] = useState(false);
+  const markLanded = (value: boolean) => {
+    landed.current = value;
+    setSettled(value);
+  };
 
   useEffect(() => {
     // 동작 줄이기 설정이거나 이미 내려앉았으면 다시 떨어지지 않고 제자리만 맞춘다.
     // 화면 크기가 바뀌거나 오류 안내가 떠도 열매가 처음부터 다시 떨어지지 않게 하려는 것이다.
     if (reduced || (landed.current && !droppedByHand)) {
       progress.setValue(1);
-      landed.current = true;
+      markLanded(true);
       return;
     }
-    landed.current = false;
+    markLanded(false);
     progress.setValue(0);
     const motion = playTimeline(progress, flight.durationMs, delayMs);
     motion.start(({ finished }) => {
-      if (finished) landed.current = true;
+      if (finished) markLanded(true);
     });
     return () => motion.stop();
   }, [progress, reduced, flight, delayMs, droppedByHand]);
@@ -171,11 +147,28 @@ export function FieldFruit({
   const color = lighten(storyColorOf(story.id), farness * 0.6);
   const motion = held ? hand.holding : falling;
   const rotate = held ? `${finalAngleOf(placement)}deg` : falling.rotate;
+  // 좋아요를 많이 받은 열매는 땅에 가만히 있는 동안 후광이 나고 오뚝이처럼 기우뚱한다.
+  // 홈이 가려져 있거나 동작 줄이기면 후광은 가만히 두고 흔들지 않는다.
+  const popular = isPopular(story.likeCount);
+  const glowing = popular && settled && !held;
+  const glowMoves = onScreen && !reduced;
+  const sway = useSway(glowing && glowMoves, swayDelayOf(story.id), size);
+  // 그림을 볼 수 없는 사람도 인기 열매인 줄 알 수 있게 이름 앞에 붙인다.
+  const label = popular ? `인기 ${story.title} 열매` : `${story.title} 열매`;
   // 앞쪽 열매가 겹칠 때 앞에 보이도록 땅 위 자리 순서로 쌓는다. 그림자는 열매 몸통보다 아래에 둔다.
   const layer = Math.round(rest.y) * 2;
 
   return (
     <>
+      {popular && (
+        <FruitHalo
+          fruitLeft={left}
+          fruitTop={top}
+          size={size}
+          shown={glowing}
+          moving={glowMoves}
+        />
+      )}
       <Animated.View
         style={[
           styles.layer,
@@ -220,27 +213,19 @@ export function FieldFruit({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${story.title} 열매`}
+          accessibilityLabel={label}
           hitSlop={6}
           {...hand.pressHandlers}
           onPress={onPress}
           style={{ width: size, height: size }}
         >
-          {/* 구는 돌아도 겉모양이 같으므로 몸통은 그대로 두고 꼭지만 돌린다.
-              그래야 굴러가는 동안에도 빛이 늘 왼쪽 위에서 비친다. */}
-          {isBall && <FruitBody shape={shape} color={color} size={size} />}
-          <Animated.View
-            style={[styles.rollingBody, { transform: [{ rotate }] }]}
-          >
-            {!isBall && (
-              <View style={styles.overlay}>
-                <FruitBody shape={shape} color={color} size={size} />
-              </View>
-            )}
-            <View style={styles.overlay}>
-              <FruitStem shape={shape} size={size} />
-            </View>
-          </Animated.View>
+          <FruitFigure
+            shape={shape}
+            color={color}
+            size={size}
+            rotate={rotate}
+            sway={sway}
+          />
         </Pressable>
       </Animated.View>
       {held && (
@@ -263,22 +248,11 @@ const styles = StyleSheet.create({
   // 원근으로 커지거나 땅에 눌릴 때는 바닥을 축으로 한다.
   // 네이티브의 transformOrigin은 정수 퍼센트만 읽으므로 반올림해 둔다.
   fallingBody: { transformOrigin: `50% ${Math.round(FRUIT_BOTTOM * 100)}%` },
-  // 구를 때는 몸통 가운데를 축으로 한다.
-  rollingBody: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    transformOrigin: `${FRUIT_CENTER.x} ${FRUIT_CENTER.y}`,
-  },
   // 열매가 떠오르면 그림자는 땅에 닿는 점을 향해 줄어든다.
   // 네이티브의 transformOrigin은 정수 퍼센트만 읽으므로 반올림해 둔다.
   shadow: {
     transformOrigin: `${Math.round(SHADOW_ORIGIN.x * 100)}% ${Math.round(SHADOW_ORIGIN.y * 100)}%`,
   },
-  // 몸통과 꼭지 그림을 같은 자리에 겹쳐 놓는다.
-  overlay: { position: "absolute", top: 0, left: 0 },
   bubbleLayer: {
     position: "absolute",
     top: 0,

@@ -10,6 +10,8 @@ interface DemoStorySeed {
   chapterCount: number;
   memberCount: number;
   memberLimit: number;
+  // 100개 이상이면 홈 열매에 후광이 난다. E2E가 쓰는 앞 네 편은 그보다 적게 둔다.
+  likeCount: number;
   mine?: boolean;
 }
 
@@ -23,6 +25,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 3,
     memberCount: 4,
     memberLimit: 6,
+
+    likeCount: 24,
     mine: true,
   },
   {
@@ -33,6 +37,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 0,
     memberCount: 4,
     memberLimit: 6,
+
+    likeCount: 9,
   },
   {
     title: "종착역이 없는 열차",
@@ -42,6 +48,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 3,
     memberCount: 4,
     memberLimit: 6,
+
+    likeCount: 57,
   },
   {
     title: "받는 사람: 내일의 너",
@@ -52,6 +60,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 3,
     memberCount: 4,
     memberLimit: 6,
+
+    likeCount: 88,
   },
   {
     title: "비 오는 날의 우체부",
@@ -62,6 +72,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 7,
     memberCount: 5,
     memberLimit: 6,
+
+    likeCount: 41,
   },
   {
     title: "고양이 도서관",
@@ -72,6 +84,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 12,
     memberCount: 6,
     memberLimit: 8,
+
+    likeCount: 152,
   },
   {
     title: "마지막 별빛 정거장",
@@ -81,6 +95,8 @@ const seeds: DemoStorySeed[] = [
     chapterCount: 20,
     memberCount: 6,
     memberLimit: 6,
+
+    likeCount: 311,
   },
 ];
 
@@ -111,6 +127,8 @@ export const demoStories: NovelSummary[] = seeds.map((seed, index) => ({
   mine: seed.mine ?? false,
   myTurn: false,
   createdAt: "2026-10-12T09:00:00Z",
+  likeCount: seed.likeCount,
+  liked: false,
 }));
 
 function demoStory(id: number) {

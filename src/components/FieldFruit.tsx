@@ -17,7 +17,7 @@ import { isPopular, swayDelayOf } from "../design/fruitGlow";
 import { followFlight, playTimeline, rollsLikeBall } from "./fruitMotion";
 import { useFruitHand, type FieldGround } from "./fruitHand";
 import { FruitBubble } from "./FruitBubble";
-import { FruitHalo, useSway } from "./FruitGlow";
+import { FruitSparkles, useSway } from "./FruitGlow";
 import {
   finalAngleOf,
   placementFrom,
@@ -60,7 +60,7 @@ export function FieldFruit({
   ground: FieldGround;
   neighbors: FruitNeighbors;
   reduced: boolean;
-  // 홈이 지금 보이는지. 가려져 있으면 인기 열매의 흔들림·숨쉬기를 멈춘다.
+  // 홈이 지금 보이는지. 가려져 있으면 인기 열매의 흔들림·반짝임을 멈춘다.
   onScreen: boolean;
   onOpen: (story: NovelSummary) => void;
 }) {
@@ -77,7 +77,7 @@ export function FieldFruit({
 
   // 진행률 0은 떨어지기 시작하는 처음 자리라, 첫 그리기부터 열매가 땅에 번쩍 보이지 않는다.
   const progress = useRef(new Animated.Value(0)).current;
-  // 집을 수 있는지는 누르는 순간 바로 알아야 해서 ref에 두고, 인기 열매의 후광과 흔들림은
+  // 집을 수 있는지는 누르는 순간 바로 알아야 해서 ref에 두고, 인기 열매의 반짝이와 흔들림은
   // 내려앉았을 때 다시 그려야 켜지므로 같은 값을 상태로도 둔다.
   const landed = useRef(false);
   const [settled, setSettled] = useState(false);
@@ -147,8 +147,8 @@ export function FieldFruit({
   const color = lighten(storyColorOf(story.id), farness * 0.6);
   const motion = held ? hand.holding : falling;
   const rotate = held ? `${finalAngleOf(placement)}deg` : falling.rotate;
-  // 좋아요를 많이 받은 열매는 땅에 가만히 있는 동안 후광이 나고 오뚝이처럼 기우뚱한다.
-  // 홈이 가려져 있거나 동작 줄이기면 후광은 가만히 두고 흔들지 않는다.
+  // 좋아요를 많이 받은 열매는 땅에 가만히 있는 동안 둘레에서 별이 반짝이고 오뚝이처럼 기우뚱한다.
+  // 홈이 가려져 있거나 동작 줄이기면 별은 가만히 켜 두고 흔들지 않는다.
   const popular = isPopular(story.likeCount);
   const glowing = popular && settled && !held;
   const glowMoves = onScreen && !reduced;
@@ -160,15 +160,6 @@ export function FieldFruit({
 
   return (
     <>
-      {popular && (
-        <FruitHalo
-          fruitLeft={left}
-          fruitTop={top}
-          size={size}
-          shown={glowing}
-          moving={glowMoves}
-        />
-      )}
       <Animated.View
         style={[
           styles.layer,
@@ -228,6 +219,16 @@ export function FieldFruit({
           />
         </Pressable>
       </Animated.View>
+      {glowing && (
+        <FruitSparkles
+          fruitLeft={left}
+          fruitTop={top}
+          size={size}
+          layer={layer + 1}
+          startDelayMs={swayDelayOf(story.id)}
+          moving={glowMoves}
+        />
+      )}
       {held && (
         <View style={[styles.bubbleLayer, { zIndex: BUBBLE_LAYER }]}>
           <FruitBubble

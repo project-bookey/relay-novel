@@ -78,7 +78,7 @@ export function useNovelLike(novel: NovelSummary) {
         (current) => current && withLike(current, result),
       );
     },
-    // 홈 열매의 후광도 바뀐 좋아요 수를 따르도록 목록을 다시 받는다.
+    // 홈 열매의 반짝이도 바뀐 좋아요 수를 따르도록 목록을 다시 받는다.
     // 다 받을 때까지 기다리면 그동안 버튼이 잠기므로 기다리지 않는다.
     onSettled: () => {
       void client.invalidateQueries({ queryKey: ["novels"] });

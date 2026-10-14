@@ -10,7 +10,7 @@ interface DemoStorySeed {
   chapterCount: number;
   memberCount: number;
   memberLimit: number;
-  // 100개 이상이면 홈 열매에 후광이 난다. E2E가 쓰는 앞 네 편은 그보다 적게 둔다.
+  // 100개 이상이면 홈 열매 둘레에서 별이 반짝인다. E2E가 쓰는 앞 네 편은 그보다 적게 둔다.
   likeCount: number;
   mine?: boolean;
 }

@@ -1,106 +1,137 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, StyleSheet } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 import { colors } from "../theme";
-import { FRUIT_CENTER_Y } from "./FruitArt";
 import { nativeDriverEnabled } from "./fruitMotion";
 import {
   ballRollShift,
-  HALO_BREATH_MS,
-  HALO_BREATH_SCALE,
-  HALO_RINGS,
+  SPARKLE_PERIOD_MS,
+  SPARKLE_SHINE_SHARE,
+  SPARKLE_STILL_SHINE,
+  SPARKLE_TURN_DEGREES,
+  sparkleDelayOf,
+  SPARKLES,
   SWAY_DEGREES,
   SWAY_PERIOD_MS,
 } from "../design/fruitGlow";
 
-// 좋아요를 많이 받은 인기 열매의 후광과 흔들림. 값은 src/design/fruitGlow.ts에 있다.
+// 좋아요를 많이 받은 인기 열매의 반짝이와 흔들림. 값은 src/design/fruitGlow.ts에 있다.
 
-// 후광이 나타나는 시간. 사라질 때는 바로 꺼서, 집었다 금방 놓아도 새 자리에 지난 후광이 비치지 않게 한다.
-const HALO_FADE_MS = 400;
 // 흔들림을 멈출 때 똑바로 서기까지의 시간
 const SWAY_SETTLE_MS = 160;
 
-const OUTER_RADIUS = HALO_RINGS[0].radius;
+// 가운데로 오목하게 들어간 네 갈래 별. -1~1 칸에 그린다.
+const SPARKLE_PATH =
+  "M0 -1 Q0.12 -0.12 1 0 Q0.12 0.12 0 1 Q-0.12 0.12 -1 0 Q-0.12 -0.12 0 -1Z";
 
-// 열매 몸통 뒤에 겹친 연노랑 원 세 겹. 숨 쉬듯 천천히 커졌다 작아진다.
-// 모든 열매와 그림자보다 뒤에 깔리고, 누르기를 가로채지 않는다.
-export function FruitHalo({
+// 인기 열매 둘레에서 작은 별이 하나씩 차례로 반짝였다 사라진다.
+// 열매 그림 칸 위에 겹쳐 놓고, 누르기를 가로채지 않는다.
+export function FruitSparkles({
   fruitLeft,
   fruitTop,
   size,
-  shown,
+  layer,
+  startDelayMs,
   moving,
 }: {
-  // 열매 그림 칸의 왼쪽 위(열매 밭 기준)와 크기. 후광은 그 안의 몸통 가운데에 맞춘다.
+  // 열매 그림 칸의 왼쪽 위(열매 밭 기준)와 크기. 별 자리는 이 칸에 대한 비율이다.
   fruitLeft: number;
   fruitTop: number;
   size: number;
-  shown: boolean;
-  // 숨쉬기와 페이드를 할지. 동작 줄이기거나 홈이 가려져 있으면 가만히 둔다.
+  // 열매 몸통과 같은 쌓는 순서. 열매 앞에 보이고, 더 앞쪽 열매에는 가려진다.
+  layer: number;
+  // 인기 열매 여럿이 한꺼번에 반짝이지 않도록 열매마다 시작을 늦춘다.
+  startDelayMs: number;
+  // 반짝일지. 동작 줄이기거나 홈이 가려져 있으면 별을 가만히 켜 둔다.
   moving: boolean;
 }) {
-  const appear = useRef(new Animated.Value(0)).current;
-  const breath = useRef(new Animated.Value(0)).current;
+  return (
+    <>
+      {SPARKLES.map((sparkle, index) => {
+        const radius = sparkle.radius * size;
+        return (
+          <Sparkle
+            key={index}
+            left={fruitLeft + sparkle.x * size - radius}
+            top={fruitTop + sparkle.y * size - radius}
+            radius={radius}
+            layer={layer}
+            delayMs={startDelayMs + sparkleDelayOf(index)}
+            moving={moving}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function Sparkle({
+  left,
+  top,
+  radius,
+  layer,
+  delayMs,
+  moving,
+}: {
+  left: number;
+  top: number;
+  radius: number;
+  layer: number;
+  delayMs: number;
+  moving: boolean;
+}) {
+  // 0은 꺼짐, 1은 가장 크게 반짝일 때
+  const shine = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const fade = Animated.timing(appear, {
-      toValue: shown ? 1 : 0,
-      duration: shown && moving ? HALO_FADE_MS : 0,
-      useNativeDriver: nativeDriverEnabled,
-    });
-    fade.start();
-    return () => fade.stop();
-  }, [appear, shown, moving]);
-
-  useEffect(() => {
-    if (!shown || !moving) {
-      breath.setValue(0);
+    if (!moving) {
+      shine.setValue(SPARKLE_STILL_SHINE);
       return;
     }
-    const breathe = (toValue: number) =>
-      Animated.timing(breath, {
+    shine.setValue(0);
+    const shineMs = SPARKLE_PERIOD_MS * SPARKLE_SHINE_SHARE;
+    const shineTo = (toValue: number) =>
+      Animated.timing(shine, {
         toValue,
-        duration: HALO_BREATH_MS / 2,
+        duration: shineMs / 2,
         easing: Easing.inOut(Easing.sin),
         useNativeDriver: nativeDriverEnabled,
       });
-    const loop = Animated.loop(Animated.sequence([breathe(1), breathe(0)]));
-    loop.start();
-    return () => loop.stop();
-  }, [breath, shown, moving]);
+    const twinkle = Animated.loop(
+      Animated.sequence([
+        shineTo(1),
+        shineTo(0),
+        Animated.delay(SPARKLE_PERIOD_MS - shineMs),
+      ]),
+    );
+    const start = setTimeout(() => twinkle.start(), delayMs);
+    return () => {
+      clearTimeout(start);
+      twinkle.stop();
+    };
+  }, [shine, moving, delayMs]);
 
-  const radius = size * OUTER_RADIUS;
-  const centerX = fruitLeft + size / 2;
-  const centerY = fruitTop + size * FRUIT_CENTER_Y;
-  const scale = breath.interpolate({
+  const turn = shine.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, HALO_BREATH_SCALE],
+    outputRange: ["0deg", `${SPARKLE_TURN_DEGREES}deg`],
   });
   return (
     <Animated.View
       style={[
-        styles.halo,
+        styles.sparkle,
         {
-          left: centerX - radius,
-          top: centerY - radius,
+          zIndex: layer,
+          left,
+          top,
           width: radius * 2,
           height: radius * 2,
-          opacity: appear,
-          transform: [{ scale }],
+          opacity: shine,
+          transform: [{ scale: shine }, { rotate: turn }],
         },
       ]}
     >
       <Svg width={radius * 2} height={radius * 2} viewBox="-1 -1 2 2">
-        {HALO_RINGS.map((ring) => (
-          <Circle
-            key={ring.radius}
-            cx={0}
-            cy={0}
-            r={ring.radius / OUTER_RADIUS}
-            fill={colors.halo}
-            opacity={ring.opacity}
-          />
-        ))}
+        <Path d={SPARKLE_PATH} fill={colors.sparkle} />
       </Svg>
     </Animated.View>
   );
@@ -163,5 +194,5 @@ export function useSway(active: boolean, delayMs: number, size: number) {
 }
 
 const styles = StyleSheet.create({
-  halo: { position: "absolute", zIndex: 0, pointerEvents: "none" },
+  sparkle: { position: "absolute", pointerEvents: "none" },
 });

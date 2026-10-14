@@ -11,13 +11,22 @@ import {
   SHADOW_ORIGIN,
 } from "./FruitArt";
 import type { FruitFlight } from "../design/fruitFlight";
-import type { HandDrop } from "../design/handDrop";
+import type { HandDrop, RestingFruit } from "../design/handDrop";
 import { SHADOW_BOX } from "../design/fruitShapes";
 import { followFlight, playTimeline, rollsLikeBall } from "./fruitMotion";
 import { useFruitHand, type FieldGround } from "./fruitHand";
+import { FruitBubble } from "./FruitBubble";
 
-// 든 열매는 다른 열매보다 앞에 보인다.
+// 든 열매는 다른 열매보다 앞에 보인다. 말풍선은 그보다 앞이다.
 const HELD_LAYER = 100000;
+const BUBBLE_LAYER = HELD_LAYER + 1;
+
+// 땅에 놓인 열매들의 자리를 함께 적어 두는 곳. 손으로 놓은 열매가 다른 열매 위에 겹치지 않게 한다.
+export interface FruitNeighbors {
+  report: (id: number, rest: RestingFruit) => void;
+  forget: (id: number) => void;
+  othersThan: (id: number) => RestingFruit[];
+}
 
 export interface PlacedFruit {
   story: NovelSummary;
@@ -61,11 +70,13 @@ function finalAngleOf(placement: Placement) {
 export function FieldFruit({
   fruit,
   ground,
+  neighbors,
   reduced,
   onOpen,
 }: {
   fruit: PlacedFruit;
   ground: FieldGround;
+  neighbors: FruitNeighbors;
   reduced: boolean;
   onOpen: (story: NovelSummary) => void;
 }) {
@@ -102,6 +113,11 @@ export function FieldFruit({
     return () => motion.stop();
   }, [progress, reduced, flight, delayMs, droppedByHand]);
 
+  useEffect(() => {
+    neighbors.report(story.id, rest);
+  }, [neighbors, story.id, rest]);
+  useEffect(() => () => neighbors.forget(story.id), [neighbors, story.id]);
+
   const falling = useMemo(
     () => followFlight(progress, flight, startAngle),
     [progress, flight, startAngle],
@@ -126,6 +142,7 @@ export function FieldFruit({
     reduced,
     rollsLikeBall: isBall,
     canGrab: () => landed.current,
+    otherFruits: () => neighbors.othersThan(story.id),
     onDrop: dropFromHand,
   });
   const { held } = hand;
@@ -139,6 +156,24 @@ export function FieldFruit({
   const color = lighten(storyColorOf(story.id), (1 - rest.depth) * 0.6);
   const motion = held ? hand.holding : falling;
   const rotate = held ? `${finalAngleOf(placement)}deg` : falling.rotate;
+  // 말풍선은 열매를 들어 올리는 만큼 떠오른다. 동작 줄이기면 바로 보인다.
+  const bubbleAppear =
+    hand.holdHeight > 0
+      ? hand.lift.interpolate({
+          inputRange: [0, hand.holdHeight],
+          outputRange: [0, 1],
+          extrapolate: "clamp",
+        })
+      : 1;
+  // 몸통은 바닥을 축으로 커지고 작아지므로, 원근으로 커진 만큼 열매 위쪽 끝이 더 올라간다.
+  // 말풍선도 그만큼 같이 올려서 앞뒤로 옮겨도 열매 위에 같은 간격으로 뜬다.
+  const bubbleY = Animated.add(
+    hand.holding.translateY,
+    hand.holding.scaleY.interpolate({
+      inputRange: [0, 1],
+      outputRange: [size * FRUIT_BOTTOM, 0],
+    }),
+  );
   // 앞쪽 열매가 겹칠 때 앞에 보이도록 땅 위 자리 순서로 쌓는다. 그림자는 열매 몸통보다 아래에 둔다.
   const layer = Math.round(rest.y) * 2;
 
@@ -215,6 +250,19 @@ export function FieldFruit({
           </Animated.View>
         </Pressable>
       </Animated.View>
+      {held && (
+        <View style={[styles.bubbleLayer, { zIndex: BUBBLE_LAYER }]}>
+          <FruitBubble
+            story={story}
+            fruitX={rest.x}
+            fruitTop={top}
+            screenWidth={ground.view.centerX * 2}
+            panX={hand.holding.translateX}
+            liftY={bubbleY}
+            appear={bubbleAppear}
+          />
+        </View>
+      )}
     </>
   );
 }
@@ -240,6 +288,13 @@ const styles = StyleSheet.create({
   },
   // 몸통과 꼭지 그림을 같은 자리에 겹쳐 놓는다.
   overlay: { position: "absolute", top: 0, left: 0 },
+  bubbleLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: "none",
+  },
   grip: { position: "absolute", top: 0, left: 0, right: 0 },
   // 그림자가 뒤쪽 열매를 누르는 손가락을 가로채지 않게 한다.
   passThrough: { pointerEvents: "none" },

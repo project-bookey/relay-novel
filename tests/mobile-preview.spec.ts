@@ -279,14 +279,23 @@ test("mobile demo lets a visitor pick up a fruit, move it and drop it elsewhere"
     await page.waitForTimeout(16);
   }
   await page.waitForTimeout(300);
+  // 든 동안에는 열매 위 말풍선에 제목과 상태가 보인다.
+  const bubbleStatus = page.getByText("이야기 이어가는 중", { exact: true });
+  await expect(bubbleStatus).toBeVisible();
+  await expect(
+    page.getByText("달빛을 파는 가게", { exact: true }),
+  ).toBeVisible();
   await page.mouse.up();
   await page.waitForTimeout(1500);
+  await expect(bubbleStatus).toHaveCount(0);
 
   // 소설로 넘어가지 않고 열매만 다른 자리에 내려앉는다.
   await expect(fruit).toBeVisible();
   const after = (await fruit.boundingBox())!;
-  expect(after.x).toBeLessThan(before.x - 30);
-  expect(after.y).toBeGreaterThan(before.y + 10);
+  // 놓은 자리에 다른 열매가 있으면 바로 옆 빈자리로 밀려나므로, 정확한 방향 대신 옮겨졌는지만 본다.
+  expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(
+    30,
+  );
 
   // 옮긴 열매도 누르면 그 소설로 간다.
   await fruit.click();

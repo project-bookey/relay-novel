@@ -96,8 +96,8 @@ const OUTWARD_CHANCE = 0.65;
 // 처음 땅에 닿는 자리를 정해 둔 자리에서 흩뜨리는 정도(원근 배율 1의 화면 픽셀)
 const LANDING_JITTER = { x: 18, y: 10 };
 // 멈춘 열매끼리 띄우는 거리(열매 크기에 대한 비율). 화면에서 앞뒤는 좁아 보이므로 더 넓게 친다.
-const SPACING = 0.9;
-const DEPTH_SPACING = 1.4;
+export const SPACING = 0.9;
+export const DEPTH_SPACING = 1.4;
 // 가려던 자리가 막혔을 때 덜 가 보는 비율들. 먼저 멈춘 열매에 부딪혀 멈춘 셈이다.
 const SHORTER = [1, 0.6, 0.3];
 

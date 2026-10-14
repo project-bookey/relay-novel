@@ -14,8 +14,8 @@ import {
 
 // 몸통 바닥이 칸 높이의 어디쯤인지. 땅에 놓을 때 이 지점을 땅에 맞춘다.
 export const FRUIT_BOTTOM = GROUND_LINE / 40;
-// 몸통 한가운데(칸 높이에 대한 비율). 구르거나 흔들릴 때 이 점을 축으로 돌고, 인기 열매의 후광도 여기에 맞춘다.
-export const FRUIT_CENTER_Y = 0.58;
+// 몸통 한가운데(칸 높이에 대한 비율). 구르거나 흔들릴 때 이 점을 축으로 돈다.
+const FRUIT_CENTER_Y = 0.58;
 export const FRUIT_CENTER = {
   x: "50%",
   y: `${Math.round(FRUIT_CENTER_Y * 100)}%`,

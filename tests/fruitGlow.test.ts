@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   ballRollShift,
   GLOW_LIKE_COUNT,
-  HALO_RINGS,
-  haloStrengthAt,
   isPopular,
+  SPARKLE_PERIOD_MS,
+  SPARKLE_SHINE_SHARE,
+  sparkleDelayOf,
+  SPARKLES,
   SWAY_PERIOD_MS,
   swayDelayOf,
 } from "../src/design/fruitGlow";
@@ -18,17 +20,21 @@ test("a fruit glows from 100 likes on", () => {
   assert.equal(isPopular(311), true);
 });
 
-test("halo rings get larger and fainter toward the outside", () => {
-  assert.equal(HALO_RINGS.length, 3);
-  for (let index = 1; index < HALO_RINGS.length; index++) {
-    assert.ok(HALO_RINGS[index - 1].radius > HALO_RINGS[index].radius);
-    assert.ok(haloStrengthAt(index - 1) < haloStrengthAt(index));
+test("sparkles sit around the fruit body and shine one after another", () => {
+  // 몸통(가운데 0.5, 0.58 · 반지름 약 0.33) 한가운데를 덮지 않고 둘레에 놓인다.
+  for (const sparkle of SPARKLES) {
+    const fromCenter = Math.hypot(sparkle.x - 0.5, sparkle.y - 0.58);
+    assert.ok(fromCenter > 0.3);
+    assert.ok(sparkle.radius > 0 && sparkle.radius < 0.15);
   }
-  // 가장 안쪽 원도 열매 몸통(반지름 약 0.33)보다 커서 몸통 둘레로 빛이 보인다.
-  const innermost = HALO_RINGS[HALO_RINGS.length - 1];
-  assert.ok(innermost.radius > 0.4);
-  // 겹친 가운데도 반투명이라 흰 땅 위에 꽉 찬 원반처럼 보이지 않는다.
-  assert.ok(haloStrengthAt(HALO_RINGS.length - 1) < 0.5);
+  const delays = SPARKLES.map((_, index) => sparkleDelayOf(index));
+  for (let index = 1; index < delays.length; index++) {
+    assert.ok(delays[index] > delays[index - 1]);
+  }
+  assert.ok(delays[delays.length - 1] < SPARKLE_PERIOD_MS);
+  // 앞 별이 꺼질 즈음 다음 별이 켜져, 두 개 넘게 한꺼번에 반짝이지 않는다.
+  const shineMs = SPARKLE_PERIOD_MS * SPARKLE_SHINE_SHARE;
+  assert.ok(shineMs <= delays[2] - delays[0]);
 });
 
 test("popular fruits start swaying at different moments within one sway", () => {

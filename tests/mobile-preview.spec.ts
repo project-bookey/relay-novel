@@ -356,7 +356,7 @@ test("mobile demo shows a popular story's likes and sends a visitor to log in to
   });
   await page.goto("/");
   await page.getByText("먼저 둘러보기 →").click();
-  // 좋아요가 100개를 넘은 열매는 후광이 나고 흔들리지만, 누르는 영역은 그대로라 바로 누를 수 있다.
+  // 좋아요가 100개를 넘은 열매는 별이 반짝이고 흔들리지만, 누르는 영역은 그대로라 바로 누를 수 있다.
   // 그림을 볼 수 없는 사람도 알 수 있게 이름 앞에 "인기"가 붙는다.
   await page
     .getByRole("button", { name: "인기 마지막 별빛 정거장 열매" })

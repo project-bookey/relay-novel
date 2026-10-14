@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +32,15 @@ export default function Home() {
     queryFn: novels.turns,
     enabled: mode === "authenticated",
   });
+  // 홈이 다시 그려질 때마다 새 목록을 만들면 열매 밭이 처음 배치로 돌아가, 손으로 옮긴 열매가 제자리로 튄다.
+  // 서버 응답이 바뀔 때만 목록을 새로 만든다.
+  const stories = useMemo(
+    () =>
+      mode === "demo"
+        ? demoStories
+        : fruitOrder(turns.data ?? [], feed.data?.content ?? []),
+    [mode, turns.data, feed.data],
+  );
 
   if (mode === "loading")
     return (
@@ -44,10 +54,6 @@ export default function Home() {
   // 두 목록이 다 온 뒤에 열매를 떨어뜨려야 순서가 바뀌며 다시 떨어지는 일이 없다.
   const isLoading = mode !== "demo" && (feed.isPending || turns.isPending);
   const error = feed.error ?? turns.error;
-  const stories =
-    mode === "demo"
-      ? demoStories
-      : fruitOrder(turns.data ?? [], feed.data?.content ?? []);
   const showFruits = !isLoading && stories.length > 0;
   const isEmpty = !isLoading && !error && stories.length === 0;
   const openStory = (story: NovelSummary) => router.push(`/novel/${story.id}`);

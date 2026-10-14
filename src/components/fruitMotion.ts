@@ -48,14 +48,29 @@ export function playTimeline(
   });
 }
 
+// 집어 든 열매를 손가락 위로 들어 올린다.
+export function springTo(value: Animated.Value, toValue: number) {
+  return Animated.spring(value, {
+    toValue,
+    speed: 28,
+    bounciness: 6,
+    useNativeDriver: nativeDriverEnabled,
+  });
+}
+
 // 진행률(0~1)을 화면 위치·크기·기울기·그림자로 바꾼다.
-export function followFlight(progress: Animated.Value, flight: FruitFlight) {
+// startAngle은 움직이기 전에 이미 기울어 있던 각도다. 다시 떨어뜨린 열매가 그 기울기에서 이어 구른다.
+export function followFlight(
+  progress: Animated.Value,
+  flight: FruitFlight,
+  startAngle = 0,
+) {
   const along = (values: number[]) =>
     progress.interpolate({ inputRange: flight.times, outputRange: values });
   const turned = (values: number[]) =>
     progress.interpolate({
       inputRange: flight.times,
-      outputRange: values.map((angle) => `${angle}deg`),
+      outputRange: values.map((angle) => `${startAngle + angle}deg`),
     });
   return {
     translateX: along(flight.offsetX),

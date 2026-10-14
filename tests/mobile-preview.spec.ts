@@ -246,3 +246,50 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("mobile demo lets a visitor pick up a fruit, move it and drop it elsewhere", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/");
+  await page.getByText("먼저 둘러보기 →").click();
+  const fruit = page.getByRole("button", { name: "달빛을 파는 가게 열매" });
+  const fruits = page.getByRole("button", { name: / 열매$/ });
+  await expect
+    .poll(() =>
+      fruits.evaluateAll((nodes) =>
+        Math.min(...nodes.map((node) => node.getBoundingClientRect().top)),
+      ),
+    )
+    .toBeGreaterThan(250);
+  // 모두 내려앉아 멈출 때까지 기다린다.
+  await page.waitForTimeout(2500);
+  const before = (await fruit.boundingBox())!;
+  const from = {
+    x: before.x + before.width / 2,
+    y: before.y + before.height / 2,
+  };
+
+  // 끌어서 왼쪽 아래로 옮긴 뒤 천천히 놓는다.
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  for (let step = 1; step <= 12; step++) {
+    await page.mouse.move(from.x - step * 5, from.y + step * 3);
+    await page.waitForTimeout(16);
+  }
+  await page.waitForTimeout(300);
+  await page.mouse.up();
+  await page.waitForTimeout(1500);
+
+  // 소설로 넘어가지 않고 열매만 다른 자리에 내려앉는다.
+  await expect(fruit).toBeVisible();
+  const after = (await fruit.boundingBox())!;
+  expect(after.x).toBeLessThan(before.x - 30);
+  expect(after.y).toBeGreaterThan(before.y + 10);
+
+  // 옮긴 열매도 누르면 그 소설로 간다.
+  await fruit.click();
+  await expect(page.getByText("함께 쓰는 작가들")).toBeVisible();
+  expect(errors).toEqual([]);
+});

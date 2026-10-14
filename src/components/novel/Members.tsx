@@ -27,6 +27,23 @@ export function MemberList({ members }: { members: Member[] }) {
   );
 }
 
+// 열매로 퍼뜨리는 작품에는 참가자 명단이 없어, 회차를 쓴 작가를 쓴 순서대로 보여 준다.
+export function AuthorList({ names }: { names: string[] }) {
+  if (!names.length) return null;
+  return (
+    <>
+      <Text style={ui.sectionTitle}>이어 쓴 작가들</Text>
+      <View style={styles.members}>
+        {names.map((name) => (
+          <View key={name} style={styles.member}>
+            <Text style={styles.memberName}>{name}</Text>
+          </View>
+        ))}
+      </View>
+    </>
+  );
+}
+
 export function ApplicationList({
   applications,
   busy,

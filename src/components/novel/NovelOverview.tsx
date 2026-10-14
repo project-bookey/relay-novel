@@ -1,17 +1,32 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { NovelSummary } from "../../api/types";
-import { statusLabel } from "../../theme";
+import type { ChapterLink } from "../../design/chapterTree";
+import { statusLabel, writersLabel } from "../../theme";
 import { StoryTree } from "../StoryTree";
 import { ErrorBox, Label, ui } from "../ui";
 import { LikeButton, useNovelLike } from "./LikeButton";
 
+// 가지가 갈라지는 작품의 목표 회차는 한 가지의 깊이라 전체 회차 수와 나눠 쓴다.
+function chaptersOf(novel: NovelSummary) {
+  if (novel.mode === "OPEN")
+    return `${novel.chapterCount}개의 장 · 목표 ${novel.chapterLimit}화`;
+  return `${novel.chapterCount}/${novel.chapterLimit}개의 장`;
+}
+
 // 소설의 나무와 제목·소개·진행 현황, 좋아요.
-export function NovelOverview({ novel }: { novel: NovelSummary }) {
+export function NovelOverview({
+  novel,
+  nodes,
+}: {
+  novel: NovelSummary;
+  // 회차 나무. 아직 불러오지 못했으면 회차 수만큼 한 줄기로 그린다.
+  nodes?: ChapterLink[];
+}) {
   const like = useNovelLike(novel);
   return (
     <>
       <View style={styles.header}>
-        <StoryTree novel={novel} />
+        <StoryTree novel={novel} nodes={nodes} />
         <Label>
           {novel.genre} · {statusLabel[novel.status]}
         </Label>
@@ -19,12 +34,8 @@ export function NovelOverview({ novel }: { novel: NovelSummary }) {
         <Text style={[ui.body, styles.centered]}>{novel.description}</Text>
       </View>
       <View style={[ui.row, styles.stats]}>
-        <Text style={ui.body}>
-          {novel.memberCount}/{novel.memberLimit}명의 작가
-        </Text>
-        <Text style={ui.body}>
-          {novel.chapterCount}/{novel.chapterLimit}개의 장
-        </Text>
+        <Text style={ui.body}>{writersLabel(novel)}</Text>
+        <Text style={ui.body}>{chaptersOf(novel)}</Text>
         <LikeButton novel={novel} busy={like.busy} onPress={like.press} />
       </View>
       {!!like.error && <ErrorBox error={like.error} />}

@@ -48,6 +48,7 @@ const keepTouchOnWeb =
 export function FieldFruit({
   fruit,
   story,
+  delivered,
   ground,
   neighbors,
   reduced,
@@ -57,6 +58,8 @@ export function FieldFruit({
   fruit: PlacedFruit;
   // 지금 소설 정보. 배치한 뒤 좋아요 수 등이 바뀌어도 최신 것을 보여 준다.
   story: NovelSummary;
+  // 나에게 배달된 열매인지. 말풍선과 접근성 이름에 알린다.
+  delivered: boolean;
   ground: FieldGround;
   neighbors: FruitNeighbors;
   reduced: boolean;
@@ -154,7 +157,10 @@ export function FieldFruit({
   const glowMoves = onScreen && !reduced;
   const sway = useSway(glowing && glowMoves, swayDelayOf(story.id), size);
   // 그림을 볼 수 없는 사람도 인기 열매인 줄 알 수 있게 이름 앞에 붙인다.
-  const label = popular ? `인기 ${story.title} 열매` : `${story.title} 열매`;
+  const popularLabel = popular
+    ? `인기 ${story.title} 열매`
+    : `${story.title} 열매`;
+  const label = delivered ? `나에게 온 ${popularLabel}` : popularLabel;
   // 앞쪽 열매가 겹칠 때 앞에 보이도록 땅 위 자리 순서로 쌓는다. 그림자는 열매 몸통보다 아래에 둔다.
   const layer = Math.round(rest.y) * 2;
 
@@ -233,6 +239,7 @@ export function FieldFruit({
         <View style={[styles.bubbleLayer, { zIndex: BUBBLE_LAYER }]}>
           <FruitBubble
             story={story}
+            delivered={delivered}
             centerX={hand.bubble.centerX}
             top={hand.bubble.top}
             appear={hand.bubble.appear}

@@ -68,6 +68,15 @@ export function fruitShapeOf(novelId: number) {
   return fruitShapes[index];
 }
 
+// 작가 수. 열매로 퍼뜨리는 작품은 정원이 없어(서버가 null을 보냄) 쓴 작가 수만 보여 준다.
+export function writersLabel(novel: {
+  memberCount: number;
+  memberLimit?: number | null;
+}) {
+  if (novel.memberLimit == null) return `작가 ${novel.memberCount}명`;
+  return `작가 ${novel.memberCount}/${novel.memberLimit}명`;
+}
+
 export const statusLabel = {
   RECRUITING: "작가 모집 중",
   ONGOING: "이야기 이어가는 중",

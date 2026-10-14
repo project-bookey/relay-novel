@@ -5,12 +5,14 @@ import type {
   NovelDetail,
   NovelLikeView,
   NovelStatus,
-  ChapterSummary,
+  NovelDelivery,
+  ChapterNode,
   Chapter,
+  BaseWork,
+  BranchWrite,
   Draft,
   Write,
   CreateNovel,
-  Tokens,
 } from "./types";
 const root = "/api/v1/novels";
 export const novels = {
@@ -25,8 +27,6 @@ export const novels = {
     api<NovelLikeView>(`${root}/${id}/like`, { method: "POST" }),
   create: (body: CreateNovel) =>
     api<NovelDetail>(root, { method: "POST", body }),
-  join: (inviteCode: string) =>
-    api<NovelDetail>(`${root}/join`, { method: "POST", body: { inviteCode } }),
   apply: (id: number) =>
     api<NovelDetail>(`${root}/${id}/applications`, { method: "POST" }),
   decide: (id: number, userId: number, approved: boolean) =>
@@ -38,19 +38,37 @@ export const novels = {
     api<NovelDetail>(`${root}/${id}/start`, { method: "POST" }),
   complete: (id: number) =>
     api<NovelDetail>(`${root}/${id}/complete`, { method: "POST" }),
-  chapters: (id: number, page = 0) =>
-    api<Page<ChapterSummary>>(`${root}/${id}/chapters`, { query: { page } }),
-  chapter: (id: number, number: number) =>
-    api<Chapter>(`${root}/${id}/chapters/${number}`),
+  // 회차 나무 전체. 마디마다 부모 회차가 있다.
+  chapterTree: (id: number) => api<ChapterNode[]>(`${root}/${id}/chapter-tree`),
+  // 가지가 갈라진 작품은 같은 깊이에 회차가 여럿이라 id로 읽는다.
+  chapter: (id: number, chapterId: number) =>
+    api<Chapter>(`${root}/${id}/chapters/nodes/${chapterId}`),
   draft: (id: number) => api<Draft>(`${root}/${id}/draft`),
   saveDraft: (id: number, body: Write) =>
     api<Draft>(`${root}/${id}/draft`, { method: "PUT", body }),
   publish: (id: number, body: Write) =>
     api<Chapter>(`${root}/${id}/chapters`, { method: "POST", body }),
+  // 내가 받은 열매(배달). 홈 열매 밭에 떨어진다.
+  deliveries: () => api<NovelDelivery[]>(`${root}/deliveries`),
+  deliveryDraft: (deliveryId: number) =>
+    api<Draft>(`${root}/deliveries/${deliveryId}/draft`),
+  saveDeliveryDraft: (deliveryId: number, body: BranchWrite) =>
+    api<Draft>(`${root}/deliveries/${deliveryId}/draft`, {
+      method: "PUT",
+      body,
+    }),
+  // 받은 회차에서 가지를 뻗어 발행한다. 새 회차는 다시 무작위로 배달된다.
+  publishBranch: (deliveryId: number, body: BranchWrite) =>
+    api<Chapter>(`${root}/deliveries/${deliveryId}/chapters`, {
+      method: "POST",
+      body,
+    }),
+  // 넘기기 — 열매가 다른 한 사람에게 다시 배달된다.
+  decline: (deliveryId: number) =>
+    api<void>(`${root}/deliveries/${deliveryId}/decline`, { method: "POST" }),
+  genres: () => api<string[]>(`${root}/genres`),
+  myGenres: () => api<string[]>(`${root}/me/genres`),
+  saveMyGenres: (genres: string[]) =>
+    api<string[]>(`${root}/me/genres`, { method: "PUT", body: { genres } }),
+  baseWorks: () => api<BaseWork[]>(`${root}/base-works`),
 };
-export const login = (email: string, password: string) =>
-  api<Tokens>("/api/v1/auth/login", {
-    method: "POST",
-    auth: false,
-    body: { email, password },
-  });

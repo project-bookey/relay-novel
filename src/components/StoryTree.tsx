@@ -8,7 +8,8 @@ import {
   TREE_WIDTH,
   type Leaf,
 } from "../design/storyTree";
-import { colors } from "../theme";
+import type { ChapterLink } from "../design/chapterTree";
+import { colors, darken, storyColorOf } from "../theme";
 import type { NovelSummary } from "../api/types";
 
 const leafColors: Record<Leaf["tone"], string> = {
@@ -17,17 +18,20 @@ const leafColors: Record<Leaf["tone"], string> = {
   deep: colors.leafDeep,
 };
 
-function describeTree(novel: NovelSummary) {
+function describeTree(novel: NovelSummary, fruitCount: number) {
   if (novel.chapterCount === 0) return "이야기 나무, 아직 새싹이에요";
-  return `이야기 나무, 가지 ${novel.chapterCount}개`;
+  return `이야기 나무, 가지 ${novel.chapterCount}개, 열매 ${fruitCount}개`;
 }
 
 // 소설 하나의 나무. 회차가 가지가 되고, 소설마다 모양이 다르다.
+// 회차 나무(nodes)를 주면 갈라진 가지까지 그리고, 없으면 회차 수만큼 한 줄기로 그린다.
 export function StoryTree({
   novel,
+  nodes,
   height = 230,
 }: {
   novel: NovelSummary;
+  nodes?: ChapterLink[];
   height?: number;
 }) {
   const tree = useMemo(
@@ -37,16 +41,18 @@ export function StoryTree({
         chapterCount: novel.chapterCount,
         memberCount: novel.memberCount,
         growing: novel.status === "ONGOING",
+        nodes,
       }),
-    [novel.id, novel.chapterCount, novel.memberCount, novel.status],
+    [novel.id, novel.chapterCount, novel.memberCount, novel.status, nodes],
   );
+  const fruitColor = storyColorOf(novel.id);
   const { trunk } = tree;
 
   return (
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={describeTree(novel)}
+      accessibilityLabel={describeTree(novel, tree.fruits.length)}
       style={{ width: "100%", height }}
     >
       <Svg
@@ -70,7 +76,7 @@ export function StoryTree({
         />
         {tree.branches.map((branch) => (
           <Path
-            key={branch.chapterNumber}
+            key={branch.id}
             d={curvePath(branch.start, branch.control, branch.end)}
             stroke={colors.bark}
             strokeWidth={branch.thickness}
@@ -86,6 +92,17 @@ export function StoryTree({
             r={leaf.radius}
             fill={leafColors[leaf.tone]}
             opacity={0.92}
+          />
+        ))}
+        {tree.fruits.map((fruit) => (
+          <Circle
+            key={fruit.id}
+            cx={fruit.x}
+            cy={fruit.y}
+            r={fruit.radius}
+            fill={fruitColor}
+            stroke={darken(fruitColor, 0.25)}
+            strokeWidth={1}
           />
         ))}
         {!!tree.bud && (

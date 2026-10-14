@@ -1,29 +1,24 @@
 import { useState } from "react";
-import { Text, Share } from "react-native";
+import { Text } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
-import { demoDetail, demoChaptersOf } from "../../src/api/demo";
-import type { NovelDetail } from "../../src/api/types";
+import { demoDetail } from "../../src/api/demo";
+import type { ChapterNode, NovelDetail } from "../../src/api/types";
 import { useSession } from "../../src/state/session";
 import { NovelOverview } from "../../src/components/novel/NovelOverview";
 import { TurnCard } from "../../src/components/novel/TurnCard";
+import { OpenRelayCard } from "../../src/components/novel/OpenRelayCard";
+import { CircleControls } from "../../src/components/novel/CircleControls";
+import { CompleteControl } from "../../src/components/novel/CompleteControl";
+import { AuthorList } from "../../src/components/novel/Members";
+import { ChapterList } from "../../src/components/novel/ChapterList";
 import {
-  ApplicationList,
-  MemberList,
-} from "../../src/components/novel/Members";
-import {
-  ChapterList,
-  type ChapterListItem,
-} from "../../src/components/novel/ChapterList";
+  useChapterTree,
+  useMyDelivery,
+} from "../../src/components/novel/useNovelChapters";
 import {
   Screen,
-  Label,
   Card,
   Button,
   Loading,
@@ -50,13 +45,17 @@ function runAction(novelId: number, action: NovelAction) {
   }
 }
 
+// 회차를 쓴 작가를 처음 쓴 순서대로 한 번씩.
+function authorsOf(nodes: ChapterNode[]) {
+  return [...new Set(nodes.map((node) => node.authorNickname))];
+}
+
 export default function Detail() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = Number(params.id);
   const { mode } = useSession();
   const client = useQueryClient();
   const [confirmingComplete, setConfirmingComplete] = useState(false);
-  const [shareError, setShareError] = useState("");
 
   const query = useQuery({
     queryKey: ["novel", id, mode],
@@ -66,24 +65,28 @@ export default function Detail() {
     refetchInterval: mode === "authenticated" ? 30000 : false,
   });
   const detail = query.data;
-  const chapters = useInfiniteQuery({
-    queryKey: ["chapters", id],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => novels.chapters(id, pageParam),
-    getNextPageParam: (last) => (last.hasNext ? last.page + 1 : undefined),
-    enabled:
-      mode === "authenticated" &&
-      !!detail &&
-      (detail.novel.isPublic || detail.myMembership === "ACTIVE"),
-  });
+  const tree = useChapterTree(id, detail);
+  const myDelivery = useMyDelivery(id, detail?.myDeliveryId);
+  const refreshLists = () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: ["novels"] }),
+      client.invalidateQueries({ queryKey: ["my-turns"] }),
+      client.invalidateQueries({ queryKey: ["deliveries"] }),
+    ]);
   const mutation = useMutation({
     mutationFn: (action: NovelAction) => runAction(id, action),
     onSuccess: async (updated) => {
       client.setQueryData(["novel", id, mode], updated);
       setConfirmingComplete(false);
+      await refreshLists();
+    },
+  });
+  const decline = useMutation({
+    mutationFn: (deliveryId: number) => novels.decline(deliveryId),
+    onSuccess: async () => {
       await Promise.all([
-        client.invalidateQueries({ queryKey: ["novels"] }),
-        client.invalidateQueries({ queryKey: ["my-turns"] }),
+        client.invalidateQueries({ queryKey: ["novel", id] }),
+        refreshLists(),
       ]);
     },
   });
@@ -108,161 +111,85 @@ export default function Detail() {
     );
 
   const { novel } = detail;
-  let chapterItems: ChapterListItem[];
-  if (mode === "demo") chapterItems = demoChaptersOf(id);
-  else
-    chapterItems = chapters.data?.pages.flatMap((page) => page.content) ?? [];
+  const isOpen = novel.mode === "OPEN";
+  const nodes = tree.data ?? [];
+  const busy = mutation.isPending || decline.isPending;
 
   return (
     <Screen title="이야기 펼치기">
-      <NovelOverview novel={novel} />
-      {mode === "demo" && (
-        <Card>
-          <Text style={ui.body}>
-            디자인 미리보기예요. 로그인하면 실제 작품에 참가할 수 있어요.
-          </Text>
-          <Button outline onPress={() => router.push("/login")}>
-            Bookey 계정으로 로그인
-          </Button>
-        </Card>
+      <NovelOverview novel={novel} nodes={tree.data} />
+      {mode === "demo" && <DemoNotice />}
+      {isOpen && novel.status === "ONGOING" && (
+        <OpenRelayCard
+          detail={detail}
+          delivery={myDelivery}
+          busy={decline.isPending}
+          onDecline={() => {
+            if (detail.myDeliveryId) decline.mutate(detail.myDeliveryId);
+          }}
+        />
       )}
-      {novel.status === "ONGOING" && <TurnCard detail={detail} />}
-      <MemberList members={detail.members} />
-      {detail.myMembership === "PENDING" && (
-        <Card>
-          <Text style={ui.body}>
-            참가 신청을 보냈어요. 개설자의 승인을 기다리고 있어요.
-          </Text>
-        </Card>
-      )}
-      {mode === "authenticated" && detail.canApply && (
-        <Button
-          disabled={mutation.isPending}
-          onPress={() => mutation.mutate({ type: "apply" })}
-        >
-          함께 쓰기 신청하기
-        </Button>
-      )}
-      {!!detail.inviteCode && (
-        <InviteCard detail={detail} onShareError={setShareError} />
-      )}
-      <ApplicationList
-        applications={detail.applications}
-        busy={mutation.isPending}
-        onDecide={(userId, approved) =>
-          mutation.mutate({ type: "decide", userId, approved })
-        }
-      />
-      {detail.canStart && (
-        <Button
-          disabled={mutation.isPending}
-          onPress={() => mutation.mutate({ type: "start" })}
-        >
-          모인 작가들과 릴레이 시작하기
-        </Button>
-      )}
-      {novel.mine && novel.status === "RECRUITING" && !detail.canStart && (
-        <Text style={ui.hint}>
-          참가자를 한 명 이상 승인하면 릴레이를 시작할 수 있어요.
-        </Text>
+      {!isOpen && novel.status === "ONGOING" && <TurnCard detail={detail} />}
+      {isOpen ? (
+        <AuthorList names={authorsOf(nodes)} />
+      ) : (
+        <CircleControls
+          detail={detail}
+          signedIn={mode === "authenticated"}
+          busy={busy}
+          onApply={() => mutation.mutate({ type: "apply" })}
+          onDecide={(userId, approved) =>
+            mutation.mutate({ type: "decide", userId, approved })
+          }
+          onStart={() => mutation.mutate({ type: "start" })}
+        />
       )}
       {detail.canComplete && (
         <CompleteControl
           confirming={confirmingComplete}
-          busy={mutation.isPending}
+          busy={busy}
           onAsk={() => setConfirmingComplete(true)}
           onCancel={() => setConfirmingComplete(false)}
           onComplete={() => mutation.mutate({ type: "complete" })}
         />
       )}
       {!!mutation.error && <ErrorBox error={mutation.error} />}
-      {!!shareError && <ErrorBox error={new Error(shareError)} />}
-      <Text style={ui.sectionTitle}>이야기의 목차</Text>
-      {chapters.isLoading && <Loading />}
-      {!!chapters.error && (
+      {!!decline.error && <ErrorBox error={decline.error} />}
+      <Text style={ui.sectionTitle}>
+        {isOpen ? "이야기의 가지" : "이야기의 목차"}
+      </Text>
+      {tree.isLoading && <Loading />}
+      {!!tree.error && (
         <ErrorBox
-          error={chapters.error}
+          error={tree.error}
           retry={() => {
-            void chapters.refetch();
+            void tree.refetch();
           }}
         />
       )}
-      <ChapterList novelId={id} chapters={chapterItems} />
-      {chapters.hasNextPage && (
-        <Button
-          outline
-          disabled={chapters.isFetchingNextPage}
-          onPress={() => {
-            void chapters.fetchNextPage();
-          }}
-        >
-          목차 더 보기
-        </Button>
-      )}
-      {novel.chapterCount === 0 && (
-        <Text style={ui.hint}>
-          첫 번째 장을 기다리고 있어요. 릴레이가 시작되면 첫 작가가 이야기를
-          열어요.
-        </Text>
-      )}
+      <ChapterList novelId={id} chapters={nodes} branching={isOpen} />
+      {novel.chapterCount === 0 && <EmptyChapters detail={detail} />}
     </Screen>
   );
 }
 
-function InviteCard({
-  detail,
-  onShareError,
-}: {
-  detail: NovelDetail;
-  onShareError: (message: string) => void;
-}) {
-  const share = () => {
-    Share.share({
-      message: `${detail.novel.title} 릴레이 소설에 함께해요! 초대 코드: ${detail.inviteCode}`,
-    }).catch((error: Error) => onShareError(error.message));
-  };
+function DemoNotice() {
   return (
     <Card>
-      <Label>INVITE YOUR NEXT WRITER</Label>
-      <Text selectable style={[ui.body, { marginTop: 12, fontSize: 12 }]}>
-        {detail.inviteCode}
+      <Text style={ui.body}>
+        디자인 미리보기예요. 로그인하면 실제 작품에 참가할 수 있어요.
       </Text>
-      <Button outline onPress={share}>
-        초대 코드 공유하기
+      <Button outline onPress={() => router.push("/login")}>
+        Bookey 계정으로 로그인
       </Button>
     </Card>
   );
 }
 
-function CompleteControl({
-  confirming,
-  busy,
-  onAsk,
-  onCancel,
-  onComplete,
-}: {
-  confirming: boolean;
-  busy: boolean;
-  onAsk: () => void;
-  onCancel: () => void;
-  onComplete: () => void;
-}) {
-  if (!confirming)
-    return (
-      <Button outline onPress={onAsk}>
-        이야기 완결하기
-      </Button>
-    );
-  return (
-    <Card>
-      <Text style={ui.label}>이 작품을 완결할까요?</Text>
-      <Text style={ui.hint}>완결하면 추가 집필이 종료돼요.</Text>
-      <Button disabled={busy} onPress={onComplete}>
-        완결하기
-      </Button>
-      <Button outline disabled={busy} onPress={onCancel}>
-        계속 이어 쓰기
-      </Button>
-    </Card>
-  );
+function EmptyChapters({ detail }: { detail: NovelDetail }) {
+  const message =
+    detail.novel.mode === "OPEN"
+      ? "만든 사람이 첫 회차를 쓰면 열매가 배달되기 시작해요."
+      : "첫 번째 장을 기다리고 있어요. 릴레이가 시작되면 첫 작가가 이야기를 열어요.";
+  return <Text style={ui.hint}>{message}</Text>;
 }

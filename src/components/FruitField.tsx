@@ -151,9 +151,12 @@ function layoutField(
 // 끌거나 길게 누르면 집어서 앞쪽 빈 땅까지 옮겨 떨어뜨릴 수 있다.
 export function FruitField({
   stories,
+  deliveredIds,
   onOpen,
 }: {
   stories: NovelSummary[];
+  // 나에게 배달된 열매의 소설 id
+  deliveredIds: Set<number>;
   onOpen: (story: NovelSummary) => void;
 }) {
   const reduced = useReducedMotion();
@@ -201,6 +204,7 @@ export function FruitField({
           key={fruit.story.id}
           fruit={fruit}
           story={latestStories.get(fruit.story.id) ?? fruit.story}
+          delivered={deliveredIds.has(fruit.story.id)}
           ground={field.ground}
           neighbors={neighbors}
           reduced={reduced}

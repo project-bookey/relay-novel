@@ -247,7 +247,7 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   expect(errors).toEqual([]);
 });
 
-test("mobile demo lets a visitor pick up a fruit, move it and drop it elsewhere", async ({
+test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -265,37 +265,64 @@ test("mobile demo lets a visitor pick up a fruit, move it and drop it elsewhere"
     .toBeGreaterThan(250);
   // 모두 내려앉아 멈출 때까지 기다린다.
   await page.waitForTimeout(2500);
+  // 열매 바닥은 그림 칸 높이의 90% 지점이다(FruitArt의 FRUIT_BOTTOM).
+  const bottomOf = (box: { y: number; height: number }) =>
+    box.y + box.height * 0.9;
   const before = (await fruit.boundingBox())!;
   const from = {
     x: before.x + before.width / 2,
     y: before.y + before.height / 2,
   };
+  const bubbleMeta = page.getByText("이야기 이어가는 중 · 3화 · 작가 4/6명", {
+    exact: true,
+  });
 
-  // 끌어서 왼쪽 아래로 옮긴 뒤 천천히 놓는다.
+  // 길게 누르면 말풍선으로 무슨 소설인지 보이고, 끌지 않고 놓으면 그 자리에 그대로 있다.
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
-  for (let step = 1; step <= 12; step++) {
-    await page.mouse.move(from.x - step * 5, from.y + step * 3);
+  await page.waitForTimeout(600);
+  await expect(bubbleMeta).toBeVisible();
+  await expect(page.getByText("판타지", { exact: true })).toBeVisible();
+  await page.mouse.up();
+  await expect(bubbleMeta).toHaveCount(0);
+  const peeked = (await fruit.boundingBox())!;
+  expect(Math.abs(peeked.x - before.x)).toBeLessThan(1);
+  expect(Math.abs(peeked.y - before.y)).toBeLessThan(1);
+  // 길게 누른 뒤 뒤늦게 소설로 넘어가지 않는지, 잠시 기다렸다가 확인한다.
+  await page.waitForTimeout(500);
+  await expect(page).not.toHaveURL(/\/novel\//);
+
+  // 끌면 열매가 손가락 아래에 그대로 붙어 앞쪽 빈 땅까지 따라온다.
+  const drag = { x: -30, y: 150 };
+  await page.mouse.down();
+  for (let step = 1; step <= 15; step++) {
+    await page.mouse.move(
+      from.x + (drag.x * step) / 15,
+      from.y + (drag.y * step) / 15,
+    );
     await page.waitForTimeout(16);
   }
-  await page.waitForTimeout(300);
-  // 든 동안에는 열매 위 말풍선에 제목과 상태가 보인다.
-  const bubbleStatus = page.getByText("이야기 이어가는 중", { exact: true });
-  await expect(bubbleStatus).toBeVisible();
+  await page.waitForTimeout(200);
+  const held = (await fruit.boundingBox())!;
+  expect(Math.abs(held.x + held.width / 2 - (from.x + drag.x))).toBeLessThan(2);
+  expect(Math.abs(bottomOf(held) - (bottomOf(before) + drag.y))).toBeLessThan(
+    2,
+  );
+  // 앞쪽으로 옮기면 가까워진 만큼 커 보인다.
+  expect(held.height).toBeGreaterThan(before.height);
   await expect(
     page.getByText("달빛을 파는 가게", { exact: true }),
   ).toBeVisible();
+
+  // 놓으면 바로 아래 땅으로 떨어져 멈추고 말풍선은 사라진다.
   await page.mouse.up();
   await page.waitForTimeout(1500);
-  await expect(bubbleStatus).toHaveCount(0);
-
-  // 소설로 넘어가지 않고 열매만 다른 자리에 내려앉는다.
-  await expect(fruit).toBeVisible();
+  await expect(bubbleMeta).toHaveCount(0);
   const after = (await fruit.boundingBox())!;
-  // 놓은 자리에 다른 열매가 있으면 바로 옆 빈자리로 밀려나므로, 정확한 방향 대신 옮겨졌는지만 본다.
-  expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(
-    30,
+  expect(Math.abs(after.x + after.width / 2 - (from.x + drag.x))).toBeLessThan(
+    2,
   );
+  expect(bottomOf(after)).toBeGreaterThan(bottomOf(held) + 10);
 
   // 옮긴 열매도 누르면 그 소설로 간다.
   await fruit.click();

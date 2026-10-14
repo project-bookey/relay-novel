@@ -167,6 +167,13 @@ function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
 }
 
+// 떠 있는 높이에 따른 그림자의 크기 비율과 진하기. 땅에 닿아 있으면 그대로이고,
+// 열매 세 개 높이 넘게 뜨면 땅에 닿는 점으로 작아지며 사라진다. size는 원근 배율 1에서의 열매 크기다.
+export function shadowAt(height: number, size: number) {
+  const closeness = 1 - Math.min(1, height / (size * 3));
+  return { scale: 0.35 + 0.65 * closeness, opacity: closeness };
+}
+
 export function planFlight(input: FlightInput): FruitFlight {
   const { style, start, rest, view } = input;
   const gravity = style.gravity;
@@ -294,6 +301,8 @@ export function planFlight(input: FlightInput): FruitFlight {
     impacts.reduce((sum, impact) => {
       const since = time - impact.time;
       if (since < 0) return sum;
+      // 땅에 닿은 채 놓으면(높이 0) 부딪히는 빠르기가 없으므로 찌그러지지 않는다.
+      if (impactSpeed === 0) return sum;
       const amount = style.squash * (impact.speed / impactSpeed);
       return (
         sum +
@@ -328,8 +337,7 @@ export function planFlight(input: FlightInput): FruitFlight {
     const screen = isLast ? restScreen : toScreen(view, point);
     const groundY = view.horizonY + view.eyeHeight * screen.depth;
     const nearness = screen.depth / restScreen.depth;
-    // 땅에 닿아 있으면 1, 열매 세 개 높이 넘게 떠 있으면 0
-    const closeness = 1 - Math.min(1, sample.height / (input.size * 3));
+    const shadow = shadowAt(sample.height, input.size);
     // 떠 있을 때는 빠를수록 길쭉하고, 부딪히면 납작해졌다가 출렁이며 돌아온다.
     const stretch = sample.airborne
       ? style.stretch * Math.min(1, Math.abs(sample.climb) / impactSpeed)
@@ -341,8 +349,8 @@ export function planFlight(input: FlightInput): FruitFlight {
     flight.offsetY.push(screen.y - restScreen.y);
     flight.nearness.push(nearness);
     flight.shadowOffsetY.push(groundY - restScreen.y);
-    flight.shadowScale.push(nearness * (0.35 + 0.65 * closeness));
-    flight.shadowOpacity.push(closeness);
+    flight.shadowScale.push(nearness * shadow.scale);
+    flight.shadowOpacity.push(shadow.opacity);
     flight.angle.push(
       input.rollsLikeBall
         ? rolledTotal === 0

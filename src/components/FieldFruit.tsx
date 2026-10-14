@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from "react-native";
 import type { NovelSummary } from "../api/types";
 import { fruitShapeOf, lighten, storyColorOf } from "../theme";
 import {
@@ -65,8 +72,15 @@ function finalAngleOf(placement: Placement) {
   return placement.startAngle + angles[angles.length - 1];
 }
 
+// 웹 브라우저가 열매를 끄는 손가락을 화면 스크롤이나 당겨서 새로고침으로 가져가 끌기가 끊기지 않게 한다.
+// 웹에만 있는 스타일이라 React Native 타입에는 없다.
+const keepTouchOnWeb =
+  Platform.OS === "web"
+    ? ({ touchAction: "none" } as unknown as ViewStyle)
+    : undefined;
+
 // 홈 열매 하나. 하늘에서 떨어져 내려앉고, 누르면 그 소설로 간다.
-// 끌거나 길게 누르면 집어 들어 옮길 수 있고, 놓으면 그 자리에서 떨어져 튕기거나 굴러가 멈춘다.
+// 끌거나 길게 누르면 집혀 손가락 아래에 붙어 따라오고, 놓으면 바로 아래 땅으로 떨어져 튄 뒤 멈춘다.
 export function FieldFruit({
   fruit,
   ground,
@@ -148,32 +162,15 @@ export function FieldFruit({
   const { held } = hand;
 
   const onPress = () => {
-    if (hand.justDragged()) return;
+    if (hand.justHeld()) return;
     onOpen(story);
   };
 
-  // 멀리 있는 열매는 살짝 옅어 보이게 한다.
-  const color = lighten(storyColorOf(story.id), (1 - rest.depth) * 0.6);
+  // 멀리 있는 열매는 살짝 옅어 보이게 한다. 앞줄보다 가까이 옮긴 열매는 제 색 그대로 둔다.
+  const farness = Math.max(0, 1 - rest.depth);
+  const color = lighten(storyColorOf(story.id), farness * 0.6);
   const motion = held ? hand.holding : falling;
   const rotate = held ? `${finalAngleOf(placement)}deg` : falling.rotate;
-  // 말풍선은 열매를 들어 올리는 만큼 떠오른다. 동작 줄이기면 바로 보인다.
-  const bubbleAppear =
-    hand.holdHeight > 0
-      ? hand.lift.interpolate({
-          inputRange: [0, hand.holdHeight],
-          outputRange: [0, 1],
-          extrapolate: "clamp",
-        })
-      : 1;
-  // 몸통은 바닥을 축으로 커지고 작아지므로, 원근으로 커진 만큼 열매 위쪽 끝이 더 올라간다.
-  // 말풍선도 그만큼 같이 올려서 앞뒤로 옮겨도 열매 위에 같은 간격으로 뜬다.
-  const bubbleY = Animated.add(
-    hand.holding.translateY,
-    hand.holding.scaleY.interpolate({
-      inputRange: [0, 1],
-      outputRange: [size * FRUIT_BOTTOM, 0],
-    }),
-  );
   // 앞쪽 열매가 겹칠 때 앞에 보이도록 땅 위 자리 순서로 쌓는다. 그림자는 열매 몸통보다 아래에 둔다.
   const layer = Math.round(rest.y) * 2;
 
@@ -205,6 +202,7 @@ export function FieldFruit({
         style={[
           styles.layer,
           styles.fallingBody,
+          keepTouchOnWeb,
           {
             zIndex: held ? HELD_LAYER : layer + 1,
             left,
@@ -220,11 +218,6 @@ export function FieldFruit({
           },
         ]}
       >
-        {/* 들어 올린 열매와 원래 누른 자리 사이를 채운다. 웹 마우스는 커서 아래 요소로 끌기를 보내므로(터치는 처음 누른 요소로 보낸다),
-            길게 눌러 든 열매가 커서 위로 떠오른 뒤에도 끌기를 이 열매가 이어받게 한다. */}
-        {held && Platform.OS === "web" && (
-          <View style={[styles.grip, { height: size + hand.holdHeight * 2 }]} />
-        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${story.title} 열매`}
@@ -254,12 +247,10 @@ export function FieldFruit({
         <View style={[styles.bubbleLayer, { zIndex: BUBBLE_LAYER }]}>
           <FruitBubble
             story={story}
-            fruitX={rest.x}
-            fruitTop={top}
+            centerX={hand.bubble.centerX}
+            top={hand.bubble.top}
+            appear={hand.bubble.appear}
             screenWidth={ground.view.centerX * 2}
-            panX={hand.holding.translateX}
-            liftY={bubbleY}
-            appear={bubbleAppear}
           />
         </View>
       )}
@@ -295,7 +286,6 @@ const styles = StyleSheet.create({
     right: 0,
     pointerEvents: "none",
   },
-  grip: { position: "absolute", top: 0, left: 0, right: 0 },
   // 그림자가 뒤쪽 열매를 누르는 손가락을 가로채지 않게 한다.
   passThrough: { pointerEvents: "none" },
 });

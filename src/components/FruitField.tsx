@@ -58,6 +58,10 @@ const BACK_ROW_Y = Math.min(...landingSpots.map((spot) => spot.y));
 const FRONT_ROW_Y = Math.max(...landingSpots.map((spot) => spot.y));
 // 굴러가거나 튄 열매가 멈출 수 있는 땅의 범위(그림 좌표계). 화면 양옆과 아래쪽 버튼 줄에 닿지 않는다.
 const GROUND = { left: 24, right: 316, top: 64, bottom: 182 };
+// 손으로 옮긴 열매는 처음 배치보다 앞쪽, 아래쪽 버튼 줄에서 이만큼(화면 px) 위까지 놓을 수 있다.
+const HAND_FRONT_GAP = 12;
+// 든 열매 위에 뜨는 말풍선이 화면 위로 잘리지 않도록 남기는 높이(화면 px)
+const BUBBLE_ROOM = 150;
 
 // 열매마다 하늘에서 떨어져 땅에 부딪힌 뒤 어디로 튀고 굴러 멈출지 정하고, 그 움직임을 계산한다.
 function layoutField(
@@ -84,15 +88,23 @@ function layoutField(
     rollsLikeBall: rollsLikeBall(fruitShapeOf(story.id)),
     landing: toScreenSpot(landingSpots[order]),
   }));
+  const bounds = {
+    left: GROUND.left * scale,
+    right: GROUND.right * scale,
+    top: fieldTop + GROUND.top * scale,
+    bottom: fieldTop + GROUND.bottom * scale,
+  };
+  const fruitSize = FRUIT_SIZE * scale;
   const ground: FieldGround = {
     view,
-    bounds: {
-      left: GROUND.left * scale,
-      right: GROUND.right * scale,
-      top: fieldTop + GROUND.top * scale,
-      bottom: fieldTop + GROUND.bottom * scale,
+    bounds,
+    handBounds: {
+      ...bounds,
+      bottom: Math.max(bounds.bottom, room - HAND_FRONT_GAP),
     },
-    fruitSize: FRUIT_SIZE * scale,
+    // 땅 뒤쪽 끝보다 위는 하늘이라, 그곳까지 들어 올렸다 놓으면 처음처럼 높이서 떨어진다.
+    skyTop: Math.min(bounds.top, BUBBLE_ROOM + fruitSize),
+    fruitSize,
     scale,
   };
   const plans = planDrops(
@@ -114,7 +126,7 @@ function layoutField(
       start: skyStart(view, restWorld, rollAway, SKY_ENTRY_Y),
       rest: restWorld,
       view,
-      size: FRUIT_SIZE * scale,
+      size: fruitSize,
       rollsLikeBall,
       // 소설마다 다 굴러간 뒤 기울어지는 정도가 조금씩 다르다.
       restTilt: 12 + ((story.id * 7) % 16),
@@ -138,7 +150,7 @@ function layoutField(
 
 // 홈 화면의 열매 밭. 오로지 열매와 땅만 있다. 소설 열매가 하나씩 화면 밖 하늘에서 떨어져 흰 땅에 부딪히고,
 // 털썩 멈추거나, 굴러가거나, 크게 튀어 다른 자리로 가서 멈춘다. 누르면 그 소설로 가고,
-// 끌거나 길게 누르면 집어 들어 다른 자리에 떨어뜨릴 수 있다.
+// 끌거나 길게 누르면 집어서 앞쪽 빈 땅까지 옮겨 떨어뜨릴 수 있다.
 export function FruitField({
   stories,
   onOpen,

@@ -26,6 +26,15 @@ export interface NovelSummary {
   myTurn: boolean;
   turnDueAt?: string;
   createdAt: string;
+  // 탈퇴한 사람을 뺀 좋아요 수
+  likeCount: number;
+  // 내가 좋아요를 눌렀는지
+  liked: boolean;
+}
+// 좋아요 토글 결과. 누른 뒤 서버의 실제 상태다.
+export interface NovelLikeView {
+  liked: boolean;
+  likeCount: number;
 }
 export interface Member {
   userId: number;

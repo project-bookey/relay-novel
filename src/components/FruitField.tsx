@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { useIsFocused } from "expo-router";
 import type { NovelSummary } from "../api/types";
 import { fruitShapeOf } from "../theme";
 import {
@@ -9,11 +10,8 @@ import {
   toWorld,
 } from "../design/fruitFlight";
 import { flightStyleFor, planDrops } from "../design/skyDrop";
-import {
-  FieldFruit,
-  type FruitNeighbors,
-  type PlacedFruit,
-} from "./FieldFruit";
+import { FieldFruit, type FruitNeighbors } from "./FieldFruit";
+import type { PlacedFruit } from "./fruitPlacement";
 import type { RestingFruit } from "../design/handDrop";
 import type { FieldGround } from "./fruitHand";
 import { rollsLikeBall, useReducedMotion } from "./fruitMotion";
@@ -175,13 +173,20 @@ export function FruitField({
     }),
     [restsById],
   );
+  // 열매 자리는 어떤 소설들이 놓이는지에만 따른다. 좋아요 수처럼 내용만 바뀐 응답으로 다시 배치하면
+  // 손으로 옮긴 열매가 처음 자리로 돌아가므로, 배치는 소설 id 목록이 바뀔 때만 다시 하고
+  // 열매에는 그릴 때마다 최신 소설 정보를 넘긴다.
+  const storyIds = stories.map((story) => story.id).join(",");
   const field = useMemo(
     () =>
       area.width > 0
         ? layoutField(area.width, area.height, stories, seed)
         : undefined,
-    [area.width, area.height, stories, seed],
+    [area.width, area.height, storyIds, seed],
   );
+  const latestStories = new Map(stories.map((story) => [story.id, story]));
+  // 홈이 다른 탭이나 소설 화면에 가려져 있으면 인기 열매의 흔들림·숨쉬기를 멈춰 배터리를 아낀다.
+  const onScreen = useIsFocused();
 
   return (
     <View
@@ -195,9 +200,11 @@ export function FruitField({
         <FieldFruit
           key={fruit.story.id}
           fruit={fruit}
+          story={latestStories.get(fruit.story.id) ?? fruit.story}
           ground={field.ground}
           neighbors={neighbors}
           reduced={reduced}
+          onScreen={onScreen}
           onOpen={onOpen}
         />
       ))}

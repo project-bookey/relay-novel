@@ -47,6 +47,8 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
   page,
 }) => {
   let phase: "recruiting" | "writing" | "published" = "recruiting";
+  let liked = false;
+  let likeCount = 12;
   const calls: { path: string; body: any }[] = [];
   const summary = () => ({
     id: 42,
@@ -64,6 +66,8 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
     mine: true,
     myTurn: phase === "writing",
     createdAt: "2026-10-12T09:00:00Z",
+    likeCount,
+    liked,
   });
   const detail = () => ({
     novel: summary(),
@@ -161,7 +165,12 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
       };
     else if (path.endsWith("/my-turns"))
       data = phase === "writing" ? [summary()] : [];
-    else data = detail();
+    else if (path.endsWith("/like") && method === "POST") {
+      // 그사이 다른 사람들도 눌러서 서버의 수는 앱이 미리 보여 준 수보다 크다.
+      liked = !liked;
+      likeCount = liked ? 30 : 29;
+      data = { liked, likeCount };
+    } else data = detail();
     await route.fulfill({
       json: data,
       headers: { "Access-Control-Allow-Origin": "*" },
@@ -184,6 +193,12 @@ test("backend contract supports login, relay recruitment, draft save and turn ha
     .getByRole("textbox", { name: "이야기 소개" })
     .fill("함께 만드는 작은 우주");
   await page.getByRole("button", { name: "작가 모집 시작하기" }).click();
+  // 좋아요를 누르면 서버가 돌려준 실제 수로 맞춘다.
+  await page.getByRole("button", { name: "좋아요 12개" }).click();
+  await expect(page.getByRole("button", { name: "좋아요 30개" })).toBeVisible();
+  expect(calls.filter((c) => c.path === "/api/v1/novels/42/like")).toHaveLength(
+    1,
+  );
   await page
     .getByRole("button", { name: "모인 작가들과 릴레이 시작하기" })
     .click();
@@ -327,5 +342,30 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
   // 옮긴 열매도 누르면 그 소설로 간다.
   await fruit.click();
   await expect(page.getByText("함께 쓰는 작가들")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("mobile demo shows a popular story's likes and sends a visitor to log in to like it", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (/Invalid DOM property|non-boolean attribute/.test(message.text()))
+      errors.push(message.text());
+  });
+  await page.goto("/");
+  await page.getByText("먼저 둘러보기 →").click();
+  // 좋아요가 100개를 넘은 열매는 후광이 나고 흔들리지만, 누르는 영역은 그대로라 바로 누를 수 있다.
+  // 그림을 볼 수 없는 사람도 알 수 있게 이름 앞에 "인기"가 붙는다.
+  await page
+    .getByRole("button", { name: "인기 마지막 별빛 정거장 열매" })
+    .click();
+  const like = page.getByRole("button", { name: "좋아요 311개" });
+  await expect(like).toBeVisible();
+  await like.click();
+  await expect(
+    page.getByRole("textbox", { name: "Bookey 계정 이메일" }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });

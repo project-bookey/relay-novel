@@ -2,27 +2,27 @@ import {
   planFlight,
   toScreen,
   toWorld,
+  type FlightStyle,
   type FruitFlight,
   type GroundView,
   type ScreenPoint,
 } from "./fruitFlight";
 import { DEPTH_SPACING, flightStyleFor, SPACING } from "./skyDrop";
 
-// 손으로 집어 든 열매를 놓았을 때의 움직임을 정한다. 든 높이에서 그대로 떨어져 땅에 부딪히고,
-// 놓는 순간 손이 움직이던 만큼 그쪽으로 굴러가거나 미끄러져 멈춘다.
+// 손으로 집어 든 열매의 자세와, 놓았을 때 떨어지는 움직임을 정한다.
+// 든 열매는 손가락 아래에 그대로 붙어 따라오고, 들어 올린 만큼 바로 아래 땅에서 떠 있다.
+// 놓으면 그 땅으로 곧게 떨어져 처음 하늘에서 떨어질 때처럼 부딪혀 찌그러지고 몇 번 튄 뒤 멈춘다.
+// 땅에서 미끄러지지 않고, 다른 열매 위로 떨어지면 그 열매에 튕겨 옆 빈자리에 내려앉는다.
 // React·Expo 의존성이 없어서 node 테스트가 가능하다.
 
-// 놓는 손의 빠르기(px/초)를 굴러갈 거리로 바꾸는 비율(초)과, 굴러갈 수 있는 가장 먼 거리(그림 좌표계)
-const CARRY_SECONDS = 0.15;
-const MAX_CARRY = 140;
-// 이보다 빠르게 놓으면 털썩 서지 않고 굴러간다(그림 좌표계 px/초).
-const ROLL_SPEED = 300;
 // 놓은 자리에 다른 열매가 있으면 둘레를 이만큼씩(열매 크기에 대한 비율) 넓혀 가며 빈자리를 찾는다.
 const RING_STEP = 0.45;
 const RING_COUNT = 8;
 const RING_DIRECTIONS = 16;
-// 거의 들지 않고 놓아도 땅에 톡 닿는 느낌이 나도록 떨어지는 높이의 하한(그림 좌표계)
-const MIN_DROP_HEIGHT = 4;
+// 마지막으로 튄 뒤 땅에서 움직이는 시간. 짧게 두어 옆으로 가는 건 튀어 오른 동안 거의 끝낸다.
+const SETTLE_SECONDS = 0.1;
+// 이 높이(그림 좌표계)부터는 처음 떨어질 때만큼 찌그러지고 늘어난다. 더 낮으면 그만큼 덜하다.
+const FULL_SQUASH_HEIGHT = 40;
 
 export interface GroundBounds {
   left: number;
@@ -31,45 +31,64 @@ export interface GroundBounds {
   bottom: number;
 }
 
-// 땅에 놓여 있는 다른 열매의 자리(열매 바닥)와 원근 배율
+// 땅 위 한 자리(열매 바닥)와 그곳의 원근 배율
 export interface RestingFruit extends ScreenPoint {
   depth: number;
-}
-
-export interface HandDropInput {
-  view: GroundView;
-  // 열매가 멈출 수 있는 땅의 화면 범위
-  bounds: GroundBounds;
-  // 든 열매 바로 아래 땅의 화면 자리
-  ground: ScreenPoint;
-  // 그 자리에서 열매 바닥을 들어 올린 화면 높이
-  lift: number;
-  // 놓는 순간 손이 움직이던 화면 빠르기(px/초)
-  velocity: ScreenPoint;
-  // 원근 배율 1인 곳의 열매 크기
-  fruitSize: number;
-  // 그림 좌표계를 화면에 맞춰 늘리고 줄인 비율
-  scale: number;
-  rollsLikeBall: boolean;
-  // 땅에 놓여 있는 다른 열매들. 그 위에 겹쳐 멈추지 않는다.
-  others: RestingFruit[];
-}
-
-export interface HandDrop {
-  // 멈출 자리(열매 바닥)와 그곳의 원근 배율
-  rest: ScreenPoint & { depth: number };
-  flight: FruitFlight;
 }
 
 export function depthAt(view: GroundView, groundY: number) {
   return (groundY - view.horizonY) / view.eyeHeight;
 }
 
+function clamp(value: number, low: number, high: number) {
+  return Math.min(high, Math.max(low, value));
+}
+
 export function clampToGround(bounds: GroundBounds, point: ScreenPoint) {
   return {
-    x: Math.min(bounds.right, Math.max(bounds.left, point.x)),
-    y: Math.min(bounds.bottom, Math.max(bounds.top, point.y)),
+    x: clamp(point.x, bounds.left, bounds.right),
+    y: clamp(point.y, bounds.top, bounds.bottom),
   };
+}
+
+export interface HoldInput {
+  view: GroundView;
+  // 든 열매 아래 땅이 될 수 있는 범위
+  bounds: GroundBounds;
+  // 든 열매 바닥이 올라갈 수 있는 가장 높은 화면 y. 이보다 위로는 따라가지 않는다.
+  skyTop: number;
+  // 집기 전에 놓여 있던 자리(열매 바닥)
+  rest: ScreenPoint;
+  // 집은 뒤 손가락이 움직인 거리
+  drag: ScreenPoint;
+  // 땅에서 들어 올린 높이(원근 배율 1 기준)
+  holdHeight: number;
+}
+
+export interface HoldPose {
+  // 열매 바닥의 화면 자리. 손가락을 그대로 따라간다.
+  bottom: ScreenPoint;
+  // 바로 아래 땅. 놓으면 여기로 떨어진다.
+  ground: RestingFruit;
+  // 땅에서 열매 바닥까지의 높이(원근 배율 1 기준)
+  height: number;
+}
+
+export function holdPose(input: HoldInput): HoldPose {
+  const { view, bounds } = input;
+  const bottom = {
+    x: clamp(input.rest.x + input.drag.x, bounds.left, bounds.right),
+    y: clamp(input.rest.y + input.drag.y, input.skyTop, bounds.bottom),
+  };
+  // 들어 올린 열매 바로 아래 땅은 열매보다 (높이 × 그 땅의 원근 배율)만큼 아래에 보인다.
+  // 땅의 원근 배율도 그 땅의 화면 y에 따라 달라지므로 두 관계를 함께 풀어 땅의 y를 구한다.
+  const lean = input.holdHeight / view.eyeHeight;
+  const groundY = (bottom.y - lean * view.horizonY) / (1 - lean);
+  // 땅 끝을 넘어가면 땅 끝에 멈추고 높이가 그만큼 달라진다. 하늘로 올리면 뒤쪽 땅 위로 더 높이 든다.
+  const landingY = clamp(groundY, bounds.top, bounds.bottom);
+  const depth = depthAt(view, landingY);
+  const height = Math.max(0, (landingY - bottom.y) / depth);
+  return { bottom, ground: { x: bottom.x, y: landingY, depth }, height };
 }
 
 // 하늘에서 떨어진 열매끼리 띄우는 거리(skyDrop.ts)와 같은 기준으로, 다른 열매와 겹치지 않는지 본다.
@@ -89,7 +108,7 @@ function isOpen(
   });
 }
 
-// 멈출 자리가 다른 열매와 겹치면, 먼저 있던 열매에 부딪혀 옆으로 밀려난 것처럼 가장 가까운 빈자리로 옮긴다.
+// 떨어질 자리가 다른 열매와 겹치면, 그 열매에 부딪혀 튕겨 나간 것처럼 가장 가까운 빈자리를 찾는다.
 // 땅이 꽉 차 빈자리가 없으면 원래 자리에 둔다.
 export function openSpotNear(
   view: GroundView,
@@ -117,40 +136,67 @@ export function openSpotNear(
   return point;
 }
 
+export interface HandDropInput {
+  view: GroundView;
+  // 열매가 멈출 수 있는 땅의 화면 범위
+  bounds: GroundBounds;
+  // 놓는 순간 든 열매의 자세
+  pose: HoldPose;
+  // 원근 배율 1인 곳의 열매 크기
+  fruitSize: number;
+  // 그림 좌표계를 화면에 맞춰 늘리고 줄인 비율
+  scale: number;
+  rollsLikeBall: boolean;
+  // 땅에 놓여 있는 다른 열매들. 그 위에 겹쳐 멈추지 않는다.
+  others: RestingFruit[];
+}
+
+export interface HandDrop {
+  // 멈출 자리(열매 바닥)와 그곳의 원근 배율
+  rest: RestingFruit;
+  flight: FruitFlight;
+}
+
+// 처음 하늘에서 크게 튀어 떨어질 때(skyDrop.ts의 hop)와 같은 중력·찌그러짐·튀는 정도를 쓴다.
+// 손 높이에서는 튀는 높이가 낮으므로 모난 열매가 기우뚱하는 각도는 반으로 줄이고,
+// 몇 px만 떨어뜨리면 거의 찌그러지지 않게 해서 제자리에서 통통 튀어 보이지 않게 한다.
+function handDropStyle(
+  rollsLikeBall: boolean,
+  scale: number,
+  height: number,
+): FlightStyle {
+  const hop = flightStyleFor("hop", rollsLikeBall);
+  const impact = Math.min(1, height / (FULL_SQUASH_HEIGHT * scale));
+  return {
+    ...hop,
+    gravity: hop.gravity * scale,
+    settleSeconds: SETTLE_SECONDS,
+    tumbleDegrees: hop.tumbleDegrees / 2,
+    squash: hop.squash * impact,
+    stretch: hop.stretch * impact,
+  };
+}
+
 export function planHandDrop(input: HandDropInput): HandDrop {
-  const { view, bounds, ground, velocity, scale } = input;
-  const speed = Math.hypot(velocity.x, velocity.y);
-  const carryLimit = MAX_CARRY * scale;
-  const carry = Math.min(carryLimit, speed * CARRY_SECONDS);
-  const carryShare = speed === 0 ? 0 : carry / speed;
-  const carriedTo = clampToGround(bounds, {
-    x: ground.x + velocity.x * carryShare,
-    y: ground.y + velocity.y * carryShare,
-  });
-  const restPoint = openSpotNear(
+  const { view, pose } = input;
+  const start = { ...toWorld(view, pose.ground), height: pose.height };
+  const landing = openSpotNear(
     view,
-    bounds,
-    carriedTo,
+    input.bounds,
+    pose.ground,
     input.others,
     input.fruitSize,
   );
-
-  const groundDepth = depthAt(view, ground.y);
-  const lift = Math.max(input.lift, MIN_DROP_HEIGHT * scale * groundDepth);
-  const start = toWorld(view, { x: ground.x, y: ground.y - lift }, groundDepth);
-  const rest = toWorld(view, restPoint);
-  const bounce = speed > ROLL_SPEED * scale ? "roll" : "thud";
-  const style = flightStyleFor(bounce, input.rollsLikeBall);
-
+  const rest = toWorld(view, landing);
   const flight = planFlight({
     start,
     rest,
     view,
     size: input.fruitSize,
     rollsLikeBall: input.rollsLikeBall,
-    // 든 채 기울어 있던 각도에서 이어서 구르므로, 굴러간 뒤에도 같은 기울기로 멈춘다.
+    // 든 채 기울어 있던 각도에서 이어지므로, 떨어진 뒤에도 같은 기울기로 멈춘다.
     restTilt: 0,
-    style: { ...style, gravity: style.gravity * scale },
+    style: handDropStyle(input.rollsLikeBall, input.scale, pose.height),
   });
   const restScreen = toScreen(view, rest);
   return {

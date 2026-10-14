@@ -4,7 +4,13 @@ import type { FruitFlight } from "../design/fruitFlight";
 import type { FruitShape } from "../theme";
 
 // 웹에는 네이티브 애니메이션 모듈이 없어서 켜면 경고만 난다.
-const nativeDriverEnabled = Platform.OS !== "web";
+export const nativeDriverEnabled = Platform.OS !== "web";
+
+// 처음부터 네이티브 애니메이션 모듈에서 움직이는 값. 손가락을 따라 자주 바꿔도
+// React를 거쳐 다시 그리지 않고 바로 화면에 반영된다. 렌더마다 만들면 네이티브 쪽에 값이 쌓이므로 한 번만 만든다.
+export function nativeValue(initial: number) {
+  return new Animated.Value(initial, { useNativeDriver: nativeDriverEnabled });
+}
 
 // 기기의 "동작 줄이기" 설정을 따른다. 켜져 있으면 열매가 처음부터 제자리에 놓인다.
 export function useReducedMotion() {
@@ -44,16 +50,6 @@ export function playTimeline(
     duration: durationMs,
     delay: delayMs,
     easing: Easing.linear,
-    useNativeDriver: nativeDriverEnabled,
-  });
-}
-
-// 집어 든 열매를 손가락 위로 들어 올린다.
-export function springTo(value: Animated.Value, toValue: number) {
-  return Animated.spring(value, {
-    toValue,
-    speed: 28,
-    bounciness: 6,
     useNativeDriver: nativeDriverEnabled,
   });
 }

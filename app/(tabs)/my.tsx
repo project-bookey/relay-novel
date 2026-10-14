@@ -50,7 +50,7 @@ function StorySection({
   );
 }
 
-// 마이 페이지. 내 차례와 내 작품, 초대 코드 참가, 로그아웃을 모았다.
+// 마이 페이지. 내 차례와 내 작품, 관심 장르, 로그아웃을 모았다.
 export default function MyPage() {
   const { mode, logout } = useSession();
   const turns = useQuery({
@@ -115,9 +115,9 @@ export default function MyPage() {
           <View style={styles.actions}>
             <Button
               outline
-              onPress={() => router.push(isDemo ? "/login" : "/join")}
+              onPress={() => router.push(isDemo ? "/login" : "/genres")}
             >
-              초대 코드로 참가하기
+              관심 장르 고르기
             </Button>
             <Button outline onPress={leave}>
               {isDemo ? "둘러보기 끝내기" : "로그아웃"}

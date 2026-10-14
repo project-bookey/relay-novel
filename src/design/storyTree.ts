@@ -1,5 +1,7 @@
 // 소설 하나의 "이야기 나무" 모양을 계산한다. React·Expo 의존성이 없어서 node 테스트가 가능하다.
-// 지금 백엔드의 회차는 한 줄로만 이어지므로, 회차 하나를 가지 하나로 그린다.
+// 회차 하나가 가지 하나다. 먼저 쓴 가지를 따라 이어지는 큰 줄기는 줄기에 붙고,
+// 한 회차를 여러 사람이 이어 써서 갈라진 가지는 부모 가지에서 뻗는다. 아직 아무도 잇지 않은 끝 가지에는 열매가 맺힌다.
+import { straightChain, type ChapterLink } from "./chapterTree";
 
 export const TREE_WIDTH = 300;
 export const TREE_HEIGHT = 260;
@@ -7,6 +9,8 @@ const GROUND_Y = 240;
 const CENTER_X = TREE_WIDTH / 2;
 // 회차가 아주 많아도 그림이 뭉개지지 않도록 그리는 가지 수에 상한을 둔다.
 export const MAX_DRAWN_BRANCHES = 24;
+// 갈라진 가지도 너무 많으면 먼저 쓴 것부터 이만큼만 그린다.
+export const MAX_DRAWN_SIDE_BRANCHES = 24;
 
 export interface Point {
   x: number;
@@ -14,6 +18,8 @@ export interface Point {
 }
 
 export interface Branch {
+  // 회차 id (회차 수만 알 때는 1부터 매긴 순번)
+  id: number;
   chapterNumber: number;
   start: Point;
   control: Point;
@@ -26,10 +32,17 @@ export interface Leaf extends Point {
   tone: "light" | "base" | "deep";
 }
 
+// 끝 가지에 맺힌 열매
+export interface BranchFruit extends Point {
+  id: number;
+  radius: number;
+}
+
 export interface StoryTreeShape {
   trunk: { start: Point; control: Point; end: Point; thickness: number };
   branches: Branch[];
   leaves: Leaf[];
+  fruits: BranchFruit[];
   // 다음 회차가 돋아날 자리. 이어 쓰는 중일 때만 있다.
   bud?: Point;
 }
@@ -39,6 +52,39 @@ export interface StoryTreeInput {
   chapterCount: number;
   memberCount: number;
   growing: boolean;
+  // 회차 나무. 없으면 chapterCount만큼 한 줄기로 이어진 것으로 본다.
+  nodes?: ChapterLink[];
+}
+
+// 뿌리에서 먼저 쓴 가지만 따라 내려간 큰 줄기.
+function mainLineOf(
+  nodes: ChapterLink[],
+  childrenOf: Map<number, ChapterLink[]>,
+) {
+  const ids = new Set(nodes.map((node) => node.id));
+  const roots = nodes
+    .filter(
+      (node) => node.parentChapterId == null || !ids.has(node.parentChapterId),
+    )
+    .sort((first, second) => first.id - second.id);
+  const line: ChapterLink[] = [];
+  let current = roots[0];
+  while (current) {
+    line.push(current);
+    current = (childrenOf.get(current.id) ?? [])[0];
+  }
+  return line;
+}
+
+function childrenMap(nodes: ChapterLink[]) {
+  const map = new Map<number, ChapterLink[]>();
+  for (const node of [...nodes].sort((first, second) => first.id - second.id)) {
+    if (node.parentChapterId == null) continue;
+    const siblings = map.get(node.parentChapterId) ?? [];
+    siblings.push(node);
+    map.set(node.parentChapterId, siblings);
+  }
+  return map;
 }
 
 // 같은 seed면 항상 같은 수열을 돌려주는 난수 생성기(mulberry32).
@@ -113,10 +159,12 @@ function leafClusterAt(
 
 export function growStoryTree(input: StoryTreeInput): StoryTreeShape {
   const random = seededRandom(input.seed * 9973 + 17);
-  const drawnBranchCount = Math.min(
-    Math.max(input.chapterCount, 0),
-    MAX_DRAWN_BRANCHES,
-  );
+  const nodes = input.nodes ?? straightChain(input.chapterCount);
+  const childrenOf = childrenMap(nodes);
+  const mainLine = mainLineOf(nodes, childrenOf);
+  const drawnBranchCount = Math.min(mainLine.length, MAX_DRAWN_BRANCHES);
+  // 큰 줄기의 회차는 상한을 넘어 그리지 않은 것도 곁가지로 돌리지 않는다.
+  const mainIds = new Set(mainLine.map((node) => node.id));
 
   const trunkHeight = trunkHeightFor(drawnBranchCount);
   const lean = between(random, -18, 18);
@@ -153,6 +201,7 @@ export function growStoryTree(input: StoryTreeInput): StoryTreeShape {
       y: start.y - length * rise * 0.15 + between(random, -6, 4),
     };
     branches.push({
+      id: mainLine[index].id,
       chapterNumber,
       start,
       control,
@@ -172,13 +221,97 @@ export function growStoryTree(input: StoryTreeInput): StoryTreeShape {
   const crownSize = 10 + Math.min(drawnBranchCount, 10) * 1.1;
   leaves.push(...leafClusterAt(random, trunk.end, crownSize));
 
+  branches.push(
+    ...sideBranches(
+      random,
+      branches,
+      nodes.filter((node) => !mainIds.has(node.id)),
+      input.memberCount,
+      leaves,
+    ),
+  );
+
+  const fruits = branches
+    .filter((branch) => (childrenOf.get(branch.id) ?? []).length === 0)
+    .map((branch) => ({
+      id: branch.id,
+      x: branch.end.x,
+      y: branch.end.y + 3,
+      radius: 5,
+    }));
+
   const topOfCrown = { x: trunk.end.x, y: trunk.end.y - crownSize * 0.9 };
   return {
     trunk,
     branches,
     leaves,
+    fruits,
     bud: input.growing ? topOfCrown : undefined,
   };
+}
+
+// 큰 줄기 밖의 회차(nodes)는 부모 가지의 끝 쪽에서 비스듬히 뻗는다. 부모를 그리지 않았으면 그 가지도 그리지 않는다.
+function sideBranches(
+  random: () => number,
+  drawn: Branch[],
+  nodes: ChapterLink[],
+  memberCount: number,
+  leaves: Leaf[],
+): Branch[] {
+  const byId = new Map(drawn.map((branch) => [branch.id, branch]));
+  const sides: Branch[] = [];
+  const pending = [...nodes]
+    .sort((first, second) => first.id - second.id)
+    .filter((node) => !byId.has(node.id));
+  // 같은 부모에서 갈라진 가지는 번갈아 좌우로 벌어진다.
+  const siblingTurn = new Map<number, number>();
+  for (const node of pending) {
+    if (sides.length >= MAX_DRAWN_SIDE_BRANCHES) break;
+    const parent =
+      node.parentChapterId == null ? undefined : byId.get(node.parentChapterId);
+    if (!parent) continue;
+    const turn = siblingTurn.get(parent.id) ?? 0;
+    siblingTurn.set(parent.id, turn + 1);
+    const start = pointOnCurve(
+      parent.start,
+      parent.control,
+      parent.end,
+      between(random, 0.55, 0.9),
+    );
+    const parentAngle = Math.atan2(
+      parent.end.y - parent.start.y,
+      parent.end.x - parent.start.x,
+    );
+    const spread = between(random, 0.45, 0.85) * (turn % 2 === 0 ? -1 : 1);
+    const angle = parentAngle + spread;
+    const parentLength = Math.hypot(
+      parent.end.x - parent.start.x,
+      parent.end.y - parent.start.y,
+    );
+    const length = Math.max(14, parentLength * between(random, 0.5, 0.72));
+    const margin = 8;
+    const end = {
+      x: clamp(start.x + Math.cos(angle) * length, margin, TREE_WIDTH - margin),
+      y: clamp(start.y + Math.sin(angle) * length, margin, GROUND_Y - margin),
+    };
+    const control = {
+      x: (start.x + end.x) / 2 + between(random, -4, 4),
+      y: (start.y + end.y) / 2 + between(random, -5, 2),
+    };
+    const branch: Branch = {
+      id: node.id,
+      chapterNumber: parent.chapterNumber + 1,
+      start,
+      control,
+      end,
+      thickness: Math.max(1.5, parent.thickness * 0.7),
+    };
+    sides.push(branch);
+    byId.set(node.id, branch);
+    const leafSize = 6 + Math.min(memberCount, 8) * 0.5;
+    leaves.push(...leafClusterAt(random, end, leafSize));
+  }
+  return sides;
 }
 
 export function curvePath(start: Point, control: Point, end: Point) {

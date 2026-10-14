@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Text, View, Pressable } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { login } from "../src/api/novels";
+import { Text, View, Pressable, StyleSheet } from "react-native";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
+import { auth } from "../src/api/auth";
 import { useSession } from "../src/state/session";
 import { HomeTree } from "../src/components/HomeTree";
 import {
@@ -20,11 +20,14 @@ export default function Login() {
     [password, setPassword] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>();
+  // 이미 로그인했으면(가입 직후 뒤로 가기 등) 홈으로 보낸다. 원고 화면에서 다시 로그인하러 온 경우는 제외한다.
+  if (session.mode === "authenticated" && returnBack !== "1")
+    return <Redirect href="/" />;
   async function submit() {
     setBusy(true);
     setError(undefined);
     try {
-      await session.authenticate(await login(email.trim(), password));
+      await session.authenticate(await auth.login(email.trim(), password));
       const canReturn = returnBack === "1" && router.canGoBack();
       if (canReturn) router.back();
       else router.replace("/");
@@ -70,10 +73,15 @@ export default function Login() {
         >
           {busy ? "로그인 중…" : "로그인하고 이야기 이어가기"}
         </Button>
-        <Text style={ui.hint}>
-          기존 Bookey 계정으로 로그인해요. 신규 회원가입과 소셜 로그인은 추후
-          연결할 예정이에요.
-        </Text>
+        <Text style={ui.hint}>Bookey 계정으로 로그인해요.</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="처음이라면 회원가입"
+          onPress={() => router.push("/signup")}
+          style={styles.signup}
+        >
+          <Text style={ui.label}>처음이라면 회원가입</Text>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           onPress={() => {
@@ -90,3 +98,7 @@ export default function Login() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  signup: { minHeight: 48, alignItems: "center", justifyContent: "center" },
+});

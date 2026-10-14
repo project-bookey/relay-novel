@@ -9,10 +9,15 @@ import type { NovelSummary } from "../../src/api/types";
 import { FruitField } from "../../src/components/FruitField";
 import { ErrorBox, Loading, Screen, ui } from "../../src/components/ui";
 
-// 열매 자리는 몇 개뿐이라, 내가 이어 쓸 차례인 소설을 먼저 놓고 나머지를 피드 순서대로 채운다.
-function fruitOrder(myTurns: NovelSummary[], feed: NovelSummary[]) {
+// 열매 자리는 몇 개뿐이라, 나에게 배달된 열매와 내가 이어 쓸 차례인 소설을 먼저 놓고
+// 나머지를 피드 순서대로 채운다.
+function fruitOrder(
+  delivered: NovelSummary[],
+  myTurns: NovelSummary[],
+  feed: NovelSummary[],
+) {
   const seen = new Set<number>();
-  return [...myTurns, ...feed].filter((story) => {
+  return [...delivered, ...myTurns, ...feed].filter((story) => {
     if (seen.has(story.id)) return false;
     seen.add(story.id);
     return true;
@@ -32,14 +37,28 @@ export default function Home() {
     queryFn: novels.turns,
     enabled: mode === "authenticated",
   });
+  // 회차가 발행되면 무작위로 고른 사람의 홈에 열매가 떨어진다. 둘러보기에는 배달이 없다.
+  const deliveries = useQuery({
+    queryKey: ["deliveries", mode],
+    queryFn: novels.deliveries,
+    enabled: mode === "authenticated",
+  });
   // 홈이 다시 그려질 때마다 새 목록을 만들면 열매 밭이 처음 배치로 돌아가, 손으로 옮긴 열매가 제자리로 튄다.
   // 서버 응답이 바뀔 때만 목록을 새로 만든다.
   const stories = useMemo(
     () =>
       mode === "demo"
         ? demoStories
-        : fruitOrder(turns.data ?? [], feed.data?.content ?? []),
-    [mode, turns.data, feed.data],
+        : fruitOrder(
+            (deliveries.data ?? []).map((delivery) => delivery.novel),
+            turns.data ?? [],
+            feed.data?.content ?? [],
+          ),
+    [mode, deliveries.data, turns.data, feed.data],
+  );
+  const deliveredIds = useMemo(
+    () => new Set((deliveries.data ?? []).map((delivery) => delivery.novel.id)),
+    [deliveries.data],
   );
 
   if (mode === "loading")
@@ -51,14 +70,16 @@ export default function Home() {
   if (mode === "guest") return <Redirect href="/login" />;
 
   // 데모 모드에서는 쿼리가 꺼져 있어 isPending이 계속 true이므로 로딩으로 보지 않는다.
-  // 두 목록이 다 온 뒤에 열매를 떨어뜨려야 순서가 바뀌며 다시 떨어지는 일이 없다.
-  const isLoading = mode !== "demo" && (feed.isPending || turns.isPending);
-  const error = feed.error ?? turns.error;
+  // 목록이 다 온 뒤에 열매를 떨어뜨려야 순서가 바뀌며 다시 떨어지는 일이 없다.
+  const isLoading =
+    mode !== "demo" &&
+    (feed.isPending || turns.isPending || deliveries.isPending);
+  const error = feed.error ?? turns.error ?? deliveries.error;
   const showFruits = !isLoading && stories.length > 0;
   const isEmpty = !isLoading && !error && stories.length === 0;
   const openStory = (story: NovelSummary) => router.push(`/novel/${story.id}`);
   const retry = () => {
-    void Promise.all([feed.refetch(), turns.refetch()]);
+    void Promise.all([feed.refetch(), turns.refetch(), deliveries.refetch()]);
   };
 
   return (
@@ -71,7 +92,13 @@ export default function Home() {
               아직 떨어진 열매가 없어요.
             </Text>
           )}
-          {showFruits && <FruitField stories={stories} onOpen={openStory} />}
+          {showFruits && (
+            <FruitField
+              stories={stories}
+              deliveredIds={deliveredIds}
+              onOpen={openStory}
+            />
+          )}
           {!!error && (
             // 열매가 있을 때는 열매 자리가 흔들리지 않도록 오류 안내를 위에 띄운다.
             <View style={showFruits ? styles.errorOverlay : undefined}>

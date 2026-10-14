@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ArrowUpRight, BookOpen, Users } from "lucide-react-native";
 import type { NovelSummary } from "../../api/types";
-import { colors, statusLabel } from "../../theme";
+import { colors, statusLabel, writersLabel } from "../../theme";
 import { StoryTree } from "../StoryTree";
 import { Card, ui } from "../ui";
 
@@ -38,9 +38,7 @@ export function StoryCard({ story }: { story: NovelSummary }) {
           <View style={[ui.row, styles.footer]}>
             <View style={styles.metaGroup}>
               <Users size={12} color={colors.muted} />
-              <Text style={styles.meta}>
-                {story.memberCount}/{story.memberLimit}
-              </Text>
+              <Text style={styles.meta}>{writersLabel(story)}</Text>
               <Text style={styles.meta}>·</Text>
               <BookOpen size={12} color={colors.muted} />
               <Text style={styles.meta}>

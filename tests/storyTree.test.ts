@@ -81,3 +81,70 @@ test("leaves always stay inside the drawing area", () => {
     }
   }
 });
+
+// 뿌리(1)를 셋이 이어 쓰고(2, 3, 5), 2를 다시 한 사람이 이어 썼다(4).
+const branchingNodes = [
+  { id: 1 },
+  { id: 2, parentChapterId: 1 },
+  { id: 3, parentChapterId: 1 },
+  { id: 4, parentChapterId: 2 },
+  { id: 5, parentChapterId: 1 },
+];
+
+test("every chapter of a branching story becomes a branch", () => {
+  const tree = growStoryTree({ ...baseInput, nodes: branchingNodes });
+  assert.deepEqual(
+    tree.branches.map((branch) => branch.id).sort(),
+    [1, 2, 3, 4, 5],
+  );
+});
+
+test("a split branch grows out of its parent branch", () => {
+  const tree = growStoryTree({ ...baseInput, nodes: branchingNodes });
+  const byId = new Map(tree.branches.map((branch) => [branch.id, branch]));
+  const root = byId.get(1)!;
+  const split = byId.get(3)!;
+  const near = (value: number, min: number, max: number) =>
+    value >= Math.min(min, max) - 0.5 && value <= Math.max(min, max) + 0.5;
+  assert.ok(near(split.start.x, root.start.x, root.end.x));
+  assert.ok(near(split.start.y, root.start.y, root.end.y));
+  assert.ok(split.thickness < root.thickness);
+});
+
+test("fruits hang only on branches nobody continued yet", () => {
+  const tree = growStoryTree({ ...baseInput, nodes: branchingNodes });
+  assert.deepEqual(tree.fruits.map((fruit) => fruit.id).sort(), [3, 4, 5]);
+  const straight = growStoryTree(baseInput);
+  assert.deepEqual(
+    straight.fruits.map((fruit) => fruit.id),
+    [5],
+  );
+});
+
+test("a straight chain grows the same tree with or without nodes", () => {
+  const chain = [1, 2, 3, 4, 5].map((id) => ({
+    id,
+    parentChapterId: id === 1 ? undefined : id - 1,
+  }));
+  assert.deepEqual(
+    growStoryTree({ ...baseInput, nodes: chain }),
+    growStoryTree(baseInput),
+  );
+});
+
+test("split branches stay inside the drawing area", () => {
+  const many = [
+    { id: 1 },
+    ...Array.from({ length: 30 }, (_, index) => ({
+      id: index + 2,
+      parentChapterId: index < 10 ? 1 : index - 8,
+    })),
+  ];
+  for (let seed = 1; seed <= 20; seed++) {
+    const tree = growStoryTree({ ...baseInput, seed, nodes: many });
+    for (const branch of tree.branches) {
+      assert.ok(branch.end.x >= 0 && branch.end.x <= TREE_WIDTH);
+      assert.ok(branch.end.y >= 0 && branch.end.y <= TREE_HEIGHT);
+    }
+  }
+});

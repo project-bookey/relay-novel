@@ -1,9 +1,9 @@
 import { Animated, StyleSheet, Text, View } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { colors, statusLabel, storyColorOf } from "../theme";
+import { colors, statusLabel, storyColorOf, writersLabel } from "../theme";
 
 // 집어 든 열매 위에 뜨는 말풍선. 그 소설을 열지 않고도 무엇인지 알 수 있게
-// 장르·제목·상태·회차·작가 수를 흰 카드에 짧게 보여준다.
+// 장르·제목·상태·회차·작가 수를 흰 카드에 짧게 보여준다. 나에게 배달된 열매면 그것도 알려 준다.
 
 const BUBBLE_WIDTH = 200;
 // 말풍선이 화면 양옆에 붙지 않게 띄우는 거리
@@ -18,12 +18,15 @@ const RISE = 6;
 
 export function FruitBubble({
   story,
+  delivered,
   centerX,
   top,
   appear,
   screenWidth,
 }: {
   story: NovelSummary;
+  // 나에게 배달돼 이어 쓸 수 있는 열매인지
+  delivered: boolean;
   // 든 열매의 가운데 x와 위쪽 끝 y(열매 밭 기준)
   centerX: Animated.Value;
   top: Animated.Value;
@@ -54,7 +57,7 @@ export function FruitBubble({
     outputRange: [RISE, 0],
   });
   const chapters = `${story.chapterCount}화`;
-  const writers = `작가 ${story.memberCount}/${story.memberLimit}명`;
+  const writers = writersLabel(story);
 
   return (
     <Animated.View
@@ -97,7 +100,12 @@ export function FruitBubble({
         <Text style={styles.meta} numberOfLines={1}>
           {`${statusLabel[story.status]} · ${chapters} · ${writers}`}
         </Text>
-        {story.myTurn && (
+        {delivered && (
+          <View style={styles.turnBadge}>
+            <Text style={styles.turnText}>나에게 온 열매예요</Text>
+          </View>
+        )}
+        {!delivered && story.myTurn && (
           <View style={styles.turnBadge}>
             <Text style={styles.turnText}>내 차례예요</Text>
           </View>

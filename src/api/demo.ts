@@ -1,7 +1,8 @@
-import type { NovelSummary, NovelDetail, Chapter } from "./types";
+import type { NovelSummary, NovelDetail, Chapter, ChapterNode } from "./types";
 
 // 로그인 없이 "먼저 둘러보기"에서 쓰는 예시 작품. 서버에 저장되거나 발행되지 않는다.
 // 홈의 열매 자리가 모두 차고, 네 가지 열매 모양과 모집·연재·완결 상태가 다 보이도록 일곱 편을 둔다.
+// 앞의 네 편은 모여 만들기(한 줄기), 뒤의 세 편은 열매로 퍼뜨려 가지가 갈라진 작품이다.
 interface DemoStorySeed {
   title: string;
   description: string;
@@ -13,6 +14,7 @@ interface DemoStorySeed {
   // 100개 이상이면 홈 열매 둘레에서 별이 반짝인다. E2E가 쓰는 앞 네 편은 그보다 적게 둔다.
   likeCount: number;
   mine?: boolean;
+  mode?: NovelSummary["mode"];
 }
 
 const seeds: DemoStorySeed[] = [
@@ -74,6 +76,7 @@ const seeds: DemoStorySeed[] = [
     memberLimit: 6,
 
     likeCount: 41,
+    mode: "OPEN",
   },
   {
     title: "고양이 도서관",
@@ -86,6 +89,7 @@ const seeds: DemoStorySeed[] = [
     memberLimit: 8,
 
     likeCount: 152,
+    mode: "OPEN",
   },
   {
     title: "마지막 별빛 정거장",
@@ -97,6 +101,7 @@ const seeds: DemoStorySeed[] = [
     memberLimit: 6,
 
     likeCount: 311,
+    mode: "OPEN",
   },
 ];
 
@@ -114,13 +119,16 @@ const writerNames = [
 export const demoStories: NovelSummary[] = seeds.map((seed, index) => ({
   id: index + 1,
   kind: "RELAY",
+  mode: seed.mode ?? "CIRCLE",
+  // 열매로 퍼뜨리는 작품은 작가 수 제한이 없다.
+  deliveryCount: seed.mode === "OPEN" ? 3 : undefined,
   title: seed.title,
   description: seed.description,
   genre: seed.genre,
   status: seed.status,
   ownerNickname: writerNames[0],
   memberCount: seed.memberCount,
-  memberLimit: seed.memberLimit,
+  memberLimit: seed.mode === "OPEN" ? undefined : seed.memberLimit,
   chapterCount: seed.chapterCount,
   chapterLimit: 20,
   isPublic: true,
@@ -138,8 +146,9 @@ function demoStory(id: number) {
 export function demoDetail(id: number): NovelDetail {
   const novel = demoStory(id);
   const names = writerNames.slice(0, novel.memberCount);
-  // 이어 쓰는 중인 작품에만 지금 쓰고 있는 작가가 있다.
-  const currentWriterIndex = novel.status === "ONGOING" ? 2 % names.length : -1;
+  // 차례대로 이어 쓰는 중인 작품에만 지금 쓰고 있는 작가가 있다.
+  const hasTurn = novel.status === "ONGOING" && novel.mode === "CIRCLE";
+  const currentWriterIndex = hasTurn ? 2 % names.length : -1;
   return {
     novel,
     members: names.map((nickname, index) => ({
@@ -222,8 +231,56 @@ const chapterScenes = [
   "멀리서 들려오던 소리가 멈췄다. 그리고 아주 가까운 곳에서 다시 시작됐다.",
 ];
 
+// 열매로 퍼뜨린 작품의 가지 모양. i번째 회차가 몇 번째 회차에서 뻗었는지(-1은 뿌리).
+// 뿌리를 둘이 이어 쓰고, 그 가지들이 다시 갈라지며 깊어진다.
+const demoBranchParents = [
+  -1, 0, 0, 1, 1, 2, 3, 3, 4, 5, 6, 7, 8, 8, 9, 10, 11, 12, 13, 14,
+];
+
+function chainChapters(chapters: Chapter[]): Chapter[] {
+  return chapters.map((chapter, index) => ({
+    ...chapter,
+    parentChapterId: index === 0 ? undefined : chapters[index - 1].id,
+  }));
+}
+
+function branchChapters(chapters: Chapter[]): Chapter[] {
+  const linked: Chapter[] = [];
+  chapters.forEach((chapter, index) => {
+    const parentIndex = demoBranchParents[index % demoBranchParents.length];
+    const parent = parentIndex >= 0 ? linked[parentIndex] : undefined;
+    linked.push({
+      ...chapter,
+      parentChapterId: parent?.id,
+      chapterNumber: parent ? parent.chapterNumber + 1 : 1,
+    });
+  });
+  return linked;
+}
+
 // 둘러보기 작품의 회차. 작품의 회차 수만큼 만들어 목차와 읽기 화면이 서로 맞게 한다.
 export function demoChaptersOf(novelId: number): Chapter[] {
+  const novel = demoStory(novelId);
+  const written = writtenDemoChapters(novelId);
+  return novel.mode === "OPEN"
+    ? branchChapters(written)
+    : chainChapters(written);
+}
+
+// 회차 나무의 마디. 목차와 이야기 나무가 같은 마디를 쓴다.
+export function demoChapterTreeOf(novelId: number): ChapterNode[] {
+  return demoChaptersOf(novelId).map((chapter) => ({
+    id: chapter.id,
+    parentChapterId: chapter.parentChapterId,
+    chapterNumber: chapter.chapterNumber,
+    title: chapter.title,
+    authorNickname: chapter.authorNickname,
+    excerpt: chapter.body.slice(0, 140),
+    createdAt: chapter.createdAt,
+  }));
+}
+
+function writtenDemoChapters(novelId: number): Chapter[] {
   if (novelId === 1) return moonlightShopChapters;
   const novel = demoStory(novelId);
   const names = writerNames.slice(0, novel.memberCount);
@@ -242,10 +299,22 @@ export function demoChaptersOf(novelId: number): Chapter[] {
   });
 }
 
-export function demoChapter(novelId: number, chapterNumber: number) {
+export function demoChapter(novelId: number, chapterId: number) {
   const chapter = demoChaptersOf(novelId).find(
-    (candidate) => candidate.chapterNumber === chapterNumber,
+    (candidate) => candidate.id === chapterId,
   );
   if (!chapter) throw new Error("이 장을 찾지 못했어요.");
   return chapter;
 }
+
+// 둘러보기용 장르. 실제 목록은 서버가 준다.
+export const demoGenres = [
+  "판타지",
+  "일상",
+  "미스터리",
+  "로맨스",
+  "SF",
+  "드라마",
+  "무협",
+  "공포",
+];

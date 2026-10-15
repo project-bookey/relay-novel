@@ -17,10 +17,13 @@ test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
   // 아직 떨어지기 전인 열매는 화면 위 바깥에 멈춰 있으므로, 먼저 모두 땅으로 내려왔는지 본다.
   const fruits = page.getByRole("button", { name: / 열매$/ });
   await expect
-    .poll(() =>
-      fruits.evaluateAll((nodes) =>
-        Math.min(...nodes.map((node) => node.getBoundingClientRect().top)),
-      ),
+    .poll(
+      () =>
+        fruits.evaluateAll((nodes) =>
+          Math.min(...nodes.map((node) => node.getBoundingClientRect().top)),
+        ),
+      // 느린 환경에서도 열매가 모두 떨어져 내려앉을 때까지 넉넉히 기다린다.
+      { timeout: 10_000 },
     )
     .toBeGreaterThan(250);
   for (const each of await fruits.all()) await each.click({ trial: true });
@@ -160,6 +163,13 @@ test("backend contract supports login, circle creation with followed writers, dr
               },
             ]
           : [];
+    else if (path.endsWith("/novels/home-feed"))
+      data = {
+        novels: [summary()],
+        freeRefreshesLeftToday: 2,
+        dailyFreeRefreshes: 2,
+        resetsAt: "2026-10-15T15:00:00Z",
+      };
     else if (path === "/api/v1/novels")
       data = {
         content: [summary()],
@@ -304,21 +314,36 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
   const fruit = page.getByRole("button", { name: "달빛을 파는 가게 열매" });
   const fruits = page.getByRole("button", { name: / 열매$/ });
   await expect
-    .poll(() =>
-      fruits.evaluateAll((nodes) =>
-        Math.min(...nodes.map((node) => node.getBoundingClientRect().top)),
-      ),
+    .poll(
+      () =>
+        fruits.evaluateAll((nodes) =>
+          Math.min(...nodes.map((node) => node.getBoundingClientRect().top)),
+        ),
+      // 느린 환경에서도 열매가 모두 떨어져 내려앉을 때까지 넉넉히 기다린다.
+      { timeout: 10_000 },
     )
     .toBeGreaterThan(250);
-  // 모두 내려앉아 멈출 때까지 기다린다.
+  // 모두 내려앉아 멈출 때까지 기다린다. 땅에 멈춘 열매만 집을 수 있으므로 자리가 더는 바뀌지 않는지 본다.
   await page.waitForTimeout(2500);
+  await expect
+    .poll(
+      async () => {
+        const first = (await fruit.boundingBox())!;
+        await page.waitForTimeout(300);
+        const second = (await fruit.boundingBox())!;
+        return Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
+      },
+      { timeout: 10_000 },
+    )
+    .toBeLessThan(0.1);
   // 열매 바닥은 그림 칸 높이의 90% 지점이다(FruitArt의 FRUIT_BOTTOM).
   const bottomOf = (box: { y: number; height: number }) =>
     box.y + box.height * 0.9;
   const before = (await fruit.boundingBox())!;
+  // 열매 자리는 매번 무작위라 바로 앞 열매가 아래쪽을 가릴 수 있어, 가려지지 않는 윗부분을 누른다.
   const from = {
     x: before.x + before.width / 2,
-    y: before.y + before.height / 2,
+    y: before.y + before.height * 0.3,
   };
   const bubbleMeta = page.getByText("이야기 이어가는 중 · 3화 · 작가 4/6명", {
     exact: true,
@@ -340,8 +365,13 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
   await expect(page).not.toHaveURL(/\/novel\//);
 
   // 끌면 열매가 손가락 아래에 그대로 붙어 앞쪽 빈 땅까지 따라온다.
-  const drag = { x: -30, y: 150 };
+  // 왼쪽 끝 열매를 왼쪽으로 끌면 땅 끝에 걸리므로 화면 가운데 쪽으로 끈다.
+  const drag = { x: from.x < 195 ? 30 : -30, y: 150 };
   await page.mouse.down();
+  // 끌기는 열매 윗부분 안에서 옆으로 움직여 시작한다. 웹의 마우스는 다른 열매 위에서 시작한 끌기를
+  // 뒤쪽 열매에 넘기지 않는다(터치 기기는 처음 누른 열매를 계속 끈다).
+  await page.mouse.move(from.x + Math.sign(drag.x) * 12, from.y);
+  await page.waitForTimeout(16);
   for (let step = 1; step <= 15; step++) {
     await page.mouse.move(
       from.x + (drag.x * step) / 15,

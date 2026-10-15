@@ -19,16 +19,18 @@ export function FruitFigure({
   size: number;
   // 구르거나 기울어 있는 각도
   rotate: Angle;
-  // 인기 열매의 흔들림(src/components/FruitGlow.tsx의 useSway)
-  sway: { tilt: Angle; roll: Animated.AnimatedInterpolation<number> };
+  // 인기 열매의 흔들림(src/components/FruitGlow.tsx의 useSway). 없으면 흔들리지 않는다.
+  sway?: { tilt: Angle; roll: Animated.AnimatedInterpolation<number> };
 }) {
   const isBall = rollsLikeBall(shape);
   // 모난 열매는 땅에 닿은 점을 축으로 기우뚱하고,
   // 구는 꼭지를 돌리며 그만큼 옆으로 굴러 제자리에서 구르듯 흔들린다.
-  const swaying = isBall
-    ? [{ translateX: sway.roll }]
-    : [{ rotate: sway.tilt }];
-  const stemTilt = isBall ? sway.tilt : "0deg";
+  let swaying: (
+    { translateX: Animated.AnimatedInterpolation<number> } | { rotate: Angle }
+  )[] = [];
+  if (sway)
+    swaying = isBall ? [{ translateX: sway.roll }] : [{ rotate: sway.tilt }];
+  const stemTilt = isBall && sway ? sway.tilt : "0deg";
 
   return (
     <Animated.View style={[styles.swaying, { transform: swaying }]}>

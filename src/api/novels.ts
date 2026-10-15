@@ -6,6 +6,7 @@ import type {
   NovelLikeView,
   NovelStatus,
   NovelDelivery,
+  NovelHomeFeed,
   ChapterNode,
   Chapter,
   BaseWork,
@@ -21,6 +22,11 @@ export const novels = {
   mine: (page = 0) =>
     api<Page<NovelSummary>>(`${root}/mine`, { query: { kind: "RELAY", page } }),
   turns: () => api<NovelSummary[]>(`${root}/my-turns`),
+  // 홈 열매 밭에 놓인 묶음과 오늘 남은 무료 새로고침 수. 불러오기만 해서는 횟수가 줄지 않는다.
+  homeFeed: () => api<NovelHomeFeed>(`${root}/home-feed`),
+  // 열매 밭을 새 묶음으로 바꾼다. 하루 무료 횟수를 다 쓰면 서버가 거절한다(NOVEL_REFRESH_DAILY_LIMIT).
+  refreshHomeFeed: () =>
+    api<NovelHomeFeed>(`${root}/home-feed/refresh`, { method: "POST" }),
   get: (id: number) => api<NovelDetail>(`${root}/${id}`),
   // 누를 때마다 좋아요가 켜지고 꺼진다. 결과는 서버의 실제 상태다.
   toggleLike: (id: number) =>

@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { api } from "./client";
 import type {
   Page,
@@ -14,8 +15,45 @@ import type {
   Draft,
   Write,
   CreateNovel,
+  NovelCover,
 } from "./types";
+import { ApiError } from "./transport";
 const root = "/api/v1/novels";
+
+// 기기에서 고른 표지 사진(앱 전용). 서버는 JPG·PNG·WebP, 10MB까지 받는다.
+export interface CoverImage {
+  uri: string;
+  name: string;
+  type: string;
+  // 웹에서 고른 실제 파일
+  file?: Blob;
+}
+
+async function readWebFile(uri: string) {
+  try {
+    return await (await fetch(uri)).blob();
+  } catch {
+    throw new ApiError(
+      0,
+      "COVER_READ",
+      "사진을 읽지 못했어요. 다른 사진을 골라 주세요.",
+    );
+  }
+}
+
+// 업로드할 파일 파트. 웹은 실제 파일(Blob)을, 네이티브는 RN이 읽어 보낼 { uri, name, type }을 넣는다.
+async function coverForm(image: CoverImage) {
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = image.file ?? (await readWebFile(image.uri));
+    form.append("file", blob, image.name);
+  } else {
+    const nativeFile = { uri: image.uri, name: image.name, type: image.type };
+    form.append("file", nativeFile as unknown as Blob);
+  }
+  return form;
+}
+
 export const novels = {
   feed: (status?: NovelStatus, page = 0) =>
     api<Page<NovelSummary>>(root, { query: { kind: "RELAY", status, page } }),
@@ -77,4 +115,10 @@ export const novels = {
   saveMyGenres: (genres: string[]) =>
     api<string[]>(`${root}/me/genres`, { method: "PUT", body: { genres } }),
   baseWorks: () => api<BaseWork[]>(`${root}/base-works`),
+  // 소설에 붙지 않은 표지는 하루 뒤 서버가 지운다.
+  uploadCover: async (image: CoverImage) =>
+    api<NovelCover>(`${root}/covers`, {
+      method: "POST",
+      body: await coverForm(image),
+    }),
 };

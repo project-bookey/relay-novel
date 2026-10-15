@@ -12,7 +12,18 @@
     },
     "android": { "package": "app.relaynovel.mobile" },
     "web": { "bundler": "metro", "output": "single" },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "작품 표지로 쓸 사진을 고르려면 사진 보관함에 접근해야 해요.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
     "extra": { "apiBaseUrl": "http://localhost:8080" }
   }
 }

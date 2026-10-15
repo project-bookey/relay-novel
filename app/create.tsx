@@ -10,7 +10,12 @@ import {
   DeliveryCountStepper,
   ModePicker,
 } from "../src/components/create/ModePicker";
+import { RelayLimits } from "../src/components/create/RelayLimits";
 import { FollowPicker } from "../src/components/create/FollowPicker";
+import {
+  CoverPicker,
+  type PickedCover,
+} from "../src/components/create/CoverPicker";
 import {
   Screen,
   Label,
@@ -36,6 +41,7 @@ interface Form {
   chapterLimit: string;
   turnHours: string;
   baseWork?: BaseWork;
+  cover?: PickedCover;
 }
 
 const emptyForm: Form = {
@@ -65,6 +71,8 @@ function toRequest(form: Form): CreateNovel | string {
     return `제한 시간은 1~${TURN_HOURS_MAX}시간으로 입력해 주세요.`;
   if (form.mode === "CIRCLE" && form.inviteeIds.length === 0)
     return "함께 쓸 작가를 한 명 이상 골라 주세요.";
+  if (form.cover && form.cover.id === undefined)
+    return "표지를 다 올린 뒤에 만들 수 있어요. 올리지 못했다면 다시 올리거나 빼 주세요.";
   const common = {
     kind: "RELAY" as const,
     mode: form.mode,
@@ -74,6 +82,7 @@ function toRequest(form: Form): CreateNovel | string {
     chapterLimit,
     turnHours,
     baseWorkId: form.baseWork?.id,
+    coverId: form.cover?.id,
   };
   // 열매로 퍼뜨리는 작품은 누구나 읽고, 모여 만들기는 고른 작가만 본다.
   if (form.mode === "OPEN")
@@ -181,6 +190,13 @@ export default function Create() {
         }
       />
       <View style={styles.section}>
+        <Text style={ui.label}>표지 (선택)</Text>
+        <CoverPicker
+          picked={form.cover}
+          onChange={(cover) => update({ cover })}
+        />
+      </View>
+      <View style={styles.section}>
         <Field
           label="이야기 제목"
           value={form.title}
@@ -249,31 +265,14 @@ export default function Create() {
           />
         )}
       </View>
-      <View style={[styles.section, styles.numbers]}>
-        <View style={styles.number}>
-          <Field
-            label="목표 회차 수"
-            value={form.chapterLimit}
-            onChangeText={(chapterLimit) => update({ chapterLimit })}
-            keyboardType="number-pad"
-            maxLength={2}
-          />
-        </View>
-        <View style={styles.number}>
-          <Field
-            label="한 차례 제한 시간 (시간)"
-            value={form.turnHours}
-            onChangeText={(turnHours) => update({ turnHours })}
-            keyboardType="number-pad"
-            maxLength={3}
-          />
-        </View>
+      <View style={styles.section}>
+        <RelayLimits
+          mode={form.mode}
+          chapterLimit={form.chapterLimit}
+          turnHours={form.turnHours}
+          onChange={update}
+        />
       </View>
-      <Text style={ui.hint}>
-        {isOpen
-          ? "목표 회차에 닿은 가지는 더 배달되지 않아요. 열매를 받은 사람이 제한 시간 안에 쓰지 않으면 다른 사람에게 다시 배달돼요."
-          : "고른 작가들은 승인 없이 바로 참가해요. 제한 시간이 지나면 다음 작가에게 차례가 넘어가요."}
-      </Text>
       {!!validation && <ErrorBox error={new Error(validation)} />}
       {!!mutation.error && <ErrorBox error={mutation.error} />}
       <Button onPress={submit} disabled={mutation.isPending}>
@@ -287,6 +286,4 @@ const styles = StyleSheet.create({
   // 묶음 사이 간격은 묶음 안 간격보다 넓게 둔다.
   section: { marginTop: 28 },
   genres: { gap: 8, paddingVertical: 14 },
-  numbers: { flexDirection: "row", gap: 10 },
-  number: { flex: 1 },
 });

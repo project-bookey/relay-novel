@@ -1,9 +1,11 @@
 import { useId } from "react";
 import Svg, { Circle, Defs, G, Mask, Path, Rect } from "react-native-svg";
 import { colors } from "../theme";
+import { SPROUT_LEAVES, SPROUT_STEM } from "../design/refreshSprout";
 
-// 하단 바의 아이콘들(홈·사용자·열매·씨앗주머니). 모두 24칸에 검은 선으로 그린다.
+// 하단 바의 아이콘들(홈·사용자·열매·씨앗주머니)과 홈 새로고침 버튼의 새싹. 모두 24칸에 검은 선으로 그린다.
 // strokeWidth도 24칸 기준이라, 화면에서 같은 굵기로 보이려면 그리는 크기에 맞춰 환산해 넘긴다.
+// 새싹이 휘청일 때 흩날리는 작은 잎(SmallLeaf)만은 6칸에 받은 색으로 칠한다.
 export interface BarIconProps {
   size: number;
   strokeWidth: number;
@@ -121,12 +123,30 @@ export function FruitsIcon({ size, strokeWidth }: BarIconProps) {
   );
 }
 
-// 시계 방향으로 도는 화살표(새로고침). 아래쪽을 돌아 위쪽에서 오른쪽을 가리키고, 오른쪽 위는 비어 있다.
-export function RefreshIcon({ size, strokeWidth }: BarIconProps) {
+const SPROUT_STEM_PATH = `M${SPROUT_STEM.x} ${SPROUT_STEM.bottom}V${SPROUT_STEM.top}`;
+const SPROUT_LEAF_PATHS = SPROUT_LEAVES.map(({ base, tip, bulge }) =>
+  leafPath(base.x, base.y, tip.x, tip.y, bulge),
+);
+
+// 새로고침 버튼의 새싹. 줄기에 칠한 잎 셋이 돋아 있다. 남은 횟수 점은 버튼이 따로 그린다.
+export function SproutIcon({ size, strokeWidth }: BarIconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M18.77 10.14A7.2 7.2 0 1 1 12 5.4" {...line(strokeWidth)} />
-      <Path d="M9.4 2.7L12 5.4L9.4 8.1" {...line(strokeWidth)} />
+      <Path d={SPROUT_STEM_PATH} {...line(strokeWidth)} />
+      {SPROUT_LEAF_PATHS.map((leaf) => (
+        <Path key={leaf} d={leaf} fill={colors.black} />
+      ))}
+    </Svg>
+  );
+}
+
+const SMALL_LEAF_PATH = leafPath(1.1, 4.4, 4.9, 1.6, 1.3);
+
+// 새싹이 휘청일 때 흩날리는 작은 잎. 칸 왼쪽 아래에서 오른쪽 위로 비스듬히 놓인다.
+export function SmallLeaf({ size, color }: { size: number; color: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 6 6">
+      <Path d={SMALL_LEAF_PATH} fill={color} />
     </Svg>
   );
 }

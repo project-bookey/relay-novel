@@ -9,7 +9,7 @@ import { demoStories } from "../../src/api/demo";
 import type { NovelSummary } from "../../src/api/types";
 import { FruitField } from "../../src/components/FruitField";
 import {
-  REFRESH_BUTTON_SIZE,
+  REFRESH_TOUCH_SIZE,
   RefreshButton,
 } from "../../src/components/home/RefreshButton";
 import { ErrorBox, Loading, Screen, ui } from "../../src/components/ui";
@@ -47,7 +47,8 @@ function shuffled<Item>(items: Item[]) {
   return copy;
 }
 
-// 새로고침 버튼 가운데 자리. 위쪽 나무의 네모 오른쪽 위에 두되, 상태 표시줄에는 걸치지 않는다.
+// 새로고침 버튼 가운데 자리. 위쪽 나무의 네모 오른쪽 위에 두되, 누르는 칸 전체가 상태 표시줄 아래에 오게 한다.
+// 아이폰은 상태 표시줄을 누르면 시스템이 가져가서, 칸이 걸치면 그만큼 눌리지 않는다.
 // 나무는 화면 맨 위에 붙지만 버튼은 안전 영역 안쪽(Screen의 여백 안)에 그리므로, 화면 자리에서 여백만큼 뺀다.
 function useRefreshButtonCenter() {
   const { width } = useWindowDimensions();
@@ -57,7 +58,7 @@ function useRefreshButtonCenter() {
     x: left + REFRESH_BUTTON_SPOT.x * scale,
     y: Math.max(
       REFRESH_BUTTON_SPOT.y * scale,
-      insets.top + REFRESH_BUTTON_SIZE / 2,
+      insets.top + REFRESH_TOUCH_SIZE / 2,
     ),
   };
   return { x: onScreen.x - insets.left, y: onScreen.y - insets.top };
@@ -156,6 +157,8 @@ export default function Home() {
   const isEmpty = !isLoading && !error && stories.length === 0;
   const refreshesLeft =
     mode === "demo" ? demoLeft : homeFeed.data?.freeRefreshesLeftToday;
+  const dailyRefreshes =
+    mode === "demo" ? DEMO_FREE_REFRESHES : homeFeed.data?.dailyFreeRefreshes;
   const openStory = (story: NovelSummary) => router.push(`/novel/${story.id}`);
   const retry = () => {
     void Promise.all([
@@ -212,6 +215,7 @@ export default function Home() {
         <RefreshButton
           center={buttonCenter}
           left={refreshesLeft}
+          total={dailyRefreshes}
           busy={showing || refresh.isPending}
           notice={notice}
           onPress={requestRefresh}

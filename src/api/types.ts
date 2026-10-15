@@ -89,6 +89,16 @@ export interface ChapterNode {
   excerpt: string;
   createdAt: string;
 }
+// 홈 열매 밭에 지금 놓인 묶음과 오늘 남은 무료 새로고침(NovelHomeFeedView).
+// 나에게 온 열매와 내 차례 소설은 묶음을 만들 때 뺀다. 그 뒤에 배달되거나 차례가 된 작품은 함께 올 수 있어
+// 홈이 id로 한 번만 놓는다.
+export interface NovelHomeFeed {
+  novels: NovelSummary[];
+  freeRefreshesLeftToday: number;
+  dailyFreeRefreshes: number;
+  // 무료 새로고침이 다시 채워지는 때(다음 한국 시간 자정)
+  resetsAt: string;
+}
 // 내가 받은 열매. 이 회차에서 가지를 뻗어 이어 쓸 수 있다.
 export interface NovelDelivery {
   deliveryId: number;

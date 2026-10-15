@@ -121,6 +121,16 @@ export function FruitsIcon({ size, strokeWidth }: BarIconProps) {
   );
 }
 
+// 시계 방향으로 도는 화살표(새로고침). 아래쪽을 돌아 위쪽에서 오른쪽을 가리키고, 오른쪽 위는 비어 있다.
+export function RefreshIcon({ size, strokeWidth }: BarIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M18.77 10.14A7.2 7.2 0 1 1 12 5.4" {...line(strokeWidth)} />
+      <Path d="M9.4 2.7L12 5.4L9.4 8.1" {...line(strokeWidth)} />
+    </Svg>
+  );
+}
+
 // 새 이야기를 심는 씨앗주머니. 묶은 입구 위로 새싹이 나 있고, 앞면에 + 표시가 있으며
 // 오른쪽으로 씨앗(네모·세모·동그라미)이 흘러나온다.
 export function SeedPouch({ size, strokeWidth }: BarIconProps) {

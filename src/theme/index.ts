@@ -21,6 +21,16 @@ export const colors = {
   cardShadow: "rgba(48, 54, 47, 0.16)",
   // 하단 아이콘과 씨앗주머니의 선
   black: "#000000",
+  // 홈 위쪽 나무의 굵은 가지. 사용자가 그려 준 진한 갈색
+  bough: "#613D30",
+  // 홈 나무 위 캐릭터(사용자 그림): 몸 색, 다리·눈 선, 신나게 뛸 때 머리 옆에 뜨는 빗금 색
+  castCircle: "#FEF2D3",
+  castTriangle: "#FEE49A",
+  castSquare: "#B8D7FE",
+  castInk: "#191919",
+  castCircleAccent: "#FFA902",
+  castTriangleAccent: "#4E9A51",
+  castSquareAccent: "#FC4447",
 };
 
 // 하단 아이콘과 씨앗주머니의 선 굵기. 그림 크기와 상관없이 화면에서 이 굵기(px)로 보이게 한다.

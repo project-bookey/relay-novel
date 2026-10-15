@@ -29,11 +29,12 @@ import {
 const HELD_LAYER = 100000;
 const BUBBLE_LAYER = HELD_LAYER + 1;
 
-// 땅에 놓인 열매들의 자리를 함께 적어 두는 곳. 손으로 놓은 열매가 다른 열매 위에 겹치지 않게 한다.
+// 땅에 놓인 열매들의 자리와 기울기를 함께 적어 두는 곳. 손으로 놓은 열매가 다른 열매 위에 겹치지 않게 하고,
+// 새로고침하면 지금 놓인 자리에서 굴러 나가게 한다. 같은 소설이 새 묶음에 다시 올 수 있어 열매마다 붙인 key로 적는다.
 export interface FruitNeighbors {
-  report: (id: number, rest: RestingFruit) => void;
-  forget: (id: number) => void;
-  othersThan: (id: number) => RestingFruit[];
+  report: (key: string, rest: RestingFruit, angle: number) => void;
+  forget: (key: string) => void;
+  othersThan: (key: string) => RestingFruit[];
 }
 
 // 웹 브라우저가 열매를 끄는 손가락을 화면 스크롤이나 당겨서 새로고침으로 가져가 끌기가 끊기지 않게 한다.
@@ -46,6 +47,7 @@ const keepTouchOnWeb =
 // 홈 열매 하나. 하늘에서 떨어져 내려앉고, 누르면 그 소설로 간다.
 // 끌거나 길게 누르면 집혀 손가락 아래에 붙어 따라오고, 놓으면 바로 아래 땅으로 떨어져 튄 뒤 멈춘다.
 export function FieldFruit({
+  fruitKey,
   fruit,
   story,
   delivered,
@@ -55,6 +57,8 @@ export function FieldFruit({
   onScreen,
   onOpen,
 }: {
+  // 열매 밭에서 이 열매를 가리키는 key(새로고침 차례와 소설 id)
+  fruitKey: string;
   fruit: PlacedFruit;
   // 지금 소설 정보. 배치한 뒤 좋아요 수 등이 바뀌어도 최신 것을 보여 준다.
   story: NovelSummary;
@@ -106,10 +110,11 @@ export function FieldFruit({
     return () => motion.stop();
   }, [progress, reduced, flight, delayMs, droppedByHand]);
 
+  const restingAngle = finalAngleOf(placement);
   useEffect(() => {
-    neighbors.report(story.id, rest);
-  }, [neighbors, story.id, rest]);
-  useEffect(() => () => neighbors.forget(story.id), [neighbors, story.id]);
+    neighbors.report(fruitKey, rest, restingAngle);
+  }, [neighbors, fruitKey, rest, restingAngle]);
+  useEffect(() => () => neighbors.forget(fruitKey), [neighbors, fruitKey]);
 
   const falling = useMemo(
     () => followFlight(progress, flight, startAngle),
@@ -135,7 +140,7 @@ export function FieldFruit({
     reduced,
     rollsLikeBall: isBall,
     canGrab: () => landed.current,
-    otherFruits: () => neighbors.othersThan(story.id),
+    otherFruits: () => neighbors.othersThan(fruitKey),
     onDrop: dropFromHand,
   });
   const { held } = hand;

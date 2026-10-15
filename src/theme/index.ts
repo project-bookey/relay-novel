@@ -163,6 +163,17 @@ export function writersLabel(novel: {
   return `작가 ${novel.memberCount}/${novel.memberLimit}명`;
 }
 
+// 가지가 갈라지는 작품의 목표 회차는 한 가지의 깊이라 전체 회차 수와 나눠 쓴다.
+export function chaptersLabel(novel: {
+  mode: "OPEN" | "CIRCLE";
+  chapterCount: number;
+  chapterLimit: number;
+}) {
+  if (novel.mode === "OPEN")
+    return `${novel.chapterCount}개의 장 · 목표 ${novel.chapterLimit}화`;
+  return `${novel.chapterCount}/${novel.chapterLimit}개의 장`;
+}
+
 export const statusLabel = {
   RECRUITING: "작가 모집 중",
   ONGOING: "이야기 이어가는 중",

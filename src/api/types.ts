@@ -145,6 +145,15 @@ export interface CreateNovel {
   // CIRCLE: 함께 쓸 팔로우한 작가(본인 빼고 최대 9명)
   inviteeIds?: number[];
   baseWorkId?: number;
+  // 먼저 올린 표지(POST /novels/covers)의 id
+  coverId?: number;
+}
+// 올린 표지 (NovelCoverView)
+export interface NovelCover {
+  id: number;
+  url: string;
+  width?: number;
+  height?: number;
 }
 // 팔로우 목록의 한 사람 (GET /api/v1/follows/following)
 export interface FollowUser {

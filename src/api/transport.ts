@@ -53,18 +53,20 @@ export function createTransport(
     });
     const send = async () => {
       const tokens = options.auth === false ? null : await storage.get();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
+      // 파일 업로드(FormData)는 fetch가 boundary를 붙인 Content-Type을 직접 넣어야 해서 비워 둔다.
+      const isUpload =
+        typeof FormData !== "undefined" && options.body instanceof FormData;
+      const headers: Record<string, string> = {};
+      if (!isUpload) headers["Content-Type"] = "application/json";
       if (tokens) headers.Authorization = `Bearer ${tokens.accessToken}`;
+      let body: BodyInit | undefined;
+      if (isUpload) body = options.body as FormData;
+      else if (options.body !== undefined) body = JSON.stringify(options.body);
       try {
         return await request(url.toString(), {
           method: options.method || "GET",
           headers,
-          body:
-            options.body === undefined
-              ? undefined
-              : JSON.stringify(options.body),
+          body,
         });
       } catch {
         throw new ApiError(

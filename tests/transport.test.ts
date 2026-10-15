@@ -119,3 +119,41 @@ test("public login requests omit bearer tokens and backend validation errors are
     (e) => e instanceof ApiError && e.message === "이메일을 확인해 주세요.",
   );
 });
+test("file uploads send the form as is and let fetch set the multipart content type", async () => {
+  let sent: RequestInit | undefined;
+  const request: typeof fetch = async (_input, init) => {
+    sent = init;
+    return json({ id: 7, url: "https://cdn.test/cover.png" });
+  };
+  const api = createTransport("http://example.test", store(), request);
+  const form = new FormData();
+  form.append("file", new Blob(["image"], { type: "image/png" }), "cover.png");
+  const result = await api("/api/v1/novels/covers", {
+    method: "POST",
+    body: form,
+  });
+  const headers = sent?.headers as Record<string, string>;
+  assert.equal(sent?.body, form);
+  assert.equal(headers["Content-Type"], undefined);
+  assert.equal(headers.Authorization, "Bearer old");
+  assert.deepEqual(result, { id: 7, url: "https://cdn.test/cover.png" });
+});
+test("an upload that hits an expired token is sent again with the refreshed token", async () => {
+  const uploads: { token: string; body: unknown }[] = [];
+  const request: typeof fetch = async (input, init) => {
+    if (String(input).endsWith("/auth/refresh"))
+      return json({ accessToken: "new", refreshToken: "rotated" });
+    const token = (init?.headers as Record<string, string>).Authorization;
+    uploads.push({ token, body: init?.body });
+    return token === "Bearer new" ? json({ id: 8, url: "u" }) : json({}, 401);
+  };
+  const api = createTransport("http://example.test", store(), request);
+  const form = new FormData();
+  form.append("file", new Blob(["image"], { type: "image/png" }), "cover.png");
+  await api("/api/v1/novels/covers", { method: "POST", body: form });
+  assert.deepEqual(
+    uploads.map((upload) => upload.token),
+    ["Bearer old", "Bearer new"],
+  );
+  assert.equal(uploads[1].body, form);
+});

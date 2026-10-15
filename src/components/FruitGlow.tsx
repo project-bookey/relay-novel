@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { colors } from "../theme";
+import { useColors } from "../theme/themed";
 import { nativeDriverEnabled } from "./fruitMotion";
 import {
   ballRollShift,
@@ -80,6 +80,7 @@ function Sparkle({
   delayMs: number;
   moving: boolean;
 }) {
+  const colors = useColors();
   // 0은 꺼짐, 1은 가장 크게 반짝일 때
   const shine = useRef(new Animated.Value(0)).current;
 

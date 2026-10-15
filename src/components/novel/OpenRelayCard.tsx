@@ -2,7 +2,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { NovelDelivery, NovelDetail } from "../../api/types";
-import { Button, Card, Label, ui } from "../ui";
+import { Button, Card, Label, useUi } from "../ui";
 
 // 열매로 퍼뜨리는 작품의 이어 쓰기 안내. 누가 쓸 수 있는지는 서버가 준 myDeliveryId·canWrite만 따른다.
 // 받은 열매가 있으면 그 회차에서 가지를 뻗어 이어 쓰는 것이 이 화면의 단 하나의 주요 동작이다.
@@ -18,6 +18,7 @@ export function OpenRelayCard({
   busy: boolean;
   onDecline: () => void;
 }) {
+  const ui = useUi();
   const { novel } = detail;
   if (detail.myDeliveryId)
     return (
@@ -75,6 +76,7 @@ function DeliveryCard({
   busy: boolean;
   onDecline: () => void;
 }) {
+  const ui = useUi();
   const [confirmingDecline, setConfirmingDecline] = useState(false);
   const from = delivery
     ? `${delivery.chapterNumber}화 「${delivery.chapterTitle}」에서 가지를 뻗어 이어 써요.`

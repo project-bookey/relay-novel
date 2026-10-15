@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
@@ -11,14 +11,14 @@ import {
   useMyDelivery,
 } from "../../src/components/novel/useNovelChapters";
 import {
-  Screen,
-  Label,
   Button,
-  Loading,
   ErrorBox,
-  ui,
+  Label,
+  Loading,
+  Screen,
+  useUi,
 } from "../../src/components/ui";
-import { colors } from "../../src/theme";
+import { themedStyles } from "../../src/theme/themed";
 
 export default function Read() {
   const params = useLocalSearchParams<{ id: string; chapterId: string }>();
@@ -73,6 +73,8 @@ function ChapterBody({
   nodes: ChapterNode[];
   detail?: NovelDetail;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const novelId = chapter.novelId;
   const branching = detail?.novel.mode === "OPEN";
   const labels = new Map(
@@ -155,9 +157,9 @@ function ChapterBody({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   header: { marginVertical: 25 },
   body: { fontSize: 17, lineHeight: 32, color: colors.ink, paddingBottom: 35 },
   navigation: { flexDirection: "row", gap: 10 },
   navigationButton: { flex: 1 },
-});
+}));

@@ -1,6 +1,7 @@
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Text, View } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { colors, statusLabel, storyColorOf, writersLabel } from "../theme";
+import { statusLabel, storyColorOf, writersLabel } from "../theme";
+import { themedStyles } from "../theme/themed";
 
 // 집어 든 열매 위에 뜨는 말풍선. 그 소설을 열지 않고도 무엇인지 알 수 있게
 // 장르·제목·상태·회차·작가 수를 흰 카드에 짧게 보여준다. 나에게 배달된 열매면 그것도 알려 준다.
@@ -34,6 +35,7 @@ export function FruitBubble({
   appear: Animated.Value;
   screenWidth: number;
 }) {
+  const styles = useStyles();
   // 말풍선은 열매를 따라가되 화면 밖으로 나가지 않는다. 꼬리는 늘 열매를 가리킨다.
   const minLeft = SIDE_MARGIN;
   // 화면이 말풍선보다 좁아도 범위가 뒤집히지 않게 한다.
@@ -115,7 +117,7 @@ export function FruitBubble({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   // 높이 0인 기준선을 열매 위쪽 끝에 둔다. 말풍선은 이 선 위로 쌓여서 열매를 가리지 않는다.
   anchor: {
     position: "absolute",
@@ -165,4 +167,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.green,
   },
   turnText: { fontSize: 11, fontWeight: "600", color: colors.paper },
-});
+}));

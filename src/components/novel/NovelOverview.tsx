@@ -5,7 +5,7 @@ import type { ChapterLink } from "../../design/chapterTree";
 import { chaptersLabel, statusLabel, writersLabel } from "../../theme";
 import { StoryTree } from "../StoryTree";
 import { CoverThumb } from "../CoverThumb";
-import { ErrorBox, Label, ui } from "../ui";
+import { ErrorBox, Label, useUi } from "../ui";
 import { LikeButton, useNovelLike } from "./LikeButton";
 
 // 표지가 있으면 서점처럼 왼쪽에 표지, 오른쪽에 장르·제목·현황을 두고 이야기 나무는 소개 아래에 낮게 남긴다.
@@ -20,6 +20,7 @@ function CoverHeader({
   like: ReturnType<typeof useNovelLike>;
   onCoverError: () => void;
 }) {
+  const ui = useUi();
   return (
     <>
       <View style={styles.coverRow}>
@@ -52,6 +53,7 @@ export function NovelOverview({
   // 회차 나무. 아직 불러오지 못했으면 회차 수만큼 한 줄기로 그린다.
   nodes?: ChapterLink[];
 }) {
+  const ui = useUi();
   const like = useNovelLike(novel);
   // 표지를 불러오지 못하면 표지 없는 작품과 같은 화면으로 돌아간다.
   const [coverFailed, setCoverFailed] = useState(false);

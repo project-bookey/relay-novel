@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router/js-tabs";
 import { BottomBar, type Place } from "../../src/components/BottomBar";
 import { useSession } from "../../src/state/session";
-import { colors } from "../../src/theme";
+import { useColors } from "../../src/theme/themed";
 
 // 탭 이름(파일 이름)마다 아래쪽 바에서 맡은 자리
 const placeOf: Record<string, Place> = {
@@ -14,6 +14,7 @@ const placeOf: Record<string, Place> = {
 // 지금 있는 곳 표시가 다음 자리로 미끄러져 간다.
 export default function TabsLayout() {
   const { mode } = useSession();
+  const colors = useColors();
   // 세션을 확인하는 동안이나 로그인 전에는 화면이 기다리거나 로그인으로 보내므로 바를 띄우지 않는다.
   const showBar = mode === "demo" || mode === "authenticated";
 

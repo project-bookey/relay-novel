@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, Text } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import { useSession } from "../../state/session";
-import { colors } from "../../theme";
-import { Card, ErrorBox, Label, Loading, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { Card, ErrorBox, Label, Loading, useUi } from "../ui";
 
 // 받은 회차를 편집기 위에 접어 둔다. 이어 쓰다가 앞 이야기를 다시 볼 수 있게 펼칠 수 있다.
 export function ParentChapterPeek({
@@ -14,6 +14,8 @@ export function ParentChapterPeek({
   novelId: number;
   chapterId: number;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const { mode } = useSession();
   const [open, setOpen] = useState(false);
   const chapter = useQuery({
@@ -57,9 +59,9 @@ export function ParentChapterPeek({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   title: { marginTop: 8 },
   body: { fontSize: 14, lineHeight: 24, color: colors.ink, marginTop: 8 },
   toggle: { minHeight: 44, justifyContent: "center" },
   toggleText: { fontSize: 13, color: colors.green, fontWeight: "600" },
-});
+}));

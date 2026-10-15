@@ -17,14 +17,14 @@ import {
   type PickedCover,
 } from "../src/components/create/CoverPicker";
 import {
-  Screen,
-  Label,
-  Field,
   Button,
   Card,
   ErrorBox,
+  Field,
+  Label,
   Loading,
-  ui,
+  Screen,
+  useUi,
 } from "../src/components/ui";
 
 // 목표 회차는 한 가지가 닿을 수 있는 깊이다. 서버도 1~50으로 막는다.
@@ -97,6 +97,7 @@ function submitLabel(mode: NovelMode, pending: boolean) {
 }
 
 export default function Create() {
+  const ui = useUi();
   const { mode } = useSession();
   const client = useQueryClient();
   const navigation = useNavigation();

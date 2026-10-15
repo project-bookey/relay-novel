@@ -20,18 +20,19 @@ import {
   type SignupField,
 } from "../src/components/auth/authRules";
 import {
-  Screen,
-  Label,
-  Field,
   Button,
   Card,
   ErrorBox,
+  Field,
+  Label,
   Loading,
-  ui,
+  Screen,
+  useUi,
 } from "../src/components/ui";
 
 // 회원가입. 북키 계정과 같은 계정이라 가입 방식(이메일 코드·본인인증)은 서버 설정을 따른다.
 export default function Signup() {
+  const ui = useUi();
   const session = useSession();
   const config = useQuery({
     queryKey: ["signup-config"],

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { router, useNavigation } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Draft, NovelDetail } from "../../api/types";
-import { Button, Card, ErrorBox, Field, Label, ui } from "../ui";
+import { Button, Card, ErrorBox, Field, Label, useUi } from "../ui";
 import { ParentChapterPeek } from "./ParentChapterPeek";
 import type { WriteTarget } from "./writeTarget";
 
@@ -42,6 +42,7 @@ export function Editor({
   // 받은 열매에서 뻗을 때 이어받은 회차
   parentChapterId?: number;
 }) {
+  const ui = useUi();
   const [title, setTitle] = useState(draft.title);
   const [body, setBody] = useState(draft.body);
   const [saved, setSaved] = useState(draft);

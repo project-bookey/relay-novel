@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, type ComponentType } from "react";
-import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Easing, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, type Href } from "expo-router";
 import { useSession } from "../state/session";
 import { ICON_LINE_PX } from "../theme";
+import { themedStyles } from "../theme/themed";
 import {
   FruitsIcon,
   HomeIcon,
@@ -113,6 +114,7 @@ function useLiquidLens(index: number) {
 // 탭 레이아웃이 화면 위에 겹쳐 띄우며, 화면을 옮겨 다녀도 바는 그대로 남는다.
 export function BottomBar({ current }: { current: Place }) {
   const { mode } = useSession();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const lens = useLiquidLens(
     places.findIndex(({ place }) => place === current),
@@ -160,7 +162,7 @@ export function BottomBar({ current }: { current: Place }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   // 바 바깥 빈 곳은 뒤쪽 화면(열매 등)을 누를 수 있게 손가락을 통과시킨다.
   dock: {
     position: "absolute",
@@ -200,15 +202,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderCurve: "continuous",
-    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    backgroundColor: colors.lensFill,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.95)",
-    boxShadow: [
-      "0 3px 10px rgba(0, 0, 0, 0.10)",
-      "0 0 0 0.5px rgba(0, 0, 0, 0.05)",
-      "inset 0 1px 2px rgba(255, 255, 255, 1)",
-      "inset 0 -2px 4px rgba(0, 0, 0, 0.05)",
-    ].join(", "),
+    borderColor: colors.lensEdge,
+    boxShadow: colors.lensShadow,
   },
   pouch: {
     width: 56,
@@ -217,4 +214,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   pressed: { opacity: 0.6 },
-});
+}));

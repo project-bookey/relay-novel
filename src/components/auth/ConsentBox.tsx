@@ -3,7 +3,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
   type NativeScrollEvent,
@@ -12,8 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { auth } from "../../api/auth";
 import type { LegalKey, SignupConsent } from "../../api/types";
-import { colors } from "../../theme";
-import { Button, ErrorBox, Loading, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { Button, ErrorBox, Loading, useUi } from "../ui";
 
 // 가입 동의. 만 14세·이용약관·개인정보 수집·이용은 필수, 광고성 정보 수신은 선택이다.
 // 북키 앱처럼 이용약관과 개인정보 문서는 끝까지 읽어야 동의할 수 있다.
@@ -59,6 +58,7 @@ export function ConsentBox({
   value: ConsentState;
   onChange: (state: ConsentState) => void;
 }) {
+  const styles = useStyles();
   const [reading, setReading] = useState<(typeof rows)[number]>();
   return (
     <View style={styles.box}>
@@ -104,6 +104,7 @@ function CheckRow({
   checked: boolean;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -145,6 +146,8 @@ function LegalSheet({
   onClose: () => void;
   onAgree: (version: string) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const [readToEnd, setReadToEnd] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
@@ -210,7 +213,7 @@ function LegalSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   box: { marginVertical: 12, gap: 2 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 48 },
   check: {
@@ -236,4 +239,4 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   documentText: { fontSize: 13, lineHeight: 22, color: colors.ink },
-});
+}));

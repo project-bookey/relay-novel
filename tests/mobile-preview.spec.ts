@@ -431,3 +431,39 @@ test("mobile demo shows a popular story's likes and sends a visitor to log in to
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("mobile demo switches to the dark screen mode on the my page and keeps it after reload", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const openMyPage = async () => {
+    await page.getByText("먼저 둘러보기 →").click();
+    await page.getByRole("button", { name: "마이", exact: true }).click();
+    await expect(page.getByText("화면 모드", { exact: true })).toBeVisible();
+  };
+  await page.goto("/");
+  await openMyPage();
+  const heading = page.getByText("마이", { exact: true });
+  // 밝은 모드 잉크색(#30362F)
+  await expect(heading).toHaveCSS("color", "rgb(48, 54, 47)");
+
+  const dark = page.getByRole("radio", { name: "어둡게" });
+  await dark.click();
+  await expect(dark).toHaveAttribute("aria-checked", "true");
+  // 어두운 모드 잉크색(#E6E8E1)
+  await expect(heading).toHaveCSS("color", "rgb(230, 232, 225)");
+
+  // 고른 모드는 기기에 남아 새로 열어도 그대로다.
+  await page.reload();
+  await openMyPage();
+  await expect(page.getByRole("radio", { name: "어둡게" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect(page.getByText("마이", { exact: true })).toHaveCSS(
+    "color",
+    "rgb(230, 232, 225)",
+  );
+  expect(errors).toEqual([]);
+});

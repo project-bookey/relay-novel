@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, View } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { colors } from "../theme";
+import { themedStyles } from "../theme/themed";
 import { StoryTree } from "./StoryTree";
 
 // 작품 표지(3:4). 표지가 없거나 불러오지 못하면 같은 자리에 그 소설의 이야기 나무를 작게 그린다.
@@ -14,6 +14,7 @@ export function CoverThumb({
   width: number;
   onError?: () => void;
 }) {
+  const styles = useStyles();
   const [failed, setFailed] = useState(false);
   const size = { width, height: Math.round((width * 4) / 3) };
   if (novel.coverUrl && !failed)
@@ -36,7 +37,7 @@ export function CoverThumb({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   cover: { borderRadius: 8, backgroundColor: colors.line },
   treeBox: {
     backgroundColor: colors.paper,
@@ -45,4 +46,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
   },
-});
+}));

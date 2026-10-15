@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import { auth } from "../../api/auth";
 import type { EmailCode } from "../../api/types";
-import { colors } from "../../theme";
-import { Button, Field, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { Button, Field, useUi } from "../ui";
 import { CODE_LENGTH, formatRemaining, isCode, isEmail } from "./authRules";
 
 // 이메일 인증 코드 받기·확인. 코드는 여기서 확인만 하고, 가입할 때 같은 코드를 다시 보낸다.
@@ -25,6 +25,8 @@ export function EmailCodeField({
   // 가입 요청에서 돌아온 코드 오류
   serverError?: string;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const [issued, setIssued] = useState<EmailCode & { at: number }>();
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
@@ -125,8 +127,8 @@ export function EmailCodeField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   block: { marginBottom: 18 },
   verified: { fontSize: 13, color: colors.green, fontWeight: "600" },
   error: { marginTop: 6 },
-});
+}));

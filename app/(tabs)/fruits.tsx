@@ -14,11 +14,12 @@ import {
   Label,
   Loading,
   Screen,
-  ui,
+  useUi,
 } from "../../src/components/ui";
 
 // 열매 페이지. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 상태별로 골라 본다.
 export default function FruitsPage() {
+  const ui = useUi();
   const { mode } = useSession();
   const [status, setStatus] = useState<NovelStatus>();
   const feed = useInfiniteQuery({

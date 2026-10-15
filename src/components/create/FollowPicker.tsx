@@ -1,8 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { follows } from "../../api/follows";
-import { colors } from "../../theme";
-import { ErrorBox, Loading, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { ErrorBox, Loading, useUi } from "../ui";
 
 // 나를 빼고 고를 수 있는 작가 수. 나까지 열 명이 함께 쓴다.
 export const MAX_INVITEES = 9;
@@ -15,6 +15,8 @@ export function FollowPicker({
   selected: number[];
   onChange: (userIds: number[]) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const following = useQuery({
     queryKey: ["follows", "following"],
     queryFn: () => follows.following(0),
@@ -81,7 +83,7 @@ export function FollowPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   block: { marginTop: 10, gap: 4 },
   count: { fontSize: 12, color: colors.muted },
   person: {
@@ -104,4 +106,4 @@ const styles = StyleSheet.create({
   check: { color: colors.paper, fontSize: 13, fontWeight: "700" },
   name: { flex: 1, fontSize: 14, color: colors.ink },
   mutual: { fontSize: 11, color: colors.muted },
-});
+}));

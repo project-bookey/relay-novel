@@ -3,24 +3,38 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { SessionProvider } from "../src/state/session";
-import { colors } from "../src/theme";
+import { AppearanceProvider, useAppearance } from "../src/state/appearance";
+import { useColors } from "../src/theme/themed";
 const client = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 15000 } },
 });
+
+function ThemedStack() {
+  const { scheme } = useAppearance();
+  const colors = useColors();
+  return (
+    <>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      />
+    </>
+  );
+}
+
 export default function Layout() {
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={client}>
-        <SessionProvider>
-          <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          />
-        </SessionProvider>
-      </QueryClientProvider>
+      <AppearanceProvider>
+        <QueryClientProvider client={client}>
+          <SessionProvider>
+            <ThemedStack />
+          </SessionProvider>
+        </QueryClientProvider>
+      </AppearanceProvider>
     </SafeAreaProvider>
   );
 }

@@ -7,6 +7,7 @@ import { demoStories } from "../../src/api/demo";
 import type { NovelSummary } from "../../src/api/types";
 import { StoryCard } from "../../src/components/home/StoryCard";
 import { StoryRow } from "../../src/components/my/StoryRow";
+import { AppearancePicker } from "../../src/components/my/AppearancePicker";
 import {
   Button,
   Card,
@@ -14,7 +15,7 @@ import {
   Label,
   Loading,
   Screen,
-  ui,
+  useUi,
 } from "../../src/components/ui";
 
 function StorySection({
@@ -32,6 +33,7 @@ function StorySection({
   // 책장처럼 짧은 줄로 보여 준다(내 작품).
   compact?: boolean;
 }) {
+  const ui = useUi();
   return (
     <>
       <Text style={ui.sectionTitle}>{title}</Text>
@@ -58,8 +60,9 @@ function StorySection({
   );
 }
 
-// 마이 페이지. 내 차례와 내 작품, 관심 장르, 로그아웃을 모았다.
+// 마이 페이지. 내 차례와 내 작품, 화면 모드, 관심 장르, 로그아웃을 모았다.
 export default function MyPage() {
+  const ui = useUi();
   const { mode, logout } = useSession();
   const turns = useQuery({
     queryKey: ["my-turns", mode],
@@ -121,6 +124,7 @@ export default function MyPage() {
             emptyMessage="아직 함께 쓰는 이야기가 없어요."
             compact
           />
+          <AppearancePicker />
           <View style={styles.actions}>
             <Button
               outline

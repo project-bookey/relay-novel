@@ -12,7 +12,7 @@ import {
   REFRESH_TOUCH_SIZE,
   RefreshButton,
 } from "../../src/components/home/RefreshButton";
-import { ErrorBox, Loading, Screen, ui } from "../../src/components/ui";
+import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
 import { REFRESH_BUTTON_SPOT, canopyPlacement } from "../../src/design/canopy";
 
 // 둘러보기에는 서버가 없어서 하루 무료 새로고침을 이 화면 안에서만 흉내 낸다(앱을 다시 열면 다시 2번).
@@ -68,6 +68,7 @@ function useRefreshButtonCenter() {
 // 오른쪽 위 버튼으로 하루 무료 횟수 안에서 열매 밭을 새 묶음으로 바꾸면, 땅의 열매가 굴러 나가고
 // 나무가 툭 떨어져 캐릭터들이 방방 뛰며 새 열매를 떨어뜨린다.
 export default function Home() {
+  const ui = useUi();
   const { mode } = useSession();
   const queryClient = useQueryClient();
   const homeFeed = useQuery({

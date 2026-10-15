@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { NovelMode } from "../../api/types";
-import { Field, ui } from "../ui";
+import { Field, useUi } from "../ui";
 
 // 목표 회차와 한 차례 제한 시간 입력, 그리고 방식별 안내
 export function RelayLimits({
@@ -14,6 +14,7 @@ export function RelayLimits({
   turnHours: string;
   onChange: (changes: { chapterLimit?: string; turnHours?: string }) => void;
 }) {
+  const ui = useUi();
   return (
     <>
       <View style={styles.numbers}>

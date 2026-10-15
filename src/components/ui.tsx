@@ -2,7 +2,6 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -14,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, ArrowUpRight } from "lucide-react-native";
-import { colors } from "../theme";
+import { themedStyles, useColors } from "../theme/themed";
 import type { ReactNode } from "react";
 export function Screen({
   children,
@@ -27,6 +26,8 @@ export function Screen({
   title?: string;
   right?: ReactNode;
 }) {
+  const ui = useUi();
+  const colors = useColors();
   return (
     <SafeAreaView style={ui.screen}>
       <KeyboardAvoidingView
@@ -73,6 +74,8 @@ export function Button({
   disabled?: boolean;
   outline?: boolean;
 }) {
+  const ui = useUi();
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"
@@ -88,11 +91,13 @@ export function Button({
       <Text style={[ui.buttonText, outline && { color: colors.ink }]}>
         {children}
       </Text>
-      <ArrowUpRight size={17} color={outline ? colors.ink : "#fff"} />
+      <ArrowUpRight size={17} color={outline ? colors.ink : colors.onInk} />
     </Pressable>
   );
 }
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
+  const ui = useUi();
+  const colors = useColors();
   return (
     <View style={{ gap: 8, marginBottom: 18 }}>
       <Text style={ui.label}>{label}</Text>
@@ -110,6 +115,7 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
   );
 }
 export function Loading() {
+  const colors = useColors();
   return (
     <View style={{ padding: 45 }}>
       <ActivityIndicator color={colors.green} />
@@ -123,6 +129,7 @@ export function ErrorBox({
   error: unknown;
   retry?: () => void;
 }) {
+  const ui = useUi();
   return (
     <View style={ui.error}>
       <Text accessibilityRole="alert" style={ui.errorText}>
@@ -137,6 +144,7 @@ export function ErrorBox({
   );
 }
 export function Label({ children }: { children: ReactNode }) {
+  const ui = useUi();
   return <Text style={ui.eyebrow}>{children}</Text>;
 }
 export function Card({
@@ -146,9 +154,10 @@ export function Card({
   children: ReactNode;
   style?: ViewStyle;
 }) {
+  const ui = useUi();
   return <View style={[ui.card, style]}>{children}</View>;
 }
-export const ui = StyleSheet.create({
+export const useUi = themedStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: {
     padding: 24,
@@ -194,7 +203,7 @@ export const ui = StyleSheet.create({
     gap: 15,
     marginVertical: 6,
   },
-  buttonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  buttonText: { color: colors.onInk, fontSize: 14, fontWeight: "600" },
   outline: {
     backgroundColor: "transparent",
     borderWidth: 1,
@@ -221,11 +230,11 @@ export const ui = StyleSheet.create({
   error: {
     padding: 16,
     gap: 10,
-    backgroundColor: "#FAEBE6",
+    backgroundColor: colors.errorSurface,
     borderRadius: 12,
     marginVertical: 12,
   },
-  errorText: { color: "#925744", fontSize: 13, lineHeight: 20 },
+  errorText: { color: colors.errorInk, fontSize: 13, lineHeight: 20 },
   sectionTitle: {
     fontSize: 19,
     fontWeight: "700",
@@ -248,11 +257,11 @@ export const ui = StyleSheet.create({
   },
   pillSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
   pillText: { fontSize: 12, color: colors.muted },
-  pillTextSelected: { color: "#fff" },
+  pillTextSelected: { color: colors.onInk },
   hint: {
     fontSize: 12,
     lineHeight: 20,
     color: colors.muted,
     marginVertical: 12,
   },
-});
+}));

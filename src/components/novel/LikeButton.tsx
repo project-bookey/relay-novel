@@ -5,8 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import type { NovelDetail, NovelLikeView, NovelSummary } from "../../api/types";
 import { useSession } from "../../state/session";
-import { colors } from "../../theme";
-import { ui } from "../ui";
+import { useColors } from "../../theme/themed";
+import { useUi } from "../ui";
 
 const HEART_SIZE = 18;
 // 하트는 24칸에 그린다. 화면에서 1.5px 굵기로 보이도록 크기에 맞춰 환산한다.
@@ -26,6 +26,8 @@ export function LikeButton({
   busy: boolean;
   onPress: () => void;
 }) {
+  const ui = useUi();
+  const colors = useColors();
   // 웹은 눌림 상태(accessibilityState)를 보조기기에 넘기지 않으므로 이름에 함께 적는다.
   const count = `좋아요 ${novel.likeCount}개`;
   const label = novel.liked ? `${count}, 내가 누름` : count;

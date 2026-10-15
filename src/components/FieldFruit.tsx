@@ -8,7 +8,8 @@ import {
   type ViewStyle,
 } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { fruitShapeOf, lighten, storyColorOf } from "../theme";
+import { fruitShapeOf, mix, storyColorOf } from "../theme";
+import { useColors } from "../theme/themed";
 import { FRUIT_BOTTOM, FruitShadow, SHADOW_ORIGIN } from "./FruitArt";
 import { FruitFigure } from "./FruitFigure";
 import type { HandDrop, RestingFruit } from "../design/handDrop";
@@ -71,6 +72,7 @@ export function FieldFruit({
   onScreen: boolean;
   onOpen: (story: NovelSummary) => void;
 }) {
+  const colors = useColors();
   const shape = fruitShapeOf(story.id);
   const isBall = rollsLikeBall(shape);
 
@@ -150,9 +152,9 @@ export function FieldFruit({
     onOpen(story);
   };
 
-  // 멀리 있는 열매는 살짝 옅어 보이게 한다. 앞줄보다 가까이 옮긴 열매는 제 색 그대로 둔다.
+  // 멀리 있는 열매는 바탕색 쪽으로 살짝 옅어 보이게 한다. 앞줄보다 가까이 옮긴 열매는 제 색 그대로 둔다.
   const farness = Math.max(0, 1 - rest.depth);
-  const color = lighten(storyColorOf(story.id), farness * 0.6);
+  const color = mix(storyColorOf(story.id), colors.background, farness * 0.6);
   const motion = held ? hand.holding : falling;
   const rotate = held ? `${finalAngleOf(placement)}deg` : falling.rotate;
   // 좋아요를 많이 받은 열매는 땅에 가만히 있는 동안 둘레에서 별이 반짝이고 오뚝이처럼 기우뚱한다.

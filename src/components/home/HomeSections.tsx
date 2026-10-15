@@ -1,9 +1,9 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { LogOut } from "lucide-react-native";
 import type { NovelStatus } from "../../api/types";
-import { colors } from "../../theme";
-import { Button, Card, ui } from "../ui";
+import { themedStyles, useColors } from "../../theme/themed";
+import { Button, Card, useUi } from "../ui";
 
 export type Tab = "feed" | "mine" | "turns";
 
@@ -27,6 +27,9 @@ export function HomeHeader({
   showDemoNotice: boolean;
   onLogout: () => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <>
       <View style={ui.row}>
@@ -67,6 +70,7 @@ export function TabBar({
   selected: Tab;
   onSelect: (tab: Tab) => void;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.tabs}>
       {tabs.map(([key, label]) => {
@@ -96,6 +100,8 @@ export function StatusFilters({
   selected?: NovelStatus;
   onSelect: (status?: NovelStatus) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   return (
     <ScrollView
       horizontal
@@ -129,6 +135,7 @@ export function EmptyStories({
   waitingForTurn: boolean;
   onCreate: () => void;
 }) {
+  const ui = useUi();
   return (
     <Card>
       <Text style={ui.sectionTitle}>
@@ -146,7 +153,7 @@ export function EmptyStories({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   logo: {
     fontSize: 24,
     fontWeight: "800",
@@ -175,4 +182,4 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, color: colors.muted },
   activeTabText: { color: colors.ink, fontWeight: "700" },
   filters: { gap: 8, paddingVertical: 14 },
-});
+}));

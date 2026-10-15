@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, StyleSheet } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { fruitShapeOf, lighten, storyColorOf } from "../theme";
+import { fruitShapeOf, mix, storyColorOf } from "../theme";
+import { useColors } from "../theme/themed";
 import { SHADOW_BOX } from "../design/fruitShapes";
 import type { RollAway } from "../design/rollAway";
 import { FRUIT_BOTTOM, FruitShadow, SHADOW_ORIGIN } from "./FruitArt";
@@ -34,6 +35,7 @@ export function LeavingFruit({
   reduced: boolean;
   onGone: () => void;
 }) {
+  const colors = useColors();
   const shape = fruitShapeOf(story.id);
   const clock = useRef(nativeValue(0)).current;
   const fade = useRef(nativeValue(1)).current;
@@ -82,8 +84,9 @@ export function LeavingFruit({
       }),
     };
   }, [clock, fade, path]);
-  const color = lighten(
+  const color = mix(
     storyColorOf(story.id),
+    colors.background,
     Math.max(0, 1 - rest.depth) * 0.6,
   );
   const left = rest.x - size / 2;

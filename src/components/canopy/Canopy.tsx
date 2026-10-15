@@ -1,7 +1,8 @@
 import { memo, useMemo, type ReactNode } from "react";
 import { Animated, StyleSheet } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
-import { colors } from "../../theme";
+import type { Palette } from "../../theme";
+import { useColors } from "../../theme/themed";
 import {
   CANOPY_HEIGHT,
   CANOPY_WIDTH,
@@ -21,12 +22,12 @@ import { follow, followAngle, turnAround, type Turning } from "./canopyMotion";
 
 const BAND_CENTER = { x: CANOPY_WIDTH / 2, y: CANOPY_HEIGHT / 2 };
 
-const toneColors: Record<LeafTone | "bark", string> = {
+const toneColorsOf = (colors: Palette): Record<LeafTone | "bark", string> => ({
   light: colors.leafLight,
   base: colors.leaf,
   deep: colors.leafDeep,
   bark: colors.bough,
-};
+});
 
 const centerOf = (bounds: Bounds): Point => ({
   x: (bounds.left + bounds.right) / 2,
@@ -104,6 +105,8 @@ export const Canopy = memo(function Canopy({
   left: number;
   top: number;
 }) {
+  const colors = useColors();
+  const toneColors = useMemo(() => toneColorsOf(colors), [colors]);
   const playing = show ? clock : undefined;
   const motion = useMemo(
     () => ({

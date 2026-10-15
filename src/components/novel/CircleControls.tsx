@@ -1,6 +1,6 @@
 import { Text } from "react-native";
 import type { NovelDetail } from "../../api/types";
-import { Button, Card, ui } from "../ui";
+import { Button, Card, useUi } from "../ui";
 import { ApplicationList, MemberList } from "./Members";
 
 // 모여 만들기(차례대로 한 줄기) 작품의 작가 명단과 참가·승인·시작.
@@ -20,6 +20,7 @@ export function CircleControls({
   onDecide: (userId: number, approved: boolean) => void;
   onStart: () => void;
 }) {
+  const ui = useUi();
   const { novel } = detail;
   return (
     <>

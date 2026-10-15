@@ -1,12 +1,16 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ArrowUpRight, BookOpen, Users } from "lucide-react-native";
 import type { NovelSummary } from "../../api/types";
-import { colors, statusLabel, writersLabel } from "../../theme";
+import { statusLabel, writersLabel } from "../../theme";
+import { themedStyles, useColors } from "../../theme/themed";
 import { StoryTree } from "../StoryTree";
-import { Card, ui } from "../ui";
+import { Card, useUi } from "../ui";
 
 export function StoryCard({ story }: { story: NovelSummary }) {
+  const ui = useUi();
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"
@@ -56,7 +60,7 @@ export function StoryCard({ story }: { story: NovelSummary }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   card: { padding: 0, overflow: "hidden" },
   art: {
     height: 120,
@@ -111,4 +115,4 @@ const styles = StyleSheet.create({
   meta: { fontSize: 11, color: colors.muted },
   openHint: { flexDirection: "row", gap: 4 },
   openText: { fontSize: 12, color: colors.green },
-});
+}));

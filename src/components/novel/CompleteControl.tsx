@@ -1,5 +1,5 @@
 import { Text } from "react-native";
-import { Button, Card, ui } from "../ui";
+import { Button, Card, useUi } from "../ui";
 
 // 완결은 되돌릴 수 없어 한 번 더 묻는다.
 export function CompleteControl({
@@ -15,6 +15,7 @@ export function CompleteControl({
   onCancel: () => void;
   onComplete: () => void;
 }) {
+  const ui = useUi();
   if (!confirming)
     return (
       <Button outline onPress={onAsk}>

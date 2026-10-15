@@ -6,6 +6,7 @@ import { novels } from "../../src/api/novels";
 import { demoStories } from "../../src/api/demo";
 import type { NovelSummary } from "../../src/api/types";
 import { StoryCard } from "../../src/components/home/StoryCard";
+import { StoryRow } from "../../src/components/my/StoryRow";
 import {
   Button,
   Card,
@@ -21,12 +22,15 @@ function StorySection({
   stories,
   query,
   emptyMessage,
+  compact = false,
 }: {
   title: string;
   stories: NovelSummary[];
   // 둘러보기에서는 서버에 묻지 않으므로 쿼리가 없다.
   query?: UseQueryResult<unknown>;
   emptyMessage: string;
+  // 책장처럼 짧은 줄로 보여 준다(내 작품).
+  compact?: boolean;
 }) {
   return (
     <>
@@ -43,9 +47,13 @@ function StorySection({
       {!query?.isPending && !query?.error && stories.length === 0 && (
         <Text style={ui.hint}>{emptyMessage}</Text>
       )}
-      {stories.map((story) => (
-        <StoryCard key={story.id} story={story} />
-      ))}
+      {stories.map((story) =>
+        compact ? (
+          <StoryRow key={story.id} story={story} />
+        ) : (
+          <StoryCard key={story.id} story={story} />
+        ),
+      )}
     </>
   );
 }
@@ -111,6 +119,7 @@ export default function MyPage() {
             stories={myStories}
             query={isDemo ? undefined : mine}
             emptyMessage="아직 함께 쓰는 이야기가 없어요."
+            compact
           />
           <View style={styles.actions}>
             <Button

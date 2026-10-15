@@ -1,5 +1,6 @@
 import Svg, { Path, Polygon } from "react-native-svg";
-import { colors, darken, lighten, type FruitShape } from "../theme";
+import { darken, lighten, type FruitShape } from "../theme";
+import { useColors } from "../theme/themed";
 import {
   brightnessOf,
   fruitGeometries,
@@ -75,6 +76,7 @@ export function FruitStem({
   shape: FruitShape;
   size: number;
 }) {
+  const colors = useColors();
   const { stemBase } = fruitGeometries[shape];
   const stemTop = stemBase - 5.8;
   const leafBase = stemBase - 3.8;
@@ -110,6 +112,7 @@ export function FruitShadow({
   shape: FruitShape;
   size: number;
 }) {
+  const colors = useColors();
   const { shadow } = fruitGeometries[shape];
   const unit = size / 40;
   return (
@@ -121,7 +124,7 @@ export function FruitShadow({
       <Polygon
         points={toPoints(shadow)}
         fill={colors.fruitShadow}
-        opacity={0.3}
+        opacity={colors.fruitShadowOpacity}
       />
     </Svg>
   );

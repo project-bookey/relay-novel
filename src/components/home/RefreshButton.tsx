@@ -8,7 +8,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { colors, ICON_LINE_PX } from "../../theme";
+import { ICON_LINE_PX } from "../../theme";
+import { themedStyles, useColors } from "../../theme/themed";
 import type { Point } from "../../design/fruitShapes";
 import type { ScreenPoint } from "../../design/fruitFlight";
 import {
@@ -68,6 +69,7 @@ export function RefreshButton({
   notice: string | undefined;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   const usedUp = left === 0;
   const motion = useSproutMotion({ left, dimmed: busy || usedUp });
   // 안드로이드는 말풍선의 accessibilityLiveRegion이, 웹은 alert 역할이 알아서 읽어 준다.
@@ -145,6 +147,8 @@ export function RefreshButton({
 
 // 휘청일 때 잎 끝에서 하나씩 흩날리는 작은 초록 잎. 처음에 빠르게 날아가다 느려지며 사라진다.
 function FlyingLeaves({ clock }: { clock: Animated.Value }) {
+  const styles = useStyles();
+  const colors = useColors();
   const leaves = useMemo(
     () =>
       FLYING_LEAVES.map((leaf) => {
@@ -200,6 +204,7 @@ function RemainingDots({
   opacity: Animated.Value;
   pop: Animated.Value;
 }) {
+  const styles = useStyles();
   const dots = sproutDots(left, total);
   // 막 비워진 점은 첫 빈 점이다. pop은 점이 비워질 때만 움직이고 평소에는 1이다.
   const justEmptied = dots.findIndex((dot) => !dot.filled);
@@ -226,7 +231,7 @@ function RemainingDots({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   anchor: {
     position: "absolute",
     width: REFRESH_TOUCH_SIZE,
@@ -252,9 +257,9 @@ const styles = StyleSheet.create({
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
     borderWidth: DOT_LINE * UNIT,
-    borderColor: colors.black,
+    borderColor: colors.iconInk,
   },
-  filledDot: { backgroundColor: colors.black },
+  filledDot: { backgroundColor: colors.iconInk },
   // 버튼 아래, 오른쪽 끝을 새싹 그림 칸에 맞춘 말풍선
   notice: {
     position: "absolute",
@@ -269,4 +274,4 @@ const styles = StyleSheet.create({
     boxShadow: `0 6px 18px ${colors.cardShadow}`,
   },
   noticeText: { fontSize: 13, lineHeight: 19, color: colors.ink },
-});
+}));

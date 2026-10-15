@@ -5,12 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { novels } from "../src/api/novels";
 import { useSession } from "../src/state/session";
 import {
-  Screen,
-  Label,
   Button,
   ErrorBox,
+  Label,
   Loading,
-  ui,
+  Screen,
+  useUi,
 } from "../src/components/ui";
 
 const MAX_GENRES = 5;
@@ -18,6 +18,7 @@ const MAX_GENRES = 5;
 // 관심 장르 고르기. 이 장르의 작품이 열매로 먼저 배달된다.
 // 가입 직후(onboarding=1)와 마이에서 연다.
 export default function Genres() {
+  const ui = useUi();
   const { mode } = useSession();
   const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
   const isOnboarding = onboarding === "1";

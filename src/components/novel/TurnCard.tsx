@@ -1,10 +1,11 @@
 import { StyleSheet, Text } from "react-native";
 import { router } from "expo-router";
 import type { NovelDetail } from "../../api/types";
-import { Button, Card, Label, ui } from "../ui";
+import { Button, Card, Label, useUi } from "../ui";
 
 // 이어 쓰는 중인 소설의 차례 안내. 누가 쓸 수 있는지는 서버의 canWrite만 따른다.
 export function TurnCard({ detail }: { detail: NovelDetail }) {
+  const ui = useUi();
   const writerName = detail.currentWriterNickname || "다음 작가";
   const message = detail.canWrite
     ? "다음 장은 당신의 차례."

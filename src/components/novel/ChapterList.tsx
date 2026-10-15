@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ArrowUpRight } from "lucide-react-native";
 import type { ChapterNode } from "../../api/types";
 import { arrangeChapterTree, type BranchRow } from "../../design/chapterTree";
-import { colors, storyColorOf } from "../../theme";
-import { Card, Label, ui } from "../ui";
+import { storyColorOf } from "../../theme";
+import { themedStyles, useColors } from "../../theme/themed";
+import { Card, Label, useUi } from "../ui";
 
 export type ChapterListItem = Pick<
   ChapterNode,
@@ -41,6 +42,9 @@ export function ChapterList({
   chapters: ChapterListItem[];
   branching: boolean;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
+  const colors = useColors();
   const rows = arrangeChapterTree(chapters);
   return (
     <>
@@ -96,11 +100,11 @@ export function ChapterList({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   title: { marginTop: 10, marginBottom: 6 },
   branch: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   branchName: { fontSize: 12, color: colors.muted, fontWeight: "600" },
   tip: { flexDirection: "row", alignItems: "center", gap: 4 },
   fruitDot: { width: 8, height: 8, borderRadius: 4 },
   tipText: { fontSize: 11, color: colors.muted },
-});
+}));

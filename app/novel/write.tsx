@@ -12,12 +12,12 @@ import {
   turnTarget,
 } from "../../src/components/write/writeTarget";
 import {
-  Screen,
   Button,
   Card,
-  Loading,
   ErrorBox,
-  ui,
+  Loading,
+  Screen,
+  useUi,
 } from "../../src/components/ui";
 
 // 회차 쓰기. deliveryId가 있으면 받은 열매에서 가지를 뻗고, 없으면 내 차례의 다음 회차를 쓴다.
@@ -130,6 +130,7 @@ function NotWritable({
   novelId: number;
   branch: boolean;
 }) {
+  const ui = useUi();
   return (
     <Card>
       <Text style={ui.sectionTitle}>

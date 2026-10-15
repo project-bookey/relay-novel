@@ -1,8 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Minus, Plus } from "lucide-react-native";
 import type { NovelMode } from "../../api/types";
-import { colors } from "../../theme";
-import { ui } from "../ui";
+import { themedStyles, useColors } from "../../theme/themed";
+import { useUi } from "../ui";
 
 const modes: { mode: NovelMode; title: string; description: string }[] = [
   {
@@ -26,6 +26,8 @@ export function ModePicker({
   value: NovelMode;
   onChange: (mode: NovelMode) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   return (
     <View accessibilityRole="radiogroup" style={styles.group}>
       {modes.map((option) => {
@@ -64,6 +66,9 @@ export function DeliveryCountStepper({
   value: number;
   onChange: (count: number) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.stepperBlock}>
       <Text style={ui.label}>한 번에 배달할 사람 수</Text>
@@ -100,7 +105,7 @@ export function DeliveryCountStepper({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   group: { gap: 10, marginVertical: 8 },
   option: {
     padding: 16,
@@ -132,4 +137,4 @@ const styles = StyleSheet.create({
   },
   stepDisabled: { opacity: 0.35 },
   count: { fontSize: 17, fontWeight: "700", color: colors.ink, minWidth: 44 },
-});
+}));

@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { novels, type CoverImage } from "../../api/novels";
-import { colors } from "../../theme";
-import { Button, ErrorBox, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { Button, ErrorBox, useUi } from "../ui";
 
 // 서버가 받는 가장 큰 표지 사진(10MB)
 const COVER_MAX_BYTES = 10 * 1024 * 1024;
@@ -44,6 +44,8 @@ export function CoverPicker({
   picked?: PickedCover;
   onChange: (cover: PickedCover | undefined) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const [problem, setProblem] = useState("");
   // 올리는 중에 다른 사진을 고르면 먼저 고른 사진의 결과는 버린다.
   const latest = useRef<CoverImage | undefined>(undefined);
@@ -131,7 +133,7 @@ export function CoverPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   empty: { gap: 10, marginVertical: 6 },
   picked: { gap: 10, marginVertical: 6 },
   row: { flexDirection: "row", gap: 16, alignItems: "flex-end" },
@@ -147,4 +149,4 @@ const styles = StyleSheet.create({
   action: { minHeight: 44, minWidth: 44, justifyContent: "center" },
   actionText: { fontSize: 13, color: colors.green, fontWeight: "600" },
   removeText: { fontSize: 13, color: colors.muted, fontWeight: "600" },
-});
+}));

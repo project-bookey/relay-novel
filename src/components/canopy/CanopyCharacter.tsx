@@ -1,7 +1,8 @@
 import { memo, useMemo, type ReactNode } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { colors } from "../../theme";
+import type { Palette } from "../../theme";
+import { themedStyles, useColors } from "../../theme/themed";
 import type { BranchGroup } from "../../design/canopy";
 import {
   ALARM,
@@ -38,22 +39,27 @@ const LINE_PX = { leg: 1.5, face: 1.25, dash: 1.35, mark: 1.4, alarm: 1.9 };
 // 발 타원이 너무 작아 안 보이지 않도록 둔 최소 크기(너비 390 화면 px)
 const MIN_FOOT = { width: 3.6, height: 1.8 };
 
-const bodyColors: Record<BranchGroup, string> = {
-  circle: colors.castCircle,
-  triangle: colors.castTriangle,
-  square: colors.castSquare,
-};
-const accentColors: Record<BranchGroup, string> = {
-  circle: colors.castCircleAccent,
-  triangle: colors.castTriangleAccent,
-  square: colors.castSquareAccent,
-};
+// 캐릭터마다 몸 색과 빗금 색
+function castColorsOf(who: BranchGroup, colors: Palette) {
+  const body: Record<BranchGroup, string> = {
+    circle: colors.castCircle,
+    triangle: colors.castTriangle,
+    square: colors.castSquare,
+  };
+  const accent: Record<BranchGroup, string> = {
+    circle: colors.castCircleAccent,
+    triangle: colors.castTriangleAccent,
+    square: colors.castSquareAccent,
+  };
+  return { body: body[who], accent: accent[who], alarm: accent.square };
+}
 
 // 세로로 선 막대(아래쪽이 +y)를 from→to 방향으로 돌리는 각도(도)
 const barAngleOf = (from: Point, to: Point) =>
   (Math.atan2(-(to.x - from.x), to.y - from.y) * 180) / Math.PI;
 
 function FaceParts({ parts, stroke }: { parts: FacePart[]; stroke: number }) {
+  const colors = useColors();
   return parts.map((part) =>
     part.paint === "fill" ? (
       <Path key={part.d} d={part.d} fill={colors.castInk} />
@@ -87,6 +93,7 @@ function LegBar({
   unit: number;
   width: number;
 }) {
+  const styles = useStyles();
   const length = Math.hypot(to.x - from.x, to.y - from.y);
   const transform = [
     { translateX: follow(clock, tracks?.midX, (from.x + to.x) / 2, unit) },
@@ -104,7 +111,7 @@ function LegBar({
   return (
     <Animated.View
       style={[
-        styles.ink,
+        styles.leg,
         {
           left: -width / 2,
           top: (-BAR_LENGTH * unit) / 2,
@@ -132,6 +139,7 @@ function Leg({
   unit: number;
   scale: number;
 }) {
+  const styles = useStyles();
   const footWidth = Math.max(FOOT_SIZE.rx * 2 * unit, MIN_FOOT.width * scale);
   const footHeight = Math.max(FOOT_SIZE.ry * 2 * unit, MIN_FOOT.height * scale);
   const foot = footCenterOf(resting);
@@ -155,7 +163,7 @@ function Leg({
       />
       <Animated.View
         style={[
-          styles.ink,
+          styles.leg,
           {
             left: -footWidth / 2,
             top: -footHeight / 2,
@@ -202,6 +210,9 @@ export const CanopyCharacter = memo(function CanopyCharacter({
   clock: Animated.Value | undefined;
   scale: number;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
+  const castColors = castColorsOf(who, colors);
   const rig = rigs[who];
   const unit = (scale * CHARACTER_HEIGHT_PX) / CHARACTER_HEIGHT_UNITS;
   const resting = useMemo(() => restingFrameOf(who), [who]);
@@ -275,7 +286,7 @@ export const CanopyCharacter = memo(function CanopyCharacter({
       >
         {drawing(
           <>
-            <Path d={rig.body} fill={bodyColors[who]} />
+            <Path d={rig.body} fill={castColors.body} />
             {!rig.happyEyes && (
               <FaceParts
                 parts={rig.eyes}
@@ -322,7 +333,7 @@ export const CanopyCharacter = memo(function CanopyCharacter({
                 key={mark}
                 d={mark}
                 fill="none"
-                stroke={accentColors[who]}
+                stroke={castColors.accent}
                 strokeWidth={strokeUnits(LINE_PX.mark)}
                 strokeLinecap="round"
               />
@@ -349,11 +360,11 @@ export const CanopyCharacter = memo(function CanopyCharacter({
                 <Path
                   d={ALARM.stroke}
                   fill="none"
-                  stroke={accentColors.square}
+                  stroke={castColors.alarm}
                   strokeWidth={strokeUnits(LINE_PX.alarm)}
                   strokeLinecap="round"
                 />
-                <Path d={ALARM.dot} fill={accentColors.square} />
+                <Path d={ALARM.dot} fill={castColors.alarm} />
               </>,
             )}
           </Animated.View>
@@ -363,10 +374,10 @@ export const CanopyCharacter = memo(function CanopyCharacter({
   );
 });
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   // 발바닥 가운데를 원점으로 두는 크기 없는 뷰. 다리·몸은 이 점에서 떨어진 자리에 그린다.
   origin: { position: "absolute", left: 0, top: 0, width: 0, height: 0 },
-  ink: { position: "absolute", backgroundColor: colors.castInk },
+  leg: { position: "absolute", backgroundColor: colors.castLeg },
   layer: { position: "absolute" },
   overlay: { position: "absolute", left: 0, top: 0 },
-});
+}));

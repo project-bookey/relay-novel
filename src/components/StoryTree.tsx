@@ -9,14 +9,16 @@ import {
   type Leaf,
 } from "../design/storyTree";
 import type { ChapterLink } from "../design/chapterTree";
-import { colors, darken, storyColorOf } from "../theme";
+import { darken, storyColorOf } from "../theme";
+import { useColors } from "../theme/themed";
 import type { NovelSummary } from "../api/types";
 
-const leafColors: Record<Leaf["tone"], string> = {
-  light: colors.leafLight,
-  base: colors.leaf,
-  deep: colors.leafDeep,
-};
+const leafColorNames: Record<Leaf["tone"], "leafLight" | "leaf" | "leafDeep"> =
+  {
+    light: "leafLight",
+    base: "leaf",
+    deep: "leafDeep",
+  };
 
 function describeTree(novel: NovelSummary, fruitCount: number) {
   if (novel.chapterCount === 0) return "이야기 나무, 아직 새싹이에요";
@@ -45,6 +47,7 @@ export function StoryTree({
       }),
     [novel.id, novel.chapterCount, novel.memberCount, novel.status, nodes],
   );
+  const colors = useColors();
   const fruitColor = storyColorOf(novel.id);
   const { trunk } = tree;
 
@@ -90,7 +93,7 @@ export function StoryTree({
             cx={leaf.x}
             cy={leaf.y}
             r={leaf.radius}
-            fill={leafColors[leaf.tone]}
+            fill={colors[leafColorNames[leaf.tone]]}
             opacity={0.92}
           />
         ))}

@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { Member } from "../../api/types";
-import { colors } from "../../theme";
-import { Button, Card, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { Button, Card, useUi } from "../ui";
 
 function memberTitle(member: Member) {
   const roles = [member.nickname];
@@ -10,6 +10,8 @@ function memberTitle(member: Member) {
 }
 
 export function MemberList({ members }: { members: Member[] }) {
+  const ui = useUi();
+  const styles = useStyles();
   return (
     <>
       <Text style={ui.sectionTitle}>함께 쓰는 작가들</Text>
@@ -29,6 +31,8 @@ export function MemberList({ members }: { members: Member[] }) {
 
 // 열매로 퍼뜨리는 작품에는 참가자 명단이 없어, 회차를 쓴 작가를 쓴 순서대로 보여 준다.
 export function AuthorList({ names }: { names: string[] }) {
+  const ui = useUi();
+  const styles = useStyles();
   if (!names.length) return null;
   return (
     <>
@@ -53,6 +57,8 @@ export function ApplicationList({
   busy: boolean;
   onDecide: (userId: number, approved: boolean) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   if (!applications.length) return null;
   return (
     <>
@@ -85,7 +91,7 @@ export function ApplicationList({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   members: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -101,4 +107,4 @@ const styles = StyleSheet.create({
   memberName: { fontSize: 12, color: colors.ink },
   decision: { flexDirection: "row", gap: 10 },
   decisionButton: { flex: 1 },
-});
+}));

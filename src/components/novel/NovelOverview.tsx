@@ -3,7 +3,7 @@ import type { NovelSummary } from "../../api/types";
 import type { ChapterLink } from "../../design/chapterTree";
 import { statusLabel, writersLabel } from "../../theme";
 import { StoryTree } from "../StoryTree";
-import { ErrorBox, Label, ui } from "../ui";
+import { ErrorBox, Label, useUi } from "../ui";
 import { LikeButton, useNovelLike } from "./LikeButton";
 
 // 가지가 갈라지는 작품의 목표 회차는 한 가지의 깊이라 전체 회차 수와 나눠 쓴다.
@@ -22,6 +22,7 @@ export function NovelOverview({
   // 회차 나무. 아직 불러오지 못했으면 회차 수만큼 한 줄기로 그린다.
   nodes?: ChapterLink[];
 }) {
+  const ui = useUi();
   const like = useNovelLike(novel);
   return (
     <>

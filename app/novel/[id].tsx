@@ -18,12 +18,12 @@ import {
   useMyDelivery,
 } from "../../src/components/novel/useNovelChapters";
 import {
-  Screen,
-  Card,
   Button,
-  Loading,
+  Card,
   ErrorBox,
-  ui,
+  Loading,
+  Screen,
+  useUi,
 } from "../../src/components/ui";
 
 type NovelAction =
@@ -51,6 +51,7 @@ function authorsOf(nodes: ChapterNode[]) {
 }
 
 export default function Detail() {
+  const ui = useUi();
   const params = useLocalSearchParams<{ id: string }>();
   const id = Number(params.id);
   const { mode } = useSession();
@@ -174,6 +175,7 @@ export default function Detail() {
 }
 
 function DemoNotice() {
+  const ui = useUi();
   return (
     <Card>
       <Text style={ui.body}>
@@ -187,6 +189,7 @@ function DemoNotice() {
 }
 
 function EmptyChapters({ detail }: { detail: NovelDetail }) {
+  const ui = useUi();
   const message =
     detail.novel.mode === "OPEN"
       ? "만든 사람이 첫 회차를 쓰면 열매가 배달되기 시작해요."

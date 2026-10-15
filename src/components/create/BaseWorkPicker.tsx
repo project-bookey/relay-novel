@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import type { BaseWork } from "../../api/types";
-import { colors } from "../../theme";
-import { Button, ErrorBox, Loading, ui } from "../ui";
+import { themedStyles } from "../../theme/themed";
+import { Button, ErrorBox, Loading, useUi } from "../ui";
 
 // 베이스 작품에서 줄거리 가져오기(선택). 고르면 소개와 장르가 채워지고, 채운 소개는 고칠 수 있다.
 export function BaseWorkPicker({
@@ -14,6 +14,8 @@ export function BaseWorkPicker({
   picked?: BaseWork;
   onPick: (work: BaseWork | undefined) => void;
 }) {
+  const ui = useUi();
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   const works = useQuery({
     queryKey: ["base-works"],
@@ -85,7 +87,7 @@ export function BaseWorkPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   picked: {
     flexDirection: "row",
     alignItems: "center",
@@ -106,4 +108,4 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   source: { fontSize: 11, color: colors.muted },
-});
+}));

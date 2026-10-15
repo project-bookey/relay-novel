@@ -5,14 +5,15 @@ import { auth } from "../src/api/auth";
 import { useSession } from "../src/state/session";
 import { HomeTree } from "../src/components/HomeTree";
 import {
-  Screen,
-  Label,
-  Field,
   Button,
   ErrorBox,
-  ui,
+  Field,
+  Label,
+  Screen,
+  useUi,
 } from "../src/components/ui";
 export default function Login() {
+  const ui = useUi();
   const session = useSession();
   // 쓰던 원고 화면에서 다시 로그인하러 왔으면 그 화면으로 돌아간다.
   const { returnBack } = useLocalSearchParams<{ returnBack?: string }>();

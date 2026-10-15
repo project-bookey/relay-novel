@@ -1,11 +1,17 @@
-export const colors = {
+export type Scheme = "light" | "dark";
+
+const lightColors = {
   background: "#FFFFFF",
   paper: "#FFFFFF",
   ink: "#30362F",
+  // 잉크색(ink) 바탕 위의 글자·아이콘. 버튼처럼 ink를 칠한 곳에 쓴다.
+  onInk: "#FFFFFF",
   muted: "#868A80",
   line: "#E7E7DD",
   green: "#526552",
   mint: "#ADCBBE",
+  errorSurface: "#FAEBE6",
+  errorInk: "#925744",
   // 이야기 나무
   leaf: "#9DBD8F",
   leafLight: "#C8DDBA",
@@ -17,29 +23,99 @@ export const colors = {
   sparkle: "#F5C542",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
+  fruitShadowOpacity: 0.3,
   // 열매 말풍선 카드의 그림자. 잉크색(ink)을 옅게 깐다.
   cardShadow: "rgba(48, 54, 47, 0.16)",
-  // 하단 아이콘과 씨앗주머니의 선
-  black: "#000000",
+  // 하단 아이콘과 씨앗주머니·새로고침 새싹의 선
+  iconInk: "#000000",
   // 홈 위쪽 나무의 굵은 가지. 사용자가 그려 준 진한 갈색
   bough: "#613D30",
-  // 홈 나무 위 캐릭터(사용자 그림): 몸 색, 다리·눈 선, 신나게 뛸 때 머리 옆에 뜨는 빗금 색
+  // 홈 나무 위 캐릭터(사용자 그림): 몸 색, 눈 선, 다리, 신나게 뛸 때 머리 옆에 뜨는 빗금 색
   castCircle: "#FEF2D3",
   castTriangle: "#FEE49A",
   castSquare: "#B8D7FE",
   castInk: "#191919",
+  castLeg: "#191919",
   castCircleAccent: "#FFA902",
   castTriangleAccent: "#4E9A51",
   castSquareAccent: "#FC4447",
+  // 아래쪽 유리 바. 시스템 유리가 없는 곳에서 흉내 낸 유리의 색과 빛
+  glassTint: "rgba(246, 246, 248, 0.55)",
+  glassSolid: "rgba(246, 246, 248, 0.92)",
+  glassEdge: "rgba(255, 255, 255, 0.7)",
+  glassShadow: [
+    "0 10px 28px rgba(0, 0, 0, 0.08)",
+    "0 1px 3px rgba(0, 0, 0, 0.06)",
+    "inset 0 1px 1px rgba(255, 255, 255, 0.95)",
+    "inset 0 -1px 2px rgba(255, 255, 255, 0.5)",
+  ].join(", "),
+  // 지금 있는 곳 아래에 깔리는 유리 방울
+  lensFill: "rgba(255, 255, 255, 0.75)",
+  lensEdge: "rgba(255, 255, 255, 0.95)",
+  lensShadow: [
+    "0 3px 10px rgba(0, 0, 0, 0.10)",
+    "0 0 0 0.5px rgba(0, 0, 0, 0.05)",
+    "inset 0 1px 2px rgba(255, 255, 255, 1)",
+    "inset 0 -2px 4px rgba(0, 0, 0, 0.05)",
+  ].join(", "),
+};
+
+export type Palette = typeof lightColors;
+
+// 어두운 모드는 "밤의 들판"이다. 짙은 남색 바탕에 열매·나무·캐릭터 색은 그대로 두고,
+// 글자·선은 밝게 뒤집는다. 그림자는 바탕보다 어두워야 보이므로 검게 깐다.
+const darkColors: Palette = {
+  ...lightColors,
+  background: "#11151B",
+  // 말풍선·카드가 바탕에서 떠 보이도록 바탕보다 한 단계 밝게 둔다(어두운 바탕에선 그림자가 안 보임).
+  paper: "#232A33",
+  ink: "#E6E8E1",
+  onInk: "#11151B",
+  muted: "#8E948B",
+  line: "#2B313A",
+  green: "#9FC39C",
+  mint: "#5F7F70",
+  errorSurface: "#3A2622",
+  errorInk: "#F0B7A4",
+  ground: "#232920",
+  fruitShadow: "#000000",
+  // 땅이 안 보이는 짙은 바탕이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
+  fruitShadowOpacity: 0.7,
+  cardShadow: "rgba(0, 0, 0, 0.5)",
+  iconInk: "#ECEDE7",
+  // 짙은 바탕에서 가지가 묻히지 않게 한 톤 밝힌다.
+  bough: "#7A4E3E",
+  // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
+  castLeg: "#D9D4C7",
+  glassTint: "rgba(38, 44, 54, 0.55)",
+  glassSolid: "rgba(34, 40, 49, 0.92)",
+  glassEdge: "rgba(255, 255, 255, 0.12)",
+  glassShadow: [
+    "0 10px 28px rgba(0, 0, 0, 0.4)",
+    "0 1px 3px rgba(0, 0, 0, 0.3)",
+    "inset 0 1px 1px rgba(255, 255, 255, 0.14)",
+  ].join(", "),
+  lensFill: "rgba(255, 255, 255, 0.14)",
+  lensEdge: "rgba(255, 255, 255, 0.2)",
+  lensShadow: [
+    "0 3px 10px rgba(0, 0, 0, 0.35)",
+    "inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+  ].join(", "),
+};
+
+export const palettes: Record<Scheme, Palette> = {
+  light: lightColors,
+  dark: darkColors,
 };
 
 // 하단 아이콘과 씨앗주머니의 선 굵기. 그림 크기와 상관없이 화면에서 이 굵기(px)로 보이게 한다.
 export const ICON_LINE_PX = 2;
 
-// 결과도 "#RRGGBB"라서 lighten·darken을 겹쳐 쓸 수 있다.
-function mixWith(hexColor: string, target: number, amount: number) {
+// 두 "#RRGGBB" 색을 amount만큼 섞는다. 결과도 "#RRGGBB"라서 겹쳐 쓸 수 있다.
+export function mix(hexColor: string, targetColor: string, amount: number) {
   const channel = (start: number) => {
     const value = parseInt(hexColor.slice(start, start + 2), 16);
+    const target = parseInt(targetColor.slice(start, start + 2), 16);
     const mixed = Math.round(value + (target - value) * amount);
     return Math.min(255, Math.max(0, mixed)).toString(16).padStart(2, "0");
   };
@@ -48,10 +124,10 @@ function mixWith(hexColor: string, target: number, amount: number) {
 
 // 열매의 그늘진 면과 밝은 면. 2D지만 살짝 입체감을 낼 때 쓴다.
 export function darken(hexColor: string, amount: number) {
-  return mixWith(hexColor, 0, amount);
+  return mix(hexColor, "#000000", amount);
 }
 export function lighten(hexColor: string, amount: number) {
-  return mixWith(hexColor, 255, amount);
+  return mix(hexColor, "#FFFFFF", amount);
 }
 
 // 소설마다 붙는 색. 소설 id로 골라서 같은 소설은 항상 같은 색이 된다.

@@ -64,7 +64,7 @@ function useRefreshButtonCenter() {
   return { x: onScreen.x - insets.left, y: onScreen.y - insets.top };
 }
 
-// 홈에는 위쪽 나무와 열매, 땅만 있다. 열매 하나가 소설 하나이고, 누르면 그 소설로 간다.
+// 홈에는 열매와 그 둘레의 풀·꽃이 있다(새로고침할 때만 위쪽 나무가 내려온다). 열매 하나가 소설 하나이고, 누르면 그 소설로 간다.
 // 오른쪽 위 버튼으로 하루 무료 횟수 안에서 열매 밭을 새 묶음으로 바꾸면, 땅의 열매가 굴러 나가고
 // 나무가 툭 떨어져 캐릭터들이 방방 뛰며 새 열매를 떨어뜨린다.
 export default function Home() {

@@ -57,6 +57,7 @@ export function FieldFruit({
   reduced,
   onScreen,
   onOpen,
+  onTouch,
 }: {
   // 열매 밭에서 이 열매를 가리키는 key(새로고침 차례와 소설 id)
   fruitKey: string;
@@ -71,6 +72,8 @@ export function FieldFruit({
   // 홈이 지금 보이는지. 가려져 있으면 인기 열매의 흔들림·반짝임을 멈춘다.
   onScreen: boolean;
   onOpen: (story: NovelSummary) => void;
+  // 열매를 누르거나 집어 든 동안 true, 놓으면 false를 알린다(풀밭 캐릭터가 놀라 달아난다).
+  onTouch?: (touching: boolean) => void;
 }) {
   const colors = useColors();
   const shape = fruitShapeOf(story.id);
@@ -146,6 +149,16 @@ export function FieldFruit({
     onDrop: dropFromHand,
   });
   const { held } = hand;
+  // 누르고 있는지. 길게 눌러 집으면 누르기는 끝나도 집어 든 동안(held) 계속 만지는 중이다.
+  const [pressed, setPressed] = useState(false);
+  const touchRef = useRef(onTouch);
+  touchRef.current = onTouch;
+  const touching = pressed || held;
+  useEffect(() => {
+    touchRef.current?.(touching);
+  }, [touching]);
+  // 만지던 열매가 굴러 나가 사라져도 놓은 것으로 알린다.
+  useEffect(() => () => touchRef.current?.(false), []);
 
   const onPress = () => {
     if (hand.justHeld()) return;
@@ -220,6 +233,11 @@ export function FieldFruit({
           accessibilityLabel={label}
           hitSlop={6}
           {...hand.pressHandlers}
+          onPressIn={() => setPressed(true)}
+          onPressOut={() => {
+            setPressed(false);
+            hand.pressHandlers.onPressOut();
+          }}
           onPress={onPress}
           style={{ width: size, height: size }}
         >

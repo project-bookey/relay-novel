@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { router, useNavigation } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Draft, NovelDetail } from "../../api/types";
+import { usedFruits } from "../../state/usedFruits";
 import { Button, Card, ErrorBox, Field, Label, useUi } from "../ui";
 import { ParentChapterPeek } from "./ParentChapterPeek";
 import type { WriteTarget } from "./writeTarget";
@@ -69,7 +70,10 @@ export function Editor({
       target.publish(draft.turnNumber, title.trim(), body.trim()),
     onSuccess: async () => {
       setSaved({ ...saved, title, body });
+      // 이어 쓴 열매는 홈에서 사라진다. 홈이 목록을 다시 받기 전에 적어 둔다.
+      await usedFruits.add(novelId);
       await Promise.all([
+        client.invalidateQueries({ queryKey: ["used-fruits"] }),
         client.invalidateQueries({ queryKey: ["novel", novelId] }),
         client.invalidateQueries({ queryKey: ["novels"] }),
         client.invalidateQueries({ queryKey: ["my-turns"] }),

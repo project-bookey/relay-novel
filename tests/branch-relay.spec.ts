@@ -31,6 +31,13 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     likeCount: 3,
     liked: false,
   });
+  // 홈 묶음에 함께 놓인 다른 소설
+  const neighbor = {
+    ...novel(),
+    id: 78,
+    title: "별주부전",
+    chapterCount: 4,
+  };
   const root = {
     id: 300,
     chapterNumber: 1,
@@ -61,7 +68,9 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     if (path.endsWith("/auth/login"))
       return { accessToken: "test-access", refreshToken: "test-refresh" };
     if (path === "/api/v1/novels") return emptyPage;
-    if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
+    // 받은 열매의 소설이 홈 묶음에도 들어 있다. 묶음은 새로고침할 때까지 서버에 그대로 남는다.
+    if (path.endsWith("/novels/home-feed"))
+      return homeFeedOf([novel(), neighbor]);
     if (path.endsWith("/my-turns")) return [];
     if (path === "/api/v1/novels/deliveries")
       return written
@@ -129,7 +138,18 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
   await page
     .getByRole("button", { name: "로그인하고 이야기 이어가기" })
     .click();
-  // 나에게 배달된 열매가 홈에 떨어진다.
+  // 나에게 배달된 열매가 홈에 떨어진다. 함께 놓인 열매가 다 내려앉은 자리를 적어 둔다.
+  const neighborFruit = page.getByRole("button", { name: /별주부전 열매/ });
+  const settledBox = async () => {
+    let before = await neighborFruit.boundingBox();
+    for (;;) {
+      await page.waitForTimeout(250);
+      const now = await neighborFruit.boundingBox();
+      if (before && now && before.x === now.x && before.y === now.y) return now;
+      before = now;
+    }
+  };
+  const neighborBox = await settledBox();
   await page.getByRole("button", { name: "나에게 온 토끼의 간 열매" }).click();
   await expect(page.getByText("나에게 온 열매예요.")).toBeVisible();
   // 가지가 갈라진 작품은 목차에 가지 이름과 끝 열매가 보인다.
@@ -160,6 +180,27 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     title: "다른 길",
     body: "토끼가 먼저 용궁을 찾아왔다.",
   });
+  // 이어 쓴 열매는 홈 묶음에 남아 있어도 홈에서 사라지고, 다른 열매는 그대로 놓여 있다.
+  // 발행하면 편집기 자리에 작품 화면이 들어서므로, 작품 화면을 두 번 거슬러 홈으로 간다.
+  const back = page
+    .getByLabel("뒤로", { exact: true })
+    .filter({ visible: true });
+  await back.click();
+  await expect(page.getByText("이야기 펼치기")).toBeVisible();
+  await back.click();
+  await expect(neighborFruit).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /토끼의 간 열매/ }),
+  ).toHaveCount(0);
+  expect(await neighborFruit.boundingBox()).toEqual(neighborBox);
+  // 앱을 다시 열어도 다시 놓이지 않는다.
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: /별주부전 열매/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /토끼의 간 열매/ }),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

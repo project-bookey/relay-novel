@@ -131,20 +131,25 @@ export const rigs: Record<BranchGroup, CharacterRig> = {
       { x: -27.6, y: FOOT_LINE },
       { x: 27.6, y: FOOT_LINE },
     ],
+    // 세 캐릭터 모두 동그라미와 같은 세로로 긴 점 눈이고, 신날 때 > < 로 바뀐다(사용자 요청).
     eyes: [
+      { d: ellipse(-8.9, -47.1, 2.7, 7.3), paint: "fill" },
+      { d: ellipse(8.9, -47.1, 2.7, 7.3), paint: "fill" },
+    ],
+    happyEyes: [
       {
         d: polyline([
-          { x: -13.7, y: -52.5 },
-          { x: -6.3, y: -47.1 },
-          { x: -13.7, y: -41.7 },
+          { x: -12.8, y: -52.7 },
+          { x: -5, y: -47.1 },
+          { x: -12.8, y: -41.5 },
         ]),
         paint: "stroke",
       },
       {
         d: polyline([
-          { x: 14.3, y: -52.5 },
-          { x: 6.9, y: -47.1 },
-          { x: 14.3, y: -41.7 },
+          { x: 12.8, y: -52.7 },
+          { x: 5, y: -47.1 },
+          { x: 12.8, y: -41.5 },
         ]),
         paint: "stroke",
       },
@@ -177,13 +182,26 @@ export const rigs: Record<BranchGroup, CharacterRig> = {
       { x: -30.5, y: FOOT_LINE },
       { x: 30, y: FOOT_LINE },
     ],
+    // 기울어진 몸을 따라 오른쪽 눈이 조금 낮다.
     eyes: [
+      { d: ellipse(-5.7, -55, 2.7, 7.3), paint: "fill" },
+      { d: ellipse(12.1, -54, 2.7, 7.3), paint: "fill" },
+    ],
+    happyEyes: [
       {
-        d: line({ x: -18.4, y: -55.7 }, { x: -4.4, y: -54.8 }),
+        d: polyline([
+          { x: -9.6, y: -60.6 },
+          { x: -1.8, y: -55 },
+          { x: -9.6, y: -49.4 },
+        ]),
         paint: "stroke",
       },
       {
-        d: line({ x: 10.9, y: -53.8 }, { x: 24.8, y: -52.9 }),
+        d: polyline([
+          { x: 16, y: -59.6 },
+          { x: 8.2, y: -54 },
+          { x: 16, y: -48.4 },
+        ]),
         paint: "stroke",
       },
     ],

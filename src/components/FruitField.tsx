@@ -22,8 +22,15 @@ import type { FieldGround } from "./fruitHand";
 import { Canopy } from "./canopy/Canopy";
 import { FieldFruit, type FruitNeighbors } from "./FieldFruit";
 import { LeavingFruit } from "./LeavingFruit";
+import { Meadow } from "./home/Meadow";
+import { FieldCast, type CastBounds } from "./home/FieldCast";
 import type { PlacedFruit } from "./fruitPlacement";
-import { FRUIT_FIELD_LIMIT, canopyFrameOf, layoutField } from "./fruitLayout";
+import {
+  FRUIT_FIELD_LIMIT,
+  canopyFrameOf,
+  fieldPlacementOf,
+  layoutField,
+} from "./fruitLayout";
 import {
   nativeDriverEnabled,
   nativeValue,
@@ -152,7 +159,7 @@ function sceneOf(
   };
 }
 
-// 홈 화면의 열매 밭. 오로지 열매와 땅만 있고, 소설 열매가 하늘에서 떨어져 흰 땅에 부딪혀 털썩 멈추거나,
+// 홈 화면의 열매 밭. 둘레에 풀과 꽃을 흩뿌리고, 소설 열매가 하늘에서 떨어져 땅에 부딪혀 털썩 멈추거나,
 // 굴러가거나, 크게 튀어 다른 자리로 가서 멈춘다. 새로고침하면(round가 바뀌면) 땅의 열매가 굴러 나가고,
 // 화면 위에 숨어 있던 나무가 새 열매를 달고 툭 떨어져 캐릭터 셋이 방방 뛰어 열매를 떨어뜨린 뒤 다시 올라간다.
 // 열매를 누르면 그 소설로 가고, 끌거나 길게 누르면 집어서 앞쪽 빈 땅까지 옮겨 떨어뜨릴 수 있다.
@@ -198,6 +205,11 @@ export function FruitField({
   const [scene, setScene] = useState(() => sceneOf(round, stories, false));
   // 나무가 다시 올라가 연출이 끝났는지. 끝나면 나무를 그리지 않아 그림 메모리를 돌려준다.
   const [treeGone, setTreeGone] = useState(false);
+  // 열매가 다 내려앉았는지(나무 연출이 있으면 나무가 다시 올라간 뒤). 그 전에는 풀밭 캐릭터가 화면 밖에 숨어 있다.
+  const [settled, setSettled] = useState(false);
+  // 지금 누르고 있거나 집어 든 열매들. 하나라도 있으면 풀밭 캐릭터가 놀라 달아난다.
+  const touchedRef = useRef(new Set<string>());
+  const [scared, setScared] = useState(false);
   // 굴러 나가는 열매는 차례와 따로 둔다. 하나씩 사라질 때마다 열매 밭을 다시 배치하면
   // 나무에 매달린 새 열매가 처음부터 다시 움직여 가지와 박자가 어긋난다.
   const [leaving, setLeaving] = useState<Leaving[]>([]);
@@ -218,6 +230,7 @@ export function FruitField({
     );
     setScene(sceneOf(round, stories, true));
     setTreeGone(false);
+    setSettled(false);
     setLeaving((before) => [...before, ...departing]);
   }
   const show = reduced ? undefined : scene.show;
@@ -225,6 +238,11 @@ export function FruitField({
   const frame = useMemo(
     () => (origin ? canopyFrameOf(windowWidth, origin) : undefined),
     [windowWidth, origin],
+  );
+  const placement = useMemo(
+    () =>
+      area.width === 0 ? undefined : fieldPlacementOf(area.width, area.height),
+    [area.width, area.height],
   );
   // 열매 자리는 어떤 소설들이 놓이는지에만 따른다. 좋아요 수처럼 내용만 바뀐 응답으로 다시 배치하면
   // 손으로 옮긴 열매가 처음 자리로 돌아가므로, 배치는 소설 id 목록이 바뀔 때만 다시 하고
@@ -268,7 +286,10 @@ export function FruitField({
   useEffect(() => {
     if (!ready) return;
     // 새로고침할 때마다(sceneRound) 다 끝났다고 알린다.
-    const settled = setTimeout(() => showEndRef.current?.(), settleRef.current);
+    const settled = setTimeout(() => {
+      showEndRef.current?.();
+      setSettled(true);
+    }, settleRef.current);
     if (!show) return () => clearTimeout(settled);
     clock.setValue(0);
     const motion = Animated.timing(clock, {
@@ -289,6 +310,30 @@ export function FruitField({
   const latestStories = new Map(stories.map((story) => [story.id, story]));
   // 홈이 다른 탭이나 소설 화면에 가려져 있으면 인기 열매의 흔들림·숨쉬기를 멈춰 배터리를 아낀다.
   const onScreen = useIsFocused();
+  const touchFruit = (key: string, touching: boolean) => {
+    const touched = touchedRef.current;
+    if (touching) touched.add(key);
+    else touched.delete(key);
+    setScared(touched.size > 0);
+  };
+  // 풀밭 캐릭터가 노는 땅과 숨는 곳. 열매 땅 뒤쪽 끝보다 조금 앞에서 아래쪽 버튼 줄 바로 위까지, 화면 양옆까지 논다.
+  const castBounds = useMemo<CastBounds | undefined>(() => {
+    if (!field || !origin) return undefined;
+    const { ground } = field;
+    const size = ground.scale;
+    const edgeLeft = -origin.x;
+    const edgeRight = windowWidth - origin.x;
+    return {
+      left: edgeLeft + 24 * size,
+      right: edgeRight - 24 * size,
+      top: ground.bounds.top + 44 * size,
+      bottom: ground.handBounds.bottom - 6 * size,
+      edgeLeft,
+      edgeRight,
+      exitLeft: edgeLeft - 50 * size,
+      exitRight: edgeRight + 50 * size,
+    };
+  }, [field, origin, windowWidth]);
   const forgetLeaving = (key: string) =>
     setLeaving((current) => current.filter((fruit) => fruit.key !== key));
 
@@ -307,7 +352,28 @@ export function FruitField({
         );
       }}
     >
-      {/* 나무는 새로고침 연출 동안에만 그린다. 평소 홈에는 열매와 땅만 있다. */}
+      {/* 풀과 꽃은 화면 전체에 겹쳐 두고, 열매와 나무는 그 위에 그린다. */}
+      {!!origin && !!placement && (
+        <Meadow
+          windowWidth={windowWidth}
+          windowHeight={windowHeight}
+          origin={origin}
+          scale={placement.scale}
+          fieldTop={placement.fieldTop}
+        />
+      )}
+      {/* 풀밭 캐릭터: 열매가 다 내려앉으면 빼꼼 들어와 놀고, 열매를 만지면 놀라 달아난다. */}
+      {!!castBounds && !!field && (
+        <FieldCast
+          bounds={castBounds}
+          scale={field.ground.scale}
+          scared={scared}
+          away={!settled}
+          moving={!reduced && onScreen}
+          reduced={reduced}
+        />
+      )}
+      {/* 나무는 새로고침 연출 동안에만 그린다. 평소 홈에는 열매와 풀·꽃만 있다. */}
       {!!frame && !!show && !treeGone && (
         <Canopy
           show={show}
@@ -343,6 +409,7 @@ export function FruitField({
           reduced={reduced}
           onScreen={onScreen}
           onOpen={onOpen}
+          onTouch={(touching) => touchFruit(fruitKeyOf(fruit), touching)}
         />
       ))}
     </View>

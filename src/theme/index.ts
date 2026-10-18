@@ -26,6 +26,15 @@ const lightColors = {
   fruitShadowOpacity: 0.3,
   // 열매 말풍선 카드의 그림자. 잉크색(ink)을 옅게 깐다.
   cardShadow: "rgba(48, 54, 47, 0.16)",
+  // 홈 열매 밭에 흩뿌린 풀과 꽃(사용자가 고른 시안 G에서 풀·꽃만 남긴 것).
+  // 흰 바탕에서도 흰 꽃이 보이도록 꽃잎에 옅은 테두리를 두른다.
+  grassBlade: "#A5C497",
+  grassBladeDeep: "#8BB07E",
+  flowerPetal: "#FFFFFF",
+  flowerPetalWarm: "#F6E3A1",
+  flowerPetalEdge: "#C9D2BD",
+  flowerCore: "#F5C542",
+  flowerCoreWarm: "#E9A23B",
   // 하단 아이콘과 씨앗주머니·새로고침 새싹의 선
   iconInk: "#000000",
   // 홈 위쪽 나무의 굵은 가지. 사용자가 그려 준 진한 갈색
@@ -39,6 +48,12 @@ const lightColors = {
   castCircleAccent: "#FFA902",
   castTriangleAccent: "#4E9A51",
   castSquareAccent: "#FC4447",
+  // 풀밭에서 노는 캐릭터: 옆모습일 때 먼 다리, 등 쪽 어두운 면, 흰 바탕에 묻히지 않게 두른 동그라미 테두리
+  castLegFar: "#5C5C5C",
+  castCircleShade: "#F2E3BB",
+  castTriangleShade: "#F4D47F",
+  castSquareShade: "#9DC3F2",
+  castCircleEdge: "#E6D6A8",
   // 아래쪽 유리 바. 시스템 유리가 없는 곳에서 흉내 낸 유리의 색과 빛
   glassTint: "rgba(246, 246, 248, 0.55)",
   glassSolid: "rgba(246, 246, 248, 0.92)",
@@ -82,11 +97,22 @@ const darkColors: Palette = {
   // 바탕이 어두운 편이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
   fruitShadowOpacity: 0.7,
   cardShadow: "rgba(0, 0, 0, 0.5)",
+  // 어두운 바탕 위의 풀과 꽃은 한 톤 가라앉힌다.
+  grassBlade: "#5E7A56",
+  grassBladeDeep: "#4E6848",
+  flowerPetal: "#D3CEBA",
+  flowerPetalWarm: "#CFC08C",
+  flowerPetalEdge: "#D3CEBA",
+  flowerCore: "#D9B54A",
+  flowerCoreWarm: "#C98E3A",
   iconInk: "#ECEDE7",
   // 짙은 바탕에서 가지가 묻히지 않게 한 톤 밝힌다.
   bough: "#7A4E3E",
   // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
   castLeg: "#D9D4C7",
+  castLegFar: "#A29D91",
+  // 어두운 바탕에서는 동그라미가 잘 보여 테두리를 몸 색과 같게 둔다.
+  castCircleEdge: "#FEF2D3",
   glassTint: "rgba(60, 63, 67, 0.55)",
   glassSolid: "rgba(54, 57, 61, 0.92)",
   glassEdge: "rgba(255, 255, 255, 0.12)",

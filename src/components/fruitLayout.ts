@@ -118,6 +118,14 @@ interface Hanging {
   frame: CanopyFrame;
 }
 
+// 열매 밭 그림 좌표를 화면에 놓는 배율과 위쪽 자리. 홈의 풀과 꽃(Meadow)도 같은 자리에 맞춰 그린다.
+export function fieldPlacementOf(width: number, height: number) {
+  const scale = width / VIEW_WIDTH;
+  const room = height - BOTTOM_BAR_SPACE;
+  const fieldTop = Math.max(0, (room - FIELD_HEIGHT * scale) * FIELD_PLACEMENT);
+  return { scale, room, fieldTop };
+}
+
 // 열매마다 하늘(또는 나무)에서 떨어져 땅에 부딪힌 뒤 어디로 튀고 굴러 멈출지 정하고, 그 움직임을 계산한다.
 // hanging이 있으면 열매는 위쪽 나무 가지에 매달려 있다가 연출이 정한 때에 떨어진다.
 export function layoutField(
@@ -127,9 +135,7 @@ export function layoutField(
   seed: number,
   hanging: Hanging | undefined,
 ) {
-  const scale = width / VIEW_WIDTH;
-  const room = height - BOTTOM_BAR_SPACE;
-  const fieldTop = Math.max(0, (room - FIELD_HEIGHT * scale) * FIELD_PLACEMENT);
+  const { scale, room, fieldTop } = fieldPlacementOf(width, height);
   const toScreenSpot = (spot: Spot) => ({
     x: spot.x * scale,
     y: fieldTop + spot.y * scale,

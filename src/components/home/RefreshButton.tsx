@@ -42,11 +42,33 @@ const PIVOT_OFFSET: Point = {
   y: SPROUT_PIVOT.y * UNIT - SPROUT_SIZE / 2,
 };
 
-function labelOf(left: number | undefined) {
+function labelOf(
+  left: number | undefined,
+  adLeft: number | undefined,
+  paid: number,
+) {
   if (left === undefined) return "새 열매 받기";
   if (left > 0) return `새 열매 받기, 오늘 ${left}번 남았어요`;
-  return "새 열매 받기, 오늘은 다 썼어요";
+  if (paid > 0) return `새 열매 받기, 결제한 새로고침이 ${paid}번 남았어요`;
+  // 광고 새로고침을 모르는 예전 서버
+  if (adLeft === undefined) return "새 열매 받기, 오늘은 다 썼어요";
+  if (adLeft > 0)
+    return `새 열매 받기, 광고를 보면 오늘 ${adLeft}번 더 받을 수 있어요`;
+  return "새 열매 받기, 결제하면 더 받을 수 있어요";
 }
+
+// 무료 새로고침을 다 쓴 뒤 새싹을 누르면 버튼 아래에 뜨는 제안. 광고를 보거나 결제하고 새 열매를 받는다.
+export interface RefreshOffer {
+  message: string;
+  action: string;
+  // 결제를 시작했거나 확인하는 중
+  busy?: boolean;
+  onAccept: () => void;
+  onClose: () => void;
+}
+
+// 제안 말풍선 너비. 오른쪽 끝을 새싹 그림 칸에 맞춰 왼쪽으로 펼친다.
+const OFFER_WIDTH = 240;
 
 // 홈 오른쪽 위, 나무 위에 뜨는 새로고침 버튼(자리는 사용자 결정, 모양은 시안 D). 유리 없이 검은 새싹만 두고,
 // 그 아래 점으로 오늘 남은 무료 새로고침(서버가 정함)을 보여 준다. 누르면 열매 밭을 새 묶음으로 바꾼다.
@@ -55,8 +77,11 @@ export function RefreshButton({
   center,
   left,
   total,
+  adLeft,
+  paid = 0,
   busy,
   notice,
+  offer,
   onPress,
 }: {
   // 버튼 가운데 자리(버튼을 그리는 부모 뷰 기준)
@@ -64,19 +89,28 @@ export function RefreshButton({
   // 오늘 남은 무료 새로고침과 하루 무료 횟수. 아직 모르면 비어 있고 점을 그리지 않는다.
   left: number | undefined;
   total: number | undefined;
+  // 오늘 남은 광고 새로고침과 결제하고 아직 쓰지 않은 새로고침. 버튼 이름으로만 알린다.
+  adLeft?: number;
+  paid?: number;
   // 새 묶음을 받는 중이거나 나무 연출이 끝나지 않았으면 누를 수 없다.
   busy: boolean;
   notice: string | undefined;
+  offer?: RefreshOffer;
   onPress: () => void;
 }) {
   const styles = useStyles();
-  const usedUp = left === 0;
+  const usedUp = left === 0 && paid === 0;
   const motion = useSproutMotion({ left, dimmed: busy || usedUp });
   // 안드로이드는 말풍선의 accessibilityLiveRegion이, 웹은 alert 역할이 알아서 읽어 준다.
   useEffect(() => {
     if (notice && Platform.OS === "ios")
       AccessibilityInfo.announceForAccessibility(notice);
   }, [notice]);
+  const offerMessage = offer?.message;
+  useEffect(() => {
+    if (offerMessage && Platform.OS === "ios")
+      AccessibilityInfo.announceForAccessibility(offerMessage);
+  }, [offerMessage]);
 
   // 다 쓴 뒤에도 누를 수 있다. 자정이 지나 다시 찼을 수 있고 판정은 서버가 하므로, 서버에 묻고 안내를 말풍선으로 보여 준다.
   const press = () => {
@@ -85,63 +119,101 @@ export function RefreshButton({
   };
 
   return (
-    <View
-      style={[
-        styles.anchor,
-        {
-          left: center.x - REFRESH_TOUCH_SIZE / 2,
-          top: center.y - REFRESH_TOUCH_SIZE / 2,
-        },
-      ]}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={labelOf(left)}
-        accessibilityState={{ disabled: busy, busy }}
-        disabled={busy}
-        onPressIn={motion.pressIn}
-        onPressOut={motion.pressOut}
-        onPress={press}
-        // 동작 줄이기면 꾹 들어가는 대신 누르는 동안 흐려져 눌린 것을 알린다.
-        style={({ pressed }) => [
-          styles.press,
-          motion.reduced && pressed && styles.pressedStill,
+    <>
+      <View
+        style={[
+          styles.anchor,
+          {
+            left: center.x - REFRESH_TOUCH_SIZE / 2,
+            top: center.y - REFRESH_TOUCH_SIZE / 2,
+          },
         ]}
       >
-        <Animated.View
-          style={[
-            styles.sprout,
-            { opacity: motion.dim, transform: [{ scale: motion.squash }] },
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={labelOf(left, adLeft, paid)}
+          accessibilityState={{ disabled: busy, busy }}
+          disabled={busy}
+          onPressIn={motion.pressIn}
+          onPressOut={motion.pressOut}
+          onPress={press}
+          // 동작 줄이기면 꾹 들어가는 대신 누르는 동안 흐려져 눌린 것을 알린다.
+          style={({ pressed }) => [
+            styles.press,
+            motion.reduced && pressed && styles.pressedStill,
           ]}
         >
           <Animated.View
             style={[
-              StyleSheet.absoluteFill,
-              { transform: turnAround(PIVOT_OFFSET, motion.sproutAngle) },
+              styles.sprout,
+              { opacity: motion.dim, transform: [{ scale: motion.squash }] },
             ]}
           >
-            <SproutIcon
-              size={SPROUT_SIZE}
-              strokeWidth={(ICON_LINE_PX * SPROUT_GRID) / SPROUT_SIZE}
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                { transform: turnAround(PIVOT_OFFSET, motion.sproutAngle) },
+              ]}
+            >
+              <SproutIcon
+                size={SPROUT_SIZE}
+                strokeWidth={(ICON_LINE_PX * SPROUT_GRID) / SPROUT_SIZE}
+              />
+            </Animated.View>
+            <FlyingLeaves clock={motion.leafClock} />
+            <RemainingDots
+              left={left}
+              total={total}
+              opacity={motion.dotsOpacity}
+              pop={motion.dotPop}
             />
           </Animated.View>
-          <FlyingLeaves clock={motion.leafClock} />
-          <RemainingDots
-            left={left}
-            total={total}
-            opacity={motion.dotsOpacity}
-            pop={motion.dotPop}
-          />
-        </Animated.View>
-      </Pressable>
-      {!!notice && (
-        <View style={styles.notice} accessibilityLiveRegion="polite">
-          <Text accessibilityRole="alert" style={styles.noticeText}>
-            {notice}
-          </Text>
+        </Pressable>
+        {!!notice && (
+          <View style={styles.notice} accessibilityLiveRegion="polite">
+            <Text accessibilityRole="alert" style={styles.noticeText}>
+              {notice}
+            </Text>
+          </View>
+        )}
+      </View>
+      {/* 제안은 누를 수 있어야 해서 버튼 칸 밖(부모 뷰)에 그린다. 안드로이드는 부모 칸을 벗어난 곳의 터치를 받지 않는다. */}
+      {!!offer && (
+        <View
+          style={[
+            styles.offer,
+            {
+              left:
+                center.x + REFRESH_TOUCH_SIZE / 2 - ICON_INSET - OFFER_WIDTH,
+              top: center.y + REFRESH_TOUCH_SIZE / 2 + 4,
+            },
+          ]}
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={styles.noticeText}>{offer.message}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: offer.busy, busy: offer.busy }}
+            disabled={offer.busy}
+            onPress={offer.onAccept}
+            style={({ pressed }) => [
+              styles.offerAction,
+              (pressed || offer.busy) && styles.offerActionPressed,
+            ]}
+          >
+            <Text style={styles.offerActionText}>{offer.action}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={offer.onClose}
+            hitSlop={8}
+            style={styles.offerClose}
+          >
+            <Text style={styles.offerCloseText}>다음에 할게요</Text>
+          </Pressable>
         </View>
       )}
-    </View>
+    </>
   );
 }
 
@@ -274,4 +346,27 @@ const useStyles = themedStyles((colors) => ({
     boxShadow: `0 6px 18px ${colors.cardShadow}`,
   },
   noticeText: { fontSize: 13, lineHeight: 19, color: colors.ink },
+  offer: {
+    position: "absolute",
+    width: OFFER_WIDTH,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 6,
+    borderRadius: 14,
+    backgroundColor: colors.paper,
+    boxShadow: `0 6px 18px ${colors.cardShadow}`,
+  },
+  offerAction: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offerActionPressed: { opacity: 0.5 },
+  offerActionText: { fontSize: 13, fontWeight: "600", color: colors.onInk },
+  offerClose: { alignSelf: "center", paddingVertical: 6 },
+  offerCloseText: { fontSize: 12, color: colors.muted },
 }));

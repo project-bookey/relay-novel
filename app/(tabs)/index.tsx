@@ -7,19 +7,25 @@ import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
 import { demoStories } from "../../src/api/demo";
 import { usedFruits } from "../../src/state/usedFruits";
-import type { NovelSummary } from "../../src/api/types";
+import type { NovelHomeFeed, NovelSummary } from "../../src/api/types";
 import { FruitField } from "../../src/components/FruitField";
 import {
   REFRESH_TOUCH_SIZE,
   RefreshButton,
+  type RefreshOffer,
 } from "../../src/components/home/RefreshButton";
+import { RewardedAd } from "../../src/components/home/RewardedAd";
+import { useRefreshPurchase } from "../../src/components/home/refreshPurchase";
 import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
 import { REFRESH_BUTTON_SPOT, canopyPlacement } from "../../src/design/canopy";
 
-// 둘러보기에는 서버가 없어서 하루 무료 새로고침을 이 화면 안에서만 흉내 낸다(앱을 다시 열면 다시 2번).
+// 둘러보기에는 서버가 없어서 하루 무료·광고 새로고침을 이 화면 안에서만 흉내 낸다(앱을 다시 열면 다시 찬다).
 const DEMO_FREE_REFRESHES = 2;
-const DEMO_USED_UP =
-  "오늘 무료 새로고침을 다 썼어요. 자정이 지나면 다시 할 수 있어요.";
+const DEMO_AD_REFRESHES = 3;
+const AD_SKIPPED = "광고를 끝까지 보면 새 열매를 받을 수 있어요.";
+const DEMO_NO_PURCHASE =
+  "둘러보기에서는 결제할 수 없어요. 로그인하면 결제하고 새 열매를 받을 수 있어요.";
+const PURCHASE_IN_APP_ONLY = "새로고침 결제는 iOS·Android 앱에서 할 수 있어요.";
 // 새로고침 버튼 아래 알림 말풍선이 떠 있는 시간
 const NOTICE_MS = 3200;
 
@@ -105,6 +111,10 @@ export default function Home() {
   const [notice, setNotice] = useState<string>();
   const [demoOrder, setDemoOrder] = useState(demoStories);
   const [demoLeft, setDemoLeft] = useState(DEMO_FREE_REFRESHES);
+  const [demoAdLeft, setDemoAdLeft] = useState(DEMO_AD_REFRESHES);
+  // 무료 새로고침을 다 쓴 뒤 새싹을 누르면 광고를 볼지, 광고도 다 썼으면 결제할지 묻는다.
+  const [offer, setOffer] = useState<"ad" | "purchase">();
+  const [watchingAd, setWatchingAd] = useState(false);
 
   // 둘러보기에서 로그인하는 등 모드가 바뀌면 열매 밭을 새로 그려 나무가 다시 내려온다.
   useEffect(() => setShowing(true), [mode]);
@@ -127,22 +137,41 @@ export default function Home() {
       });
   }, [feedNovels, feedUpdatedAt, queryClient]);
 
+  const dropNewFeed = (feed: NovelHomeFeed) => {
+    queryClient.setQueryData(["novels", "home-feed", mode], feed);
+    setShowing(true);
+    setRound((current) => current + 1);
+  };
+  // 하루 횟수를 다 썼을 때의 안내도 서버가 보낸 문구를 그대로 보여 준다.
+  // 다른 기기에서 횟수를 썼을 수도 있으니 남은 횟수를 서버에서 다시 받아 맞춘다.
+  const refuseRefresh = (error: Error) => {
+    setNotice(error.message || "새 열매를 받지 못했어요.");
+    void queryClient.invalidateQueries({
+      queryKey: ["novels", "home-feed", mode],
+    });
+  };
   const refresh = useMutation({
     mutationFn: () => novels.refreshHomeFeed(),
-    onSuccess: (feed) => {
+    onSuccess: dropNewFeed,
+    onError: refuseRefresh,
+  });
+  // 광고를 끝까지 본 뒤 받는 새로고침
+  const adRefresh = useMutation({
+    mutationFn: () => novels.refreshHomeFeedWithAd(),
+    onSuccess: dropNewFeed,
+    onError: refuseRefresh,
+  });
+  // 광고 새로고침까지 다 쓰면 새로고침 한 번을 산다. 서버가 결제를 확인하면 결제한 새로고침이 생기고,
+  // 지금 산 것이면 바로 그것으로 새 열매를 받는다. 지난번에 확인하지 못한 결제는 새싹을 누를 때 쓴다.
+  const purchase = useRefreshPurchase({
+    onPaid: (feed, bought) => {
       queryClient.setQueryData(["novels", "home-feed", mode], feed);
-      setShowing(true);
-      setRound((current) => current + 1);
+      setOffer(undefined);
+      if (bought) refresh.mutate();
     },
-    // 하루 횟수를 다 썼을 때의 안내도 서버가 보낸 문구를 그대로 보여 준다.
-    // 다른 기기에서 횟수를 썼을 수도 있으니 남은 횟수를 서버에서 다시 받아 맞춘다.
-    onError: (error) => {
-      setNotice(
-        error instanceof Error ? error.message : "새 열매를 받지 못했어요.",
-      );
-      void queryClient.invalidateQueries({
-        queryKey: ["novels", "home-feed", mode],
-      });
+    onError: (message) => {
+      setOffer(undefined);
+      setNotice(message);
     },
   });
 
@@ -188,6 +217,10 @@ export default function Home() {
     mode === "demo" ? demoLeft : homeFeed.data?.freeRefreshesLeftToday;
   const dailyRefreshes =
     mode === "demo" ? DEMO_FREE_REFRESHES : homeFeed.data?.dailyFreeRefreshes;
+  // 광고 새로고침을 모르는 예전 서버에서는 비어 있어, 다 쓴 뒤에도 예전처럼 서버에 묻는다.
+  const adLeft =
+    mode === "demo" ? demoAdLeft : homeFeed.data?.adRefreshesLeftToday;
+  const paidLeft = mode === "demo" ? 0 : (homeFeed.data?.paidRefreshes ?? 0);
   const openStory = (story: NovelSummary) => router.push(`/novel/${story.id}`);
   const retry = () => {
     void Promise.all([
@@ -196,21 +229,79 @@ export default function Home() {
       deliveries.refetch(),
     ]);
   };
-  const requestRefresh = () => {
-    setNotice(undefined);
-    if (mode !== "demo") {
-      refresh.mutate();
-      return;
-    }
-    if (demoLeft === 0) {
-      setNotice(DEMO_USED_UP);
-      return;
-    }
-    setDemoLeft(demoLeft - 1);
+  const dropDemoFruits = () => {
     setDemoOrder(shuffled(demoStories));
     setShowing(true);
     setRound(round + 1);
   };
+  const requestRefresh = () => {
+    setNotice(undefined);
+    // 무료나 결제한 새로고침이 남았거나 남은 횟수를 아직 모르면 바로 새로 받는다(판정은 서버가 한다).
+    if (refreshesLeft !== 0 || paidLeft > 0 || adLeft === undefined) {
+      setOffer(undefined);
+      if (mode !== "demo") {
+        refresh.mutate();
+        return;
+      }
+      setDemoLeft(demoLeft - 1);
+      dropDemoFruits();
+      return;
+    }
+    // 다 썼으면 광고를 보거나 결제하고 받을지 묻는다. 물은 채로 한 번 더 누르면 닫는다.
+    setOffer(offer ? undefined : adLeft > 0 ? "ad" : "purchase");
+  };
+  const watchAd = () => {
+    setOffer(undefined);
+    setWatchingAd(true);
+  };
+  const finishAd = (rewarded: boolean) => {
+    setWatchingAd(false);
+    if (!rewarded) {
+      setNotice(AD_SKIPPED);
+      return;
+    }
+    if (mode !== "demo") {
+      adRefresh.mutate();
+      return;
+    }
+    setDemoAdLeft(demoAdLeft - 1);
+    dropDemoFruits();
+  };
+  const buy = () => {
+    const unavailable =
+      mode === "demo"
+        ? DEMO_NO_PURCHASE
+        : !purchase.available
+          ? PURCHASE_IN_APP_ONLY
+          : undefined;
+    if (!unavailable) {
+      purchase.buy();
+      return;
+    }
+    setOffer(undefined);
+    setNotice(unavailable);
+  };
+  const closeOffer = () => setOffer(undefined);
+  const offerShown: RefreshOffer | undefined =
+    offer === "ad"
+      ? {
+          message: `오늘 무료 새로고침을 다 썼어요. 광고를 보면 ${adLeft}번 더 받을 수 있어요.`,
+          action: "광고 보고 새 열매 받기",
+          onAccept: watchAd,
+          onClose: closeOffer,
+        }
+      : offer === "purchase"
+        ? {
+            message:
+              "오늘 광고로 받는 새로고침도 다 썼어요. 결제하면 새 열매를 한 번 더 받을 수 있어요.",
+            action: purchase.price
+              ? `결제하고 새 열매 받기 · ${purchase.price}`
+              : "결제하고 새 열매 받기",
+            busy: purchase.busy,
+            onAccept: buy,
+            onClose: closeOffer,
+          }
+        : undefined;
 
   return (
     <Screen scroll={false}>
@@ -245,11 +336,15 @@ export default function Home() {
           center={buttonCenter}
           left={refreshesLeft}
           total={dailyRefreshes}
-          busy={showing || refresh.isPending}
+          adLeft={adLeft}
+          paid={paidLeft}
+          busy={showing || refresh.isPending || adRefresh.isPending}
           notice={notice}
+          offer={offerShown}
           onPress={requestRefresh}
         />
       )}
+      <RewardedAd visible={watchingAd} onDone={finishAd} />
     </Screen>
   );
 }

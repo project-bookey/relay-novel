@@ -110,3 +110,97 @@ test("the refresh button swaps the home fruits for a new bundle until today's fr
   ).toHaveLength(2);
   expect(errors).toEqual([]);
 });
+
+test("after the free refreshes, watching an ad brings new fruits and then a purchase is offered", async ({
+  page,
+}) => {
+  // 나무 연출과 광고(5초)를 기다린다.
+  test.setTimeout(60_000);
+  const errors = collectErrors(page);
+  const rabbit = novel(11, "토끼의 간");
+  const letter = novel(12, "용궁의 편지");
+  // 오늘 무료는 다 썼고 광고 새로고침이 한 번 남았다.
+  let shelf = [rabbit];
+  let adLeft = 1;
+  const feed = () => ({
+    ...homeFeedOf(shelf, 0),
+    adRefreshesLeftToday: adLeft,
+    dailyAdRefreshes: 3,
+    paidRefreshes: 0,
+  });
+  const calls = await mockBackend(page, ({ path, method }) => {
+    if (path.endsWith("/auth/login"))
+      return { accessToken: "test-access", refreshToken: "test-refresh" };
+    if (path.endsWith("/home-feed/refresh/ad") && method === "POST") {
+      shelf = [letter, rabbit];
+      adLeft = 0;
+      return feed();
+    }
+    if (path.endsWith("/novels/home-feed")) return feed();
+    if (path.endsWith("/deliveries") || path.endsWith("/my-turns")) return [];
+    return emptyPage;
+  });
+  await page.goto("/");
+  await page
+    .getByRole("textbox", { name: "Bookey 계정 이메일" })
+    .fill("reader@example.test");
+  await page.getByRole("textbox", { name: "비밀번호" }).fill("test-password");
+  await page
+    .getByRole("button", { name: "로그인하고 이야기 이어가기" })
+    .click();
+  const refresh = page.getByRole("button", { name: /^새 열매 받기/ });
+  await expect(refresh).toHaveAccessibleName(
+    "새 열매 받기, 광고를 보면 오늘 1번 더 받을 수 있어요",
+  );
+  await expect(refresh).toBeEnabled({ timeout: 15_000 });
+
+  // 무료를 다 썼으면 서버에 묻지 않고 광고를 볼지 묻는다. 중간에 닫으면 받지 못한다.
+  await refresh.click();
+  await expect(
+    page.getByText(
+      "오늘 무료 새로고침을 다 썼어요. 광고를 보면 1번 더 받을 수 있어요.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "광고 보고 새 열매 받기" }).click();
+  await page.getByRole("button", { name: "광고 닫기" }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "광고를 끝까지 보면 새 열매를 받을 수 있어요.",
+  );
+
+  // 끝까지 보고 닫으면 광고 새로고침으로 새 열매가 떨어진다.
+  await refresh.click();
+  await page.getByRole("button", { name: "광고 보고 새 열매 받기" }).click();
+  await page
+    .getByRole("button", { name: "광고 닫고 새 열매 받기" })
+    .click({ timeout: 10_000 });
+  await expect(
+    page.getByRole("button", { name: "용궁의 편지 열매" }),
+  ).toBeVisible();
+  await expect(refresh).toHaveAccessibleName(
+    "새 열매 받기, 결제하면 더 받을 수 있어요",
+  );
+
+  // 광고도 다 쓰면 결제를 묻는다. 웹에는 앱 안 결제가 없어 앱에서 하라고 알린다.
+  await expect(refresh).toBeEnabled({ timeout: 15_000 });
+  await refresh.click();
+  await expect(
+    page.getByText(
+      "오늘 광고로 받는 새로고침도 다 썼어요. 결제하면 새 열매를 한 번 더 받을 수 있어요.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "결제하고 새 열매 받기" }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "새로고침 결제는 iOS·Android 앱에서 할 수 있어요.",
+  );
+  expect(
+    calls.filter((call) => call.path.endsWith("/home-feed/refresh/ad")),
+  ).toHaveLength(1);
+  expect(
+    calls.filter(
+      (call) =>
+        call.path.endsWith("/home-feed/refresh") ||
+        call.path.includes("/refresh-purchases/"),
+    ),
+  ).toHaveLength(0);
+  expect(errors).toEqual([]);
+});

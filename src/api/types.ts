@@ -98,6 +98,31 @@ export interface NovelHomeFeed {
   dailyFreeRefreshes: number;
   // 무료 새로고침이 다시 채워지는 때(다음 한국 시간 자정)
   resetsAt: string;
+  // 무료를 다 쓴 뒤 광고를 보고 받을 수 있는 새로고침(오늘 남은 수, 하루 수). 자정에 무료와 함께 다시 찬다.
+  // 광고 새로고침을 모르는 예전 서버에서는 비어 있다.
+  adRefreshesLeftToday?: number;
+  dailyAdRefreshes?: number;
+  // 결제하고 아직 쓰지 않은 새로고침. 무료 다음으로 쓴다.
+  paidRefreshes?: number;
+}
+// 새로고침을 사는 스토어. 앱 안 결제만 받는다.
+export type RefreshStore = "APPLE" | "GOOGLE";
+// 새로고침 결제를 시작하면 서버가 만든 주문(NovelRefreshCheckoutView)
+export interface RefreshCheckout {
+  provider: RefreshStore;
+  productId: string;
+  orderId: string;
+  amountKrw: number;
+}
+// 스토어 결제를 마친 뒤 서버에 확인을 맡기는 내용(NovelRefreshVerifyRequest)
+export interface RefreshVerify {
+  provider: RefreshStore;
+  orderId: string;
+  productId: string;
+  // Google의 구매 토큰
+  receiptData?: string;
+  // Apple의 거래 id
+  originalTransactionId?: string;
 }
 // 내가 받은 열매. 이 회차에서 가지를 뻗어 이어 쓸 수 있다.
 export interface NovelDelivery {

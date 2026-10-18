@@ -8,6 +8,9 @@ import type {
   NovelStatus,
   NovelDelivery,
   NovelHomeFeed,
+  RefreshCheckout,
+  RefreshStore,
+  RefreshVerify,
   ChapterNode,
   Chapter,
   BaseWork,
@@ -63,8 +66,24 @@ export const novels = {
   // 홈 열매 밭에 놓인 묶음과 오늘 남은 무료 새로고침 수. 불러오기만 해서는 횟수가 줄지 않는다.
   homeFeed: () => api<NovelHomeFeed>(`${root}/home-feed`),
   // 열매 밭을 새 묶음으로 바꾼다. 하루 무료 횟수를 다 쓰면 서버가 거절한다(NOVEL_REFRESH_DAILY_LIMIT).
+  // 무료를 다 쓰면 결제하고 아직 쓰지 않은 새로고침을 쓴다.
   refreshHomeFeed: () =>
     api<NovelHomeFeed>(`${root}/home-feed/refresh`, { method: "POST" }),
+  // 광고를 끝까지 본 뒤의 새로고침. 하루 광고 횟수를 다 쓰면 서버가 거절한다(NOVEL_REFRESH_AD_LIMIT).
+  refreshHomeFeedWithAd: () =>
+    api<NovelHomeFeed>(`${root}/home-feed/refresh/ad`, { method: "POST" }),
+  // 새로고침 한 번을 사는 주문. 무료·광고·결제한 새로고침이 남아 있으면 서버가 거절한다(NOVEL_REFRESH_STILL_LEFT).
+  checkoutRefresh: (provider: RefreshStore) =>
+    api<RefreshCheckout>(`${root}/home-feed/refresh-purchases/checkout`, {
+      method: "POST",
+      body: { provider },
+    }),
+  // 스토어 결제를 서버가 확인하면 결제한 새로고침이 하나 늘어난 묶음을 준다. 같은 주문은 한 번만 센다.
+  verifyRefresh: (body: RefreshVerify) =>
+    api<NovelHomeFeed>(`${root}/home-feed/refresh-purchases/verify`, {
+      method: "POST",
+      body,
+    }),
   get: (id: number) => api<NovelDetail>(`${root}/${id}`),
   // 누를 때마다 좋아요가 켜지고 꺼진다. 결과는 서버의 실제 상태다.
   toggleLike: (id: number) =>

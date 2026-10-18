@@ -62,24 +62,24 @@ const lightColors = {
 
 export type Palette = typeof lightColors;
 
-// 어두운 모드는 "밤의 들판"이다. 짙은 남색 바탕에 열매·나무·캐릭터 색은 그대로 두고,
-// 글자·선은 밝게 뒤집는다. 그림자는 바탕보다 어두워야 보이므로 검게 깐다.
+// 어두운 모드는 "밤의 들판"이다. 짙은 회색 바탕에 열매·나무·캐릭터 색은 그대로 두고,
+// 글자·선은 밝게 뒤집는다. 그림자는 검게 깔고, 바탕은 그 검은 그림자가 보일 만큼 회색으로 띄운다.
 const darkColors: Palette = {
   ...lightColors,
-  background: "#11151B",
-  // 말풍선·카드가 바탕에서 떠 보이도록 바탕보다 한 단계 밝게 둔다(어두운 바탕에선 그림자가 안 보임).
-  paper: "#232A33",
+  background: "#2E3033",
+  // 말풍선·카드가 바탕에서 떠 보이도록 바탕보다 한 단계 밝게 둔다.
+  paper: "#3C3F43",
   ink: "#E6E8E1",
-  onInk: "#11151B",
+  onInk: "#2E3033",
   muted: "#8E948B",
-  line: "#2B313A",
+  line: "#4A4D52",
   green: "#9FC39C",
   mint: "#5F7F70",
   errorSurface: "#3A2622",
   errorInk: "#F0B7A4",
-  ground: "#232920",
+  ground: "#3A3E37",
   fruitShadow: "#000000",
-  // 땅이 안 보이는 짙은 바탕이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
+  // 바탕이 어두운 편이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
   fruitShadowOpacity: 0.7,
   cardShadow: "rgba(0, 0, 0, 0.5)",
   iconInk: "#ECEDE7",
@@ -87,8 +87,8 @@ const darkColors: Palette = {
   bough: "#7A4E3E",
   // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
   castLeg: "#D9D4C7",
-  glassTint: "rgba(38, 44, 54, 0.55)",
-  glassSolid: "rgba(34, 40, 49, 0.92)",
+  glassTint: "rgba(60, 63, 67, 0.55)",
+  glassSolid: "rgba(54, 57, 61, 0.92)",
   glassEdge: "rgba(255, 255, 255, 0.12)",
   glassShadow: [
     "0 10px 28px rgba(0, 0, 0, 0.4)",

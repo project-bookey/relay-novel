@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  BALL_RADIUS_RATIO,
+  MAX_PRE_SPIN,
   groundViewThrough,
   planFlight,
   skyStart,
@@ -183,11 +185,77 @@ test("a fruit squashes when it lands and is back to shape at rest", () => {
 });
 
 test("a rolling round fruit rests slightly tilted and an angular fruit upright", () => {
-  const round = planFlight(inputFor("roll", true));
-  const turn = Math.abs(round.angle.at(-1) ?? 0) % 360;
-  assert.ok(Math.abs(turn - 20) < 1e-6, `기운 각도 ${turn}`);
+  for (const bounce of bounces) {
+    for (const rollAway of [RIGHTWARD, { side: -60, toward: -20 }]) {
+      const round = planFlight(inputFor(bounce, true, rollAway));
+      const turn = Math.abs(round.angle.at(-1) ?? 0) % 360;
+      assert.ok(Math.abs(turn - 20) < 1e-6, `${bounce} 기운 각도 ${turn}`);
+    }
+  }
   const angular = planFlight(inputFor("roll", false));
   assert.ok(Math.abs(angular.angle.at(-1) ?? 1) < 1e-6);
+});
+
+test("after landing, a round fruit turns exactly as far as it moves on screen, bouncing or rolling", () => {
+  const restDepth = toScreen(view, spot).depth;
+  for (const bounce of bounces) {
+    for (const rollAway of [RIGHTWARD, { side: -60, toward: -20 }]) {
+      const flight = planFlight(inputFor(bounce, true, rollAway));
+      const landing = indexAt(flight, flight.landingAt);
+      let moved = 0;
+      for (let index = landing + 1; index < flight.times.length; index++) {
+        const rolled = Math.hypot(
+          flight.offsetX[index] - flight.offsetX[index - 1],
+          flight.shadowOffsetY[index] - flight.shadowOffsetY[index - 1],
+        );
+        const depth =
+          ((flight.nearness[index] + flight.nearness[index - 1]) / 2) *
+          restDepth;
+        const radius = 44 * BALL_RADIUS_RATIO * depth;
+        const turned =
+          (Math.abs(flight.angle[index] - flight.angle[index - 1]) * Math.PI) /
+          180;
+        assert.ok(
+          Math.abs(turned - rolled / radius) < 1e-6,
+          `${bounce} ${index}: ${turned} ≠ ${rolled / radius}`,
+        );
+        moved += rolled;
+      }
+      assert.ok(moved > 0, bounce);
+    }
+  }
+});
+
+test("a round fruit turns the way it moves on screen", () => {
+  for (const bounce of bounces) {
+    for (const rollAway of [RIGHTWARD, { side: -60, toward: -20 }]) {
+      const flight = planFlight(inputFor(bounce, true, rollAway));
+      const landing = indexAt(flight, flight.landingAt);
+      for (let index = landing + 1; index < flight.times.length; index++) {
+        const moved = flight.offsetX[index] - flight.offsetX[index - 1];
+        if (Math.abs(moved) < 0.5) continue;
+        const turned = flight.angle[index] - flight.angle[index - 1];
+        // 화면에서 오른쪽으로 가면 시계 방향(+)으로 돈다.
+        assert.equal(Math.sign(turned), Math.sign(moved), `${bounce} ${index}`);
+      }
+    }
+  }
+});
+
+test("a round fruit turns only gently while it is still falling", () => {
+  for (const { name, flight } of everyFlight()) {
+    const landing = indexAt(flight, flight.landingAt);
+    for (let index = 1; index <= landing; index++) {
+      const seconds =
+        (flight.times[index] - flight.times[index - 1]) *
+        (flight.durationMs / 1000);
+      const turned = Math.abs(flight.angle[index] - flight.angle[index - 1]);
+      assert.ok(
+        turned <= MAX_PRE_SPIN * seconds + 1e-6,
+        `${name} ${index}: ${turned}°`,
+      );
+    }
+  }
 });
 
 test("time moves forward from start to finish", () => {

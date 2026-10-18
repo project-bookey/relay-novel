@@ -167,6 +167,77 @@ function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
 }
 
+interface GroundPoint {
+  x: number;
+  y: number;
+  depth: number;
+}
+
+// 땅에 닿기 전 떨어지는 동안 미리 돌 때 가장 빠른 빠르기(도/초, 1/60초에 9°).
+// 하늘에서 떨어지는 열매는 이 안에서 다 맞추고, 손으로 낮게 놓을 때처럼 떨어지는 시간이 짧아도 휙 돌지 않는다.
+export const MAX_PRE_SPIN = 540;
+
+// 0에서 1로 천천히 늘었다가 천천히 다다르는 값. 가운데에서 가장 빨라 평균의 1.5배다.
+function smoothstep(progress: number) {
+  return progress * progress * (3 - 2 * progress);
+}
+
+// 화면에서 굴러가는 쪽(오른쪽이면 1, 시계 방향). 화면 x가 거의 그대로인 앞뒤 움직임이면 땅 위 방향(side)으로 정한다.
+// side가 -0처럼 0에 가까운 계산 잡음이어도 화면에서 가는 쪽과 반대로 돌지 않게 한다.
+export function rollDirectionOf(screenDx: number, side: number) {
+  if (Math.abs(screenDx) > 0.5) return Math.sign(screenDx);
+  return side < 0 ? -1 : 1;
+}
+
+// 둥근 열매가 도는 각도(도, 굴러가는 쪽을 +로 잰 값).
+// 처음 부딪힌 뒤로는 튕겨 떠 있을 때든 땅에서 구를 때든 화면에서 굴러간 거리 ÷ 그때의 반지름만큼 돌아,
+// 미끄러지거나 헛돌지 않는다. 다 굴러가면 꼭지가 restTilt만큼 기운 채(한 바퀴씩 더 돈 것은 상관없이) 멈추도록,
+// 모자라거나 남는 만큼은 땅에 닿기 전 떨어지는 동안 천천히 돌기 시작해 천천히 멈추며 미리 돈다(떨어지는 동안은
+// 굴러가는 땅이 없어 어색하지 않다). 떨어지는 시간이 짧아 MAX_PRE_SPIN을 넘는 몫만 땅에 닿은 뒤 회전에 고르게 나눈다.
+function ballTurns(
+  samples: Sample[],
+  grounds: GroundPoint[],
+  landingIndex: number,
+  size: number,
+  restTilt: number,
+) {
+  // 구간마다 화면에서 굴러간 각도. 처음 부딪히기 전(떨어지는 동안)은 0이다.
+  const rolledSteps = samples.map((_, index) => {
+    if (index <= landingIndex) return 0;
+    const before = grounds[index - 1];
+    const after = grounds[index];
+    const radius =
+      size * BALL_RADIUS_RATIO * ((before.depth + after.depth) / 2);
+    return toDegrees(
+      Math.hypot(after.x - before.x, after.y - before.y) / radius,
+    );
+  });
+  const rolled = rolledSteps.reduce((sum, step) => sum + step, 0);
+  // 굴러가지 않으면 기울지도 않는다.
+  if (rolled === 0) return samples.map(() => 0);
+  const fullTurns = Math.max(0, Math.round((rolled - restTilt) / 360));
+  const target = fullTurns * 360 + restTilt;
+  const fallSeconds = samples[landingIndex].time - samples[0].time;
+  // 떨어지는 동안 미리 도는 몫. 가장 빠를 때가 평균의 1.5배이므로 그만큼 나눠 상한을 지킨다.
+  // 높이 없이 내려놓으면 떨어지는 시간이 없어 미리 돌지 않는다.
+  const preLimit = (MAX_PRE_SPIN * fallSeconds) / 1.5;
+  const preTurn = Math.min(preLimit, Math.max(-preLimit, target - rolled));
+  // 미리 돌고도 남는 몫은 땅에 닿은 뒤 굴러가는 회전을 그만큼 늘리거나 줄여 맞춘다(대개 1).
+  const rollShare = (target - preTurn) / rolled;
+
+  let turnedAfterLanding = 0;
+  return samples.map((sample, index) => {
+    if (index === samples.length - 1) return target;
+    if (index <= landingIndex) {
+      const fallen =
+        fallSeconds > 0 ? (sample.time - samples[0].time) / fallSeconds : 1;
+      return preTurn * smoothstep(fallen);
+    }
+    turnedAfterLanding += rolledSteps[index] * rollShare;
+    return preTurn + turnedAfterLanding;
+  });
+}
+
 // 떠 있는 높이에 따른 그림자의 크기 비율과 진하기. 땅에 닿아 있으면 그대로이고,
 // 열매 세 개 높이 넘게 뜨면 땅에 닿는 점으로 작아지며 사라진다. size는 원근 배율 1에서의 열매 크기다.
 export function shadowAt(height: number, size: number) {
@@ -216,34 +287,40 @@ export function planFlight(input: FlightInput): FruitFlight {
 
   const samples: Sample[] = [];
   let elapsed = 0;
+  // sampleAt은 구간 안의 시각과, 그 점이 구간의 끝(땅에 닿는 순간)인지를 받는다.
+  // 끝인지는 시각을 견주지 않고 몇 번째 점인지로 정한다. 나눗셈 오차로 끝 점이 떠 있는 것으로 잘못 보지 않게 한다.
   const addSegment = (
     seconds: number,
-    sampleAt: (localSeconds: number) => Omit<Sample, "time">,
+    sampleAt: (localSeconds: number, atEnd: boolean) => Omit<Sample, "time">,
   ) => {
     const steps = Math.max(2, Math.ceil(seconds / SAMPLE_SECONDS));
     // 앞 구간의 끝과 겹치지 않도록 두 번째 구간부터는 처음 점을 건너뛴다.
     const firstStep = samples.length === 0 ? 0 : 1;
     for (let step = firstStep; step <= steps; step++) {
       const localSeconds = (seconds * step) / steps;
-      samples.push({ time: elapsed + localSeconds, ...sampleAt(localSeconds) });
+      samples.push({
+        time: elapsed + localSeconds,
+        ...sampleAt(localSeconds, step === steps),
+      });
     }
     elapsed += seconds;
   };
   const resting = { climb: 0, airborne: false, tumble: 0 };
 
   // 1. 떨어진다.
-  addSegment(fallSeconds, (seconds) => ({
+  addSegment(fallSeconds, (seconds, atEnd) => ({
     traveled: fallSpeed * seconds,
     // 부딪히는 순간에는 계산 오차 없이 정확히 땅에 닿게 한다.
-    height:
-      seconds < fallSeconds
-        ? Math.max(0, start.height - 0.5 * gravity * seconds * seconds)
-        : 0,
+    height: atEnd
+      ? 0
+      : Math.max(0, start.height - 0.5 * gravity * seconds * seconds),
     climb: -gravity * seconds,
-    airborne: seconds < fallSeconds,
+    // 높이 없이 내려놓으면 떨어지는 구간이 없으므로 떠 있지 않다.
+    airborne: !atEnd && fallSeconds > 0,
     tumble: 0,
   }));
   const landingSeconds = elapsed;
+  const landingIndex = samples.length - 1;
   // 부딪힌 순간과 그때의 세로 빠르기. 납작해지는 정도가 빠르기에 비례한다.
   const impacts = [{ time: elapsed, speed: impactSpeed }];
   const onGround = (seconds: number) =>
@@ -255,11 +332,13 @@ export function planFlight(input: FlightInput): FruitFlight {
     const from = elapsed;
     // 모난 열매는 세게 튕길수록 크게 기우뚱한다.
     const tumble = style.tumbleDegrees * (speed / bounceSpeeds[0]);
-    addSegment(seconds, (local) => ({
+    addSegment(seconds, (local, atEnd) => ({
       traveled: onGround(from + local),
-      height: Math.max(0, speed * local - 0.5 * gravity * local * local),
+      height: atEnd
+        ? 0
+        : Math.max(0, speed * local - 0.5 * gravity * local * local),
       climb: speed - gravity * local,
-      airborne: local < seconds,
+      airborne: !atEnd,
       tumble: tumble * Math.sin((Math.PI * local) / seconds),
     }));
     impacts.push({ time: elapsed, speed });
@@ -280,23 +359,37 @@ export function planFlight(input: FlightInput): FruitFlight {
     height: 0,
   }));
 
-  // 둥근 열매는 처음 부딪힌 뒤로 옆으로 간 거리만큼 구른다(앞뒤로 구르는 건 화면에서 돌려 보일 수 없다).
-  // 다 굴러가면 꼭지가 restTilt만큼 기운 채 멈춘다.
-  const radius = input.size * BALL_RADIUS_RATIO;
-  const sideShare = travel === 0 ? 0 : Math.abs(along.side) / travel;
-  const rolled = (traveled: number) =>
-    Math.max(0, traveled - fallTravel) * sideShare;
-  const rolledTotal = rolled(travel);
-  const naturalTurn = toDegrees(rolledTotal / radius);
-  const fullTurns = Math.max(
-    0,
-    Math.round((naturalTurn - input.restTilt) / 360),
-  );
-  const finalTurn = fullTurns * 360 + input.restTilt;
-  // 화면에서 오른쪽으로 가면 시계 방향으로 돈다.
-  const turning = along.side < 0 ? -1 : 1;
-
+  // 표본마다 열매 바닥의 화면 자리. 마지막은 계산 오차 없이 멈출 자리에 둔다.
   const restScreen = toScreen(view, rest);
+  const screens = samples.map((sample, index) => {
+    if (index === samples.length - 1) return restScreen;
+    const share = travel === 0 ? 1 : sample.traveled / travel;
+    return toScreen(view, {
+      side: start.side + along.side * share,
+      distance: start.distance + along.ahead * share,
+      height: sample.height,
+    });
+  });
+  const groundYOf = (depth: number) => view.horizonY + view.eyeHeight * depth;
+  const turns = input.rollsLikeBall
+    ? ballTurns(
+        samples,
+        screens.map((screen) => ({
+          x: screen.x,
+          y: groundYOf(screen.depth),
+          depth: screen.depth,
+        })),
+        landingIndex,
+        input.size,
+        input.restTilt,
+      )
+    : undefined;
+  // 처음 부딪힌 뒤 화면에서 오른쪽으로 가면 시계 방향으로 돈다.
+  const turning = rollDirectionOf(
+    restScreen.x - screens[landingIndex].x,
+    along.side,
+  );
+
   const squashAt = (time: number) =>
     impacts.reduce((sum, impact) => {
       const since = time - impact.time;
@@ -327,15 +420,9 @@ export function planFlight(input: FlightInput): FruitFlight {
     stretchY: [],
   };
   samples.forEach((sample, index) => {
-    const share = travel === 0 ? 1 : sample.traveled / travel;
     const isLast = index === samples.length - 1;
-    const point = {
-      side: start.side + along.side * share,
-      distance: start.distance + along.ahead * share,
-      height: sample.height,
-    };
-    const screen = isLast ? restScreen : toScreen(view, point);
-    const groundY = view.horizonY + view.eyeHeight * screen.depth;
+    const screen = screens[index];
+    const groundY = groundYOf(screen.depth);
     const nearness = screen.depth / restScreen.depth;
     const shadow = shadowAt(sample.height, input.size);
     // 떠 있을 때는 빠를수록 길쭉하고, 부딪히면 납작해졌다가 출렁이며 돌아온다.
@@ -351,13 +438,7 @@ export function planFlight(input: FlightInput): FruitFlight {
     flight.shadowOffsetY.push(groundY - restScreen.y);
     flight.shadowScale.push(nearness * shadow.scale);
     flight.shadowOpacity.push(shadow.opacity);
-    flight.angle.push(
-      input.rollsLikeBall
-        ? rolledTotal === 0
-          ? 0
-          : (turning * finalTurn * rolled(sample.traveled)) / rolledTotal
-        : turning * sample.tumble,
-    );
+    flight.angle.push(turning * (turns ? turns[index] : sample.tumble));
     flight.stretchY.push(tall);
     // 부피가 그대로인 것처럼, 납작해지면 옆으로 퍼지고 길쭉해지면 좁아진다.
     flight.stretchX.push(1 / Math.sqrt(tall));

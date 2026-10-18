@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { groundViewThrough, shadowAt } from "../src/design/fruitFlight";
+import {
+  MAX_PRE_SPIN,
+  groundViewThrough,
+  shadowAt,
+} from "../src/design/fruitFlight";
 import {
   clampToGround,
   depthAt,
@@ -166,6 +170,65 @@ test("a fruit dropped into a crowd stays clear of every other fruit", () => {
   const inside = clampToGround(bounds, landing);
   near(inside.x, landing.x);
   near(inside.y, landing.y);
+});
+
+test("a ball dropped onto another fruit again and again rolls aside but keeps its stem tilt", () => {
+  // 놓을 때마다 앞 움직임이 끝난 각도에서 이어지므로, 기울기가 쌓이지 않아야 한다.
+  let tilt = 20;
+  let spot = { x: 150, y: 480 };
+  for (let drop = 0; drop < 4; drop++) {
+    const pose = holdPose({
+      view,
+      bounds,
+      skyTop: 150,
+      rest: spot,
+      drag: { x: 0, y: 0 },
+      holdHeight: 40,
+    });
+    const blocker = { ...pose.ground };
+    const { rest: landing, flight } = dropFor(pose, [blocker]);
+    assert.ok(Math.hypot(landing.x - blocker.x, landing.y - blocker.y) > 10);
+    // 한 바퀴씩 더 돈 것은 상관없이 꼭지는 처음 기울기 그대로다.
+    const turned = flight.angle.at(-1) ?? 0;
+    const offTurn = ((turned % 360) + 360) % 360;
+    assert.ok(Math.min(offTurn, 360 - offTurn) < 1e-6, `${drop}: ${turned}`);
+    tilt += turned;
+    spot = { x: landing.x, y: landing.y };
+  }
+  near(((tilt % 360) + 360) % 360, 20);
+});
+
+test("a ball put down on another fruit from any height rolls aside smoothly and keeps its tilt", () => {
+  for (const holdHeight of [0, 0.5, 13, 40]) {
+    const pose = poseFor({ holdHeight });
+    const { flight } = dropFor(pose, [{ ...pose.ground }]);
+    for (const values of [flight.times, flight.offsetX, flight.angle]) {
+      assert.ok(
+        values.every((value) => Number.isFinite(value)),
+        `${holdHeight}`,
+      );
+    }
+    // 떨어지는 동안 휙 되감기지 않는다.
+    const landing = flight.times.findIndex(
+      (time) => time >= flight.landingAt - 1e-9,
+    );
+    for (let index = 1; index <= landing; index++) {
+      const seconds =
+        (flight.times[index] - flight.times[index - 1]) *
+        (flight.durationMs / 1000);
+      const turned = Math.abs(flight.angle[index] - flight.angle[index - 1]);
+      assert.ok(
+        turned <= MAX_PRE_SPIN * seconds + 1e-6,
+        `${holdHeight}: ${turned}°`,
+      );
+    }
+    const turned = flight.angle.at(-1) ?? 0;
+    const offTurn = ((turned % 360) + 360) % 360;
+    assert.ok(
+      Math.min(offTurn, 360 - offTurn) < 1e-6,
+      `${holdHeight}: ${turned}`,
+    );
+  }
 });
 
 test("a fruit put down with no height still has a valid motion", () => {

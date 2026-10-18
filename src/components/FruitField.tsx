@@ -130,6 +130,15 @@ const idsOf = (stories: NovelSummary[]) =>
     .map((story) => story.id)
     .join(",");
 
+// 지금 놓을 열매가 모두 자리를 정해 둔 열매 가운데 있는지. 이어 쓴 열매가 사라질 때처럼 빠지기만 했으면
+// 남은 열매는 놓인 자리에 그대로 둔다.
+function onlyRemoved(laidOut: NovelSummary[], stories: NovelSummary[]) {
+  const placed = new Set(idsOf(laidOut).split(","));
+  return idsOf(stories)
+    .split(",")
+    .every((id) => id === "" || placed.has(id));
+}
+
 // 다시 새로고침할 수 있는 때(ms). 나무 연출이 있으면 나무가 다시 올라간 뒤, 없으면 하늘에서 떨어진 열매가
 // 다 멈춘 뒤다. 동작 줄이기에서는 열매가 처음부터 제자리에 놓이므로 기다리지 않는다.
 function settleTimeOf(
@@ -213,6 +222,11 @@ export function FruitField({
   // 굴러 나가는 열매는 차례와 따로 둔다. 하나씩 사라질 때마다 열매 밭을 다시 배치하면
   // 나무에 매달린 새 열매가 처음부터 다시 움직여 가지와 박자가 어긋난다.
   const [leaving, setLeaving] = useState<Leaving[]>([]);
+  // 열매 자리를 정한 소설들. 열매가 빠지기만 하면 다시 배치하지 않고 빠진 열매만 지운다.
+  // 새 열매가 들어오면 예전처럼 다시 배치한다.
+  const [laidOut, setLaidOut] = useState(stories);
+  if (scene.round === round && !onlyRemoved(laidOut, stories))
+    setLaidOut(stories);
   if (scene.round !== round) {
     // 화면 가장자리(열매 밭 좌표). 열매가 이 밖으로 나가면 다 굴러 나간 것이다.
     const stageX = origin?.x ?? 0;
@@ -229,6 +243,7 @@ export function FruitField({
       round,
     );
     setScene(sceneOf(round, stories, true));
+    setLaidOut(stories);
     setTreeGone(false);
     setSettled(false);
     setLeaving((before) => [...before, ...departing]);
@@ -245,42 +260,50 @@ export function FruitField({
     [area.width, area.height],
   );
   // 열매 자리는 어떤 소설들이 놓이는지에만 따른다. 좋아요 수처럼 내용만 바뀐 응답으로 다시 배치하면
-  // 손으로 옮긴 열매가 처음 자리로 돌아가므로, 배치는 소설 id 목록이 바뀔 때만 다시 하고
+  // 손으로 옮긴 열매가 처음 자리로 돌아가므로, 배치는 자리를 정한 소설 id 목록이 바뀔 때만 다시 하고
   // 열매에는 그릴 때마다 최신 소설 정보를 넘긴다.
-  const storyIds = idsOf(stories);
+  const laidOutIds = idsOf(laidOut);
   const field = useMemo(() => {
     if (area.width === 0 || !frame) return undefined;
     // 차례가 시작될 때와 같은 열매들이면 나무에 매달았다 떨어뜨리고,
     // 그 사이 배달이 와서 목록이 바뀌었으면 예전처럼 하늘에서 떨어뜨린다.
     const hanging =
-      show && storyIds === scene.storyIds ? { show, frame } : undefined;
-    return layoutField(area.width, area.height, stories, scene.seed, hanging);
+      show && laidOutIds === scene.storyIds ? { show, frame } : undefined;
+    return layoutField(area.width, area.height, laidOut, scene.seed, hanging);
   }, [
     area.width,
     area.height,
     frame,
-    storyIds,
+    laidOutIds,
     scene.seed,
     scene.storyIds,
     show,
   ]);
+  // 자리를 정한 열매 가운데 지금도 놓을 열매
+  const storyIds = idsOf(stories);
+  const fruits = useMemo(() => {
+    const kept = new Set(storyIds.split(","));
+    return (field?.fruits ?? []).filter((fruit) =>
+      kept.has(String(fruit.story.id)),
+    );
+  }, [field, storyIds]);
   const fruitKeyOf = (fruit: PlacedFruit) => `${scene.round}:${fruit.story.id}`;
   useEffect(() => {
     shownRef.current = {
-      fruits: (field?.fruits ?? []).map((fruit) => ({
+      fruits: fruits.map((fruit) => ({
         key: `${scene.round}:${fruit.story.id}`,
         fruit,
       })),
       ground: field?.ground,
     };
-  }, [field, scene.round]);
+  }, [fruits, field, scene.round]);
 
   // 나무 연출은 열매가 자리를 잡는 것과 같은 때에 시작해야 매달린 열매와 가지가 함께 움직인다.
   const clock = useRef(nativeValue(0)).current;
   const showEndRef = useRef(onShowEnd);
   showEndRef.current = onShowEnd;
   const settleRef = useRef(0);
-  settleRef.current = settleTimeOf(show, reduced, field?.fruits ?? []);
+  settleRef.current = settleTimeOf(show, reduced, fruits);
   const ready = !!field;
   const sceneRound = scene.round;
   useEffect(() => {
@@ -397,21 +420,22 @@ export function FruitField({
             onGone={() => forgetLeaving(fruit.key)}
           />
         ))}
-      {field?.fruits.map((fruit) => (
-        <FieldFruit
-          key={fruitKeyOf(fruit)}
-          fruitKey={fruitKeyOf(fruit)}
-          fruit={fruit}
-          story={latestStories.get(fruit.story.id) ?? fruit.story}
-          delivered={deliveredIds.has(fruit.story.id)}
-          ground={field.ground}
-          neighbors={neighbors}
-          reduced={reduced}
-          onScreen={onScreen}
-          onOpen={onOpen}
-          onTouch={(touching) => touchFruit(fruitKeyOf(fruit), touching)}
-        />
-      ))}
+      {!!field &&
+        fruits.map((fruit) => (
+          <FieldFruit
+            key={fruitKeyOf(fruit)}
+            fruitKey={fruitKeyOf(fruit)}
+            fruit={fruit}
+            story={latestStories.get(fruit.story.id) ?? fruit.story}
+            delivered={deliveredIds.has(fruit.story.id)}
+            ground={field.ground}
+            neighbors={neighbors}
+            reduced={reduced}
+            onScreen={onScreen}
+            onOpen={onOpen}
+            onTouch={(touching) => touchFruit(fruitKeyOf(fruit), touching)}
+          />
+        ))}
     </View>
   );
 }

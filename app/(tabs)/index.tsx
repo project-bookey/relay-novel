@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
 import { demoStories } from "../../src/api/demo";
+import { usedFruits } from "../../src/state/usedFruits";
 import type { NovelSummary } from "../../src/api/types";
 import { FruitField } from "../../src/components/FruitField";
 import {
@@ -23,14 +24,17 @@ const DEMO_USED_UP =
 const NOTICE_MS = 3200;
 
 // 열매 자리는 몇 개뿐이라, 나에게 배달된 열매와 내가 이어 쓸 차례인 소설을 먼저 놓고
-// 나머지를 홈 묶음 순서대로 채운다.
+// 나머지를 홈 묶음 순서대로 채운다. 이미 이어 쓴 소설은 홈 묶음에 남아 있어도 놓지 않는다
+// (다시 배달되거나 내 차례가 돌아오면 그때는 새 열매로 놓인다).
 function fruitOrder(
   delivered: NovelSummary[],
   myTurns: NovelSummary[],
   homeFeed: NovelSummary[],
+  used: number[],
 ) {
   const seen = new Set<number>();
-  return [...delivered, ...myTurns, ...homeFeed].filter((story) => {
+  const fresh = homeFeed.filter((story) => !used.includes(story.id));
+  return [...delivered, ...myTurns, ...fresh].filter((story) => {
     if (seen.has(story.id)) return false;
     seen.add(story.id);
     return true;
@@ -87,6 +91,12 @@ export default function Home() {
     queryFn: novels.deliveries,
     enabled: mode === "authenticated",
   });
+  // 이어 쓴 열매. 기기에 적어 둔 것이라 둘러보기에는 없다.
+  const used = useQuery({
+    queryKey: ["used-fruits", mode],
+    queryFn: usedFruits.load,
+    enabled: mode === "authenticated",
+  });
   const buttonCenter = useRefreshButtonCenter();
   // 새로고침할 때마다 늘어나는 차례. 열매 밭은 이 값이 바뀌면 새로고침 연출을 한다.
   const [round, setRound] = useState(0);
@@ -103,6 +113,19 @@ export default function Home() {
     const timer = setTimeout(() => setNotice(undefined), NOTICE_MS);
     return () => clearTimeout(timer);
   }, [notice]);
+  // 홈 묶음을 받을 때마다 묶음에서 빠진 소설은 이어 쓴 기록에서도 지운다.
+  // 내용이 같으면 묶음 객체도 그대로라, 받은 때(dataUpdatedAt)로 다시 받았는지 안다.
+  const feedNovels = homeFeed.data?.novels;
+  const feedUpdatedAt = homeFeed.dataUpdatedAt;
+  useEffect(() => {
+    if (!feedNovels) return;
+    void usedFruits
+      .keepOnly(feedNovels.map((story) => story.id))
+      .then((changed) => {
+        if (changed)
+          void queryClient.invalidateQueries({ queryKey: ["used-fruits"] });
+      });
+  }, [feedNovels, feedUpdatedAt, queryClient]);
 
   const refresh = useMutation({
     mutationFn: () => novels.refreshHomeFeed(),
@@ -133,8 +156,9 @@ export default function Home() {
             (deliveries.data ?? []).map((delivery) => delivery.novel),
             turns.data ?? [],
             homeFeed.data?.novels ?? [],
+            used.data ?? [],
           ),
-    [mode, demoOrder, deliveries.data, turns.data, homeFeed.data],
+    [mode, demoOrder, deliveries.data, turns.data, homeFeed.data, used.data],
   );
   const deliveredIds = useMemo(
     () => new Set((deliveries.data ?? []).map((delivery) => delivery.novel.id)),
@@ -151,9 +175,13 @@ export default function Home() {
 
   // 데모 모드에서는 쿼리가 꺼져 있어 isPending이 계속 true이므로 로딩으로 보지 않는다.
   // 목록이 다 온 뒤에 열매를 떨어뜨려야 순서가 바뀌며 다시 떨어지는 일이 없다.
+  // 이어 쓴 기록도 기다려야 사라질 열매가 잠깐 떨어졌다 없어지지 않는다.
   const isLoading =
     mode !== "demo" &&
-    (homeFeed.isPending || turns.isPending || deliveries.isPending);
+    (homeFeed.isPending ||
+      turns.isPending ||
+      deliveries.isPending ||
+      used.isPending);
   const error = homeFeed.error ?? turns.error ?? deliveries.error;
   const isEmpty = !isLoading && !error && stories.length === 0;
   const refreshesLeft =

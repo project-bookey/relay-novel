@@ -15,10 +15,11 @@ import { FruitFigure } from "./FruitFigure";
 import type { HandDrop, RestingFruit } from "../design/handDrop";
 import { SHADOW_BOX } from "../design/fruitShapes";
 import { isPopular, swayDelayOf } from "../design/fruitGlow";
+import { isFullyRipe, ripeColorOf } from "../design/fruitRipeness";
 import { followFlight, playTimeline, rollsLikeBall } from "./fruitMotion";
 import { useFruitHand, type FieldGround } from "./fruitHand";
 import { FruitBubble } from "./FruitBubble";
-import { FruitSparkles, useSway } from "./FruitGlow";
+import { FruitHalo, fruitLabelOf, useSway } from "./FruitGlow";
 import {
   finalAngleOf,
   placementFrom,
@@ -167,7 +168,10 @@ export function FieldFruit({
 
   // 멀리 있는 열매는 바탕색 쪽으로 살짝 옅어 보이게 한다. 앞줄보다 가까이 옮긴 열매는 제 색 그대로 둔다.
   const farness = Math.max(0, 1 - rest.depth);
-  const color = mix(storyColorOf(story.id), colors.background, farness * 0.6);
+  // 좋아요 1000개 이상 다 여문 열매는 금빛으로 물든다(수확할 수 있는 열매).
+  const ripe = isFullyRipe(story.likeCount);
+  const ownColor = ripeColorOf(storyColorOf(story.id), colors.sparkle, ripe);
+  const color = mix(ownColor, colors.background, farness * 0.6);
   const motion = held ? hand.holding : falling;
   const rotate = held ? `${finalAngleOf(placement)}deg` : falling.rotate;
   // 좋아요를 많이 받은 열매는 땅에 가만히 있는 동안 둘레에서 별이 반짝이고 오뚝이처럼 기우뚱한다.
@@ -176,11 +180,7 @@ export function FieldFruit({
   const glowing = popular && settled && !held;
   const glowMoves = onScreen && !reduced;
   const sway = useSway(glowing && glowMoves, swayDelayOf(story.id), size);
-  // 그림을 볼 수 없는 사람도 인기 열매인 줄 알 수 있게 이름 앞에 붙인다.
-  const popularLabel = popular
-    ? `인기 ${story.title} 열매`
-    : `${story.title} 열매`;
-  const label = delivered ? `나에게 온 ${popularLabel}` : popularLabel;
+  const label = `${delivered ? "나에게 온 " : ""}${fruitLabelOf(story.title, popular, ripe)}`;
   // 앞쪽 열매가 겹칠 때 앞에 보이도록 땅 위 자리 순서로 쌓는다. 그림자는 열매 몸통보다 아래에 둔다.
   const layer = Math.round(rest.y) * 2;
 
@@ -251,7 +251,8 @@ export function FieldFruit({
         </Pressable>
       </Animated.View>
       {glowing && (
-        <FruitSparkles
+        <FruitHalo
+          ripe={ripe}
           fruitLeft={left}
           fruitTop={top}
           size={size}

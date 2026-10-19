@@ -88,7 +88,7 @@ const seeds: DemoStorySeed[] = [
     memberCount: 6,
     memberLimit: 8,
 
-    likeCount: 152,
+    likeCount: 1024,
     mode: "OPEN",
   },
   {

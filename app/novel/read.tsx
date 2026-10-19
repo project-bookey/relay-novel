@@ -20,6 +20,8 @@ import {
   LineProgress,
   SiblingSwitcher,
 } from "../../src/components/novel/LineReading";
+import { SelfContinue } from "../../src/components/novel/SelfContinue";
+import { ApiError } from "../../src/api/transport";
 import {
   Button,
   ErrorBox,
@@ -53,6 +55,8 @@ export default function Read() {
         ? demoChapter(id, chapterId)
         : novels.chapter(id, chapterId),
     enabled: mode === "demo" || mode === "authenticated",
+    // 숨은 가지(404)는 다시 물어도 같으니 바로 안내한다.
+    retry: (count, error) => !isHiddenBranch(error) && count < 1,
   });
   const tree = useChapterTree(id, detail.data);
   if (mode === "guest") return <Redirect href="/login" />;
@@ -60,7 +64,8 @@ export default function Read() {
   return (
     <Screen title={detail.data?.novel.title || "이야기 읽기"}>
       {query.isPending && <Loading />}
-      {!!query.error && (
+      {isHiddenBranch(query.error) && <HiddenBranch novelId={id} />}
+      {!!query.error && !isHiddenBranch(query.error) && (
         <ErrorBox
           error={query.error}
           retry={() => {
@@ -113,6 +118,8 @@ function ChapterBody({
   const canContinueBranch =
     !!detail?.myDeliveryId && myDelivery?.chapterId === chapter.id;
   const atLineEnd = !!line && !nextChapter;
+  // 서버가 내 회차라 햇살로 이어 쓸 수 있다고 할 때만. 받은 열매가 있으면 그쪽이 먼저다.
+  const canSelfContinue = !!chapter.canSelfContinue && !canContinueBranch;
 
   return (
     <>
@@ -192,7 +199,26 @@ function ChapterBody({
           이 회차에서 가지 뻗어 이어 쓰기
         </Button>
       )}
+      {canSelfContinue && <SelfContinue chapter={chapter} />}
     </>
+  );
+}
+
+// 수거함에 들어간 가지는 나무에서 숨겨져 서버가 찾지 못한다(404).
+function isHiddenBranch(error: unknown) {
+  return error instanceof ApiError && error.status === 404;
+}
+
+function HiddenBranch({ novelId }: { novelId: number }) {
+  const ui = useUi();
+  return (
+    <View>
+      <Text style={ui.sectionTitle}>이 가지는 지금 볼 수 없어요.</Text>
+      <Text style={ui.body}>나무에서 내려왔거나 사라졌을 수 있어요.</Text>
+      <Button outline onPress={() => backToNovel(novelId)}>
+        다른 열매 보기
+      </Button>
+    </View>
   );
 }
 

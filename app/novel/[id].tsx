@@ -90,6 +90,8 @@ export default function Detail() {
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["novel", id] }),
+        // 내 글 잇기를 그만두면 서버가 햇살을 돌려준다.
+        client.invalidateQueries({ queryKey: ["sunlight"] }),
         refreshLists(),
       ]);
     },

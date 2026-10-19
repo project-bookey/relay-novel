@@ -1,4 +1,11 @@
-import type { NovelSummary, NovelDetail, Chapter, ChapterNode } from "./types";
+import type {
+  NovelSummary,
+  NovelDetail,
+  Chapter,
+  ChapterNode,
+  BranchBin,
+  SunlightWallet,
+} from "./types";
 
 // 로그인 없이 "먼저 둘러보기"에서 쓰는 예시 작품. 서버에 저장되거나 발행되지 않는다.
 // 홈의 열매 자리가 모두 차고, 네 가지 열매 모양과 모집·연재·완결 상태가 다 보이도록 일곱 편을 둔다.
@@ -120,8 +127,9 @@ export const demoStories: NovelSummary[] = seeds.map((seed, index) => ({
   id: index + 1,
   kind: "RELAY",
   mode: seed.mode ?? "CIRCLE",
-  // 열매로 퍼뜨리는 작품은 작가 수 제한이 없다.
-  deliveryCount: seed.mode === "OPEN" ? 3 : undefined,
+  // 열매로 퍼뜨리는 작품은 작가 수 제한이 없고, 새 회차를 10명에게 먼저 보낸다.
+  deliveryCount: seed.mode === "OPEN" ? 10 : undefined,
+  branchLimit: seed.mode === "OPEN" ? 10 : undefined,
   title: seed.title,
   description: seed.description,
   genre: seed.genre,
@@ -169,10 +177,18 @@ export function demoDetail(id: number): NovelDetail {
   };
 }
 
+// 둘러보기의 회차는 내가 쓴 것이 아니라 햇살로 이어 쓸 수 없다.
+const demoReading = {
+  viewCount: 0,
+  canSelfContinue: false,
+  selfContinueCost: 5,
+};
+
 // 첫 작품은 실제로 읽어 볼 수 있게 이어지는 이야기를 직접 써 두었다.
 const moonlightShopChapters: Chapter[] = [
   {
     id: 101,
+    ...demoReading,
     novelId: 1,
     chapterNumber: 1,
     title: "자정을 지나서",
@@ -182,6 +198,7 @@ const moonlightShopChapters: Chapter[] = [
   },
   {
     id: 102,
+    ...demoReading,
     novelId: 1,
     chapterNumber: 2,
     title: "잊어버린 꿈",
@@ -191,6 +208,7 @@ const moonlightShopChapters: Chapter[] = [
   },
   {
     id: 103,
+    ...demoReading,
     novelId: 1,
     chapterNumber: 3,
     title: "유리병 속의 바다",
@@ -289,6 +307,7 @@ function writtenDemoChapters(novelId: number): Chapter[] {
     const day = String(1 + (index % 28)).padStart(2, "0");
     return {
       id: novelId * 100 + chapterNumber,
+      ...demoReading,
       novelId,
       chapterNumber,
       title: chapterTitles[index % chapterTitles.length],
@@ -318,3 +337,53 @@ export const demoGenres = [
   "무협",
   "공포",
 ];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// 둘러보기의 나뭇가지 수거함. 열매로 퍼뜨린 작품에서 조회가 모자라 숨겨진 가지 둘이고, 지울 날은 지금부터 센다.
+export function demoBranchBin(now = new Date()): BranchBin {
+  const prunedAgo = (days: number) =>
+    new Date(now.getTime() - days * DAY_MS).toISOString();
+  const purgeIn = (days: number) =>
+    new Date(now.getTime() + days * DAY_MS).toISOString();
+  return {
+    restoreCost: 3,
+    branches: [
+      {
+        chapterId: 9001,
+        novelId: 5,
+        novelTitle: demoStory(5).title,
+        chapterNumber: 4,
+        title: "젖은 편지의 주소",
+        excerpt: "번진 잉크 사이로 겨우 읽히는 주소는 이 동네에 없는 번지였다.",
+        viewCount: 23,
+        prunedAt: prunedAgo(2),
+        purgeAt: purgeIn(5),
+      },
+      {
+        chapterId: 9002,
+        novelId: 7,
+        novelTitle: demoStory(7).title,
+        chapterNumber: 9,
+        title: "멈춘 시계탑",
+        excerpt:
+          "정거장 시계는 열두 시 일 분 전에서 멈춰 있었고, 아무도 그걸 고치지 않았다.",
+        viewCount: 41,
+        prunedAt: prunedAgo(6),
+        purgeAt: purgeIn(1),
+      },
+    ],
+  };
+}
+
+// 둘러보기에서는 햇살을 채우거나 쓸 수 없어 잔액이 0이다. 값과 상품은 서버 설정과 같게 둔다.
+export const demoSunlight: SunlightWallet = {
+  balance: 0,
+  restoreCost: 3,
+  selfBranchCost: 5,
+  products: [
+    { productId: "relaynovel.sunlight.10", quantity: 10, amountKrw: 1100 },
+    { productId: "relaynovel.sunlight.30", quantity: 30, amountKrw: 3300 },
+    { productId: "relaynovel.sunlight.100", quantity: 100, amountKrw: 9900 },
+  ],
+};

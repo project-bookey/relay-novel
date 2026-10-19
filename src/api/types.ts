@@ -36,8 +36,10 @@ export interface NovelSummary {
   // 내가 좋아요를 눌렀는지
   liked: boolean;
   mode: NovelMode;
-  // OPEN: 회차 하나를 배달할 사람 수
+  // OPEN: 회차 하나를 처음 배달하는 사람 수(늘 10)
   deliveryCount?: number;
+  // OPEN: 회차 하나에 붙을 수 있는 가지 수(10~20). 예전 서버에서는 비어 있다.
+  branchLimit?: number;
 }
 // 좋아요 토글 결과. 누른 뒤 서버의 실제 상태다.
 export interface NovelLikeView {
@@ -78,6 +80,12 @@ export interface Chapter {
   createdAt: string;
   // 뻗어 나온 회차. 뿌리 회차는 비어 있다.
   parentChapterId?: number;
+  // 글쓴이를 뺀, 이 회차를 연 사람 수(한 사람당 한 번)
+  viewCount: number;
+  // 내가 쓴 회차라 햇살을 내고 다음 회차를 이어 쓸 수 있는지. 서버가 가지 자리·목표 회차를 따져 정한다.
+  canSelfContinue: boolean;
+  // 내 글 잇기에 드는 햇살
+  selfContinueCost: number;
 }
 // 회차 나무의 마디 하나. chapterNumber는 가지의 깊이다(뿌리 = 1).
 export interface ChapterNode {
@@ -124,6 +132,8 @@ export interface RefreshVerify {
   // Apple의 거래 id
   originalTransactionId?: string;
 }
+// RANDOM: 무작위로 온 열매, SELF: 햇살을 내고 내 회차에 이어 쓰는 열매(넘기면 햇살을 돌려받는다)
+export type DeliverySource = "RANDOM" | "SELF";
 // 내가 받은 열매. 이 회차에서 가지를 뻗어 이어 쓸 수 있다.
 export interface NovelDelivery {
   deliveryId: number;
@@ -132,6 +142,53 @@ export interface NovelDelivery {
   chapterNumber: number;
   chapterTitle: string;
   dueAt: string;
+  source: DeliverySource;
+}
+// 나뭇가지 수거함의 가지 하나(NovelBinBranchView). 지울 날(purgeAt) 전에 살리거나 버린다.
+export interface BinBranch {
+  chapterId: number;
+  novelId: number;
+  novelTitle: string;
+  chapterNumber: number;
+  title: string;
+  excerpt: string;
+  viewCount: number;
+  prunedAt: string;
+  purgeAt: string;
+}
+export interface BranchBin {
+  branches: BinBranch[];
+  // 가지 하나를 살리는 데 드는 햇살
+  restoreCost: number;
+}
+// 햇살 충전 상품. 스토어에 같은 id의 소모형 상품으로 등록돼 있다.
+export interface SunlightProduct {
+  productId: string;
+  quantity: number;
+  amountKrw: number;
+}
+// 햇살 잔액과 쓰는 값(NovelSunlightView)
+export interface SunlightWallet {
+  balance: number;
+  restoreCost: number;
+  selfBranchCost: number;
+  products: SunlightProduct[];
+}
+// 햇살 충전 주문(NovelSunlightCheckoutView)
+export interface SunlightCheckout {
+  provider: RefreshStore;
+  productId: string;
+  orderId: string;
+  quantity: number;
+  amountKrw: number;
+}
+// 스토어 결제를 마친 뒤 서버에 확인을 맡기는 내용(NovelSunlightVerifyRequest)
+export interface SunlightVerify {
+  provider: RefreshStore;
+  orderId: string;
+  productId: string;
+  receiptData?: string;
+  originalTransactionId?: string;
 }
 export interface BaseWork {
   id: number;
@@ -165,8 +222,8 @@ export interface CreateNovel {
   isPublic: boolean;
   chapterLimit: number;
   turnHours: number;
-  // OPEN: 회차 하나를 배달할 사람 수(1~10)
-  deliveryCount?: number;
+  // OPEN: 회차 하나에 붙을 수 있는 가지 수(10~20). 배달은 늘 10명에게 간다.
+  branchLimit?: number;
   // CIRCLE: 함께 쓸 팔로우한 작가(본인 빼고 최대 9명)
   inviteeIds?: number[];
   baseWorkId?: number;

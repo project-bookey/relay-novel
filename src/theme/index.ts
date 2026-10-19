@@ -26,6 +26,8 @@ const lightColors = {
   fruitShadowOpacity: 0.3,
   // 열매 말풍선 카드의 그림자. 잉크색(ink)을 옅게 깐다.
   cardShadow: "rgba(48, 54, 47, 0.16)",
+  // 아래에서 올라오는 창 뒤를 덮는 막
+  scrim: "rgba(48, 54, 47, 0.35)",
   // 홈 열매 밭에 흩뿌린 풀과 꽃(사용자가 고른 시안 G에서 풀·꽃만 남긴 것).
   // 흰 바탕에서도 흰 꽃이 보이도록 꽃잎에 옅은 테두리를 두른다.
   grassBlade: "#A5C497",
@@ -97,6 +99,7 @@ const darkColors: Palette = {
   // 바탕이 어두운 편이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
   fruitShadowOpacity: 0.7,
   cardShadow: "rgba(0, 0, 0, 0.5)",
+  scrim: "rgba(0, 0, 0, 0.55)",
   // 어두운 바탕 위의 풀과 꽃은 한 톤 가라앉힌다.
   grassBlade: "#5E7A56",
   grassBladeDeep: "#4E6848",

@@ -103,6 +103,10 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     }
     if (path.endsWith("/chapter-tree"))
       return written ? [root, firstBranch, myBranch] : [root, firstBranch];
+    if (path.endsWith("/chapters/nodes/301"))
+      return { ...firstBranch, novelId: 77, body: "자라는 뭍으로 올라갔다." };
+    if (path.endsWith("/chapters/nodes/302"))
+      return { ...myBranch, novelId: 77, body: "토끼가 먼저 용궁을 찾아왔다." };
     if (path.endsWith("/chapters/nodes/300"))
       return {
         ...root,
@@ -167,10 +171,27 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
   await expect(page.getByText(/최근 저장/).last()).toBeVisible();
   await page.getByRole("button", { name: "회차 발행", exact: true }).click();
   await page.getByRole("button", { name: "발행하고 열매 보내기" }).click();
-  // 발행한 가지는 받은 회차에서 갈라진 새 가지로 목차에 들어온다.
+  // 발행해 가지가 갈라지면 목차는 끝 열매마다 한 줄기로 바뀌고, 새 가지는 1장에서 갈라진 열매 2가 된다.
+  const myLine = page.getByRole("button", {
+    name: "열매 2, 2장, 다른 길, 자라는 중, 열매 1의 1장에서 갈라졌어요",
+  });
+  await expect(myLine).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /CHAPTER 02 가지 1_2 다른 길/ }),
+    page.getByRole("button", { name: /^열매 1, 2장, 육지로/ }),
   ).toBeVisible();
+  // 그 열매를 누르면 1장부터 그 줄기를 따라 읽고, 갈라진 회차에서는 옆 가지로 넘길 수 있다.
+  await myLine.click();
+  await expect(
+    page.getByText("용왕의 병을 고칠 약은", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "다음 장" }).click();
+  await expect(page.getByText("토끼가 먼저 용궁을 찾아왔다.")).toBeVisible();
+  await expect(page.getByText("이 줄기는 아직 자라는 중이에요")).toBeVisible();
+  await page.getByRole("button", { name: "이전 가지" }).click();
+  await expect(page.getByText("자라는 뭍으로 올라갔다.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "다음 가지" })).toBeEnabled();
+  await page.getByRole("button", { name: "다른 열매 보기" }).click();
+  await expect(myLine).toBeVisible();
   const published = calls.filter(
     (call) =>
       call.path.endsWith("/deliveries/5/chapters") && call.method === "POST",

@@ -4,12 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
 import { demoChapter, demoDetail } from "../../src/api/demo";
 import type { Chapter, ChapterNode, NovelDetail } from "../../src/api/types";
-import { arrangeChapterTree, branchesFrom } from "../../src/design/chapterTree";
+import { branchesFrom } from "../../src/design/chapterTree";
+import {
+  firstTipUnder,
+  lineThrough,
+  storyLines,
+} from "../../src/design/storyLines";
 import { useSession } from "../../src/state/session";
 import {
   useChapterTree,
   useMyDelivery,
 } from "../../src/components/novel/useNovelChapters";
+import {
+  LineEndNote,
+  LineProgress,
+  SiblingSwitcher,
+} from "../../src/components/novel/LineReading";
 import {
   Button,
   ErrorBox,
@@ -21,9 +31,14 @@ import {
 import { themedStyles } from "../../src/theme/themed";
 
 export default function Read() {
-  const params = useLocalSearchParams<{ id: string; chapterId: string }>();
+  const params = useLocalSearchParams<{
+    id: string;
+    chapterId: string;
+    tipId?: string;
+  }>();
   const id = Number(params.id);
   const chapterId = Number(params.chapterId);
+  const tipId = params.tipId ? Number(params.tipId) : undefined;
   const { mode } = useSession();
   const detail = useQuery({
     queryKey: ["novel", id, mode],
@@ -58,6 +73,7 @@ export default function Read() {
           chapter={chapter}
           nodes={tree.data ?? []}
           detail={detail.data}
+          tipId={tipId}
         />
       )}
     </Screen>
@@ -68,36 +84,59 @@ function ChapterBody({
   chapter,
   nodes,
   detail,
+  tipId,
 }: {
   chapter: Chapter;
   nodes: ChapterNode[];
   detail?: NovelDetail;
+  tipId?: number;
 }) {
   const ui = useUi();
   const styles = useStyles();
   const novelId = chapter.novelId;
   const branching = detail?.novel.mode === "OPEN";
-  const labels = new Map(
-    arrangeChapterTree(nodes).map((row) => [row.node.id, row.label]),
-  );
   const next = branchesFrom(nodes, chapter.id);
+  // 가지가 갈라진 작품은 고른 열매(tipId)까지 이어진 줄기를 따라 읽는다. 아직 한 줄기면 목차처럼 읽는다.
+  const lines = branching ? storyLines(nodes) : [];
+  const line =
+    lines.length > 1 ? lineThrough(lines, nodes, chapter.id, tipId) : undefined;
+  const lineIndex =
+    line?.path.findIndex((node) => node.id === chapter.id) ?? -1;
+  // 줄기를 못 찾으면(나무가 아직 갱신 전 등) 먼저 쓴 가지로 잇는다. 한 줄기 작품은 다음 회차가 하나뿐이다.
+  const nextChapter = line ? line.path[lineIndex + 1] : next[0];
   const myDelivery = useMyDelivery(novelId, detail?.myDeliveryId);
-  const goTo = (chapterId: number) => router.setParams({ chapterId });
+  const goTo = (chapterId: number, nextTipId = line?.tip.id) =>
+    router.setParams({ chapterId, tipId: nextTipId });
   // 차례대로 쓰는 작품은 마지막 장을 읽은 다음 작가가, 열매로 받은 작품은 받은 회차를 읽은 사람이 이어 쓴다.
   const canContinueTurn =
     !!detail?.canWrite && !branching && nodes.length > 0 && next.length === 0;
   const canContinueBranch =
     !!detail?.myDeliveryId && myDelivery?.chapterId === chapter.id;
-  const branchLabel = labels.get(chapter.id);
+  const atLineEnd = !!line && !nextChapter;
 
   return (
     <>
+      {!!line && !!detail && (
+        <LineProgress
+          novel={detail.novel}
+          line={line}
+          readingAt={chapter.chapterNumber}
+        />
+      )}
       <View style={styles.header}>
-        <Label>
-          {`CHAPTER ${String(chapter.chapterNumber).padStart(2, "0")}`}
-          {branching && !!branchLabel ? ` · 가지 ${branchLabel}` : ""}
-        </Label>
-        <Text style={ui.heading}>{chapter.title}</Text>
+        <Label>{`CHAPTER ${String(chapter.chapterNumber).padStart(2, "0")}`}</Label>
+        <View style={styles.titleRow}>
+          <Text style={[ui.heading, styles.title]}>{chapter.title}</Text>
+          {branching && (
+            <SiblingSwitcher
+              nodes={nodes}
+              chapterId={chapter.id}
+              onSwitch={(sibling) =>
+                goTo(sibling, firstTipUnder(nodes, sibling)?.id)
+              }
+            />
+          )}
+        </View>
         <Text style={ui.body}>
           {`${chapter.authorNickname} · ${new Date(chapter.createdAt).toLocaleDateString("ko-KR")}`}
         </Text>
@@ -105,6 +144,9 @@ function ChapterBody({
       <Text selectable style={styles.body}>
         {chapter.body}
       </Text>
+      {atLineEnd && !!detail && !!line && (
+        <LineEndNote novel={detail.novel} line={line} />
+      )}
       <View style={styles.navigation}>
         {chapter.parentChapterId != null && (
           <View style={styles.navigationButton}>
@@ -116,22 +158,19 @@ function ChapterBody({
             </Button>
           </View>
         )}
-        {next.length === 1 && (
+        {!!nextChapter && (
           <View style={styles.navigationButton}>
-            <Button onPress={() => goTo(next[0].id)}>다음 장</Button>
+            <Button onPress={() => goTo(nextChapter.id)}>다음 장</Button>
+          </View>
+        )}
+        {atLineEnd && (
+          <View style={styles.navigationButton}>
+            <Button outline onPress={() => backToNovel(novelId)}>
+              다른 열매 보기
+            </Button>
           </View>
         )}
       </View>
-      {next.length > 1 && (
-        <>
-          <Text style={ui.label}>여기서 갈라진 가지</Text>
-          {next.map((branch) => (
-            <Button key={branch.id} outline onPress={() => goTo(branch.id)}>
-              {`가지 ${labels.get(branch.id) ?? ""} · ${branch.title}`}
-            </Button>
-          ))}
-        </>
-      )}
       {canContinueTurn && (
         <Button
           onPress={() =>
@@ -157,8 +196,16 @@ function ChapterBody({
   );
 }
 
+// 읽기는 상세의 줄기 목록에서 들어오므로 뒤로 가면 다른 열매를 고를 수 있다.
+function backToNovel(novelId: number) {
+  if (router.canGoBack()) router.back();
+  else router.replace({ pathname: "/novel/[id]", params: { id: novelId } });
+}
+
 const useStyles = themedStyles((colors) => ({
   header: { marginVertical: 25 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  title: { flex: 1 },
   body: { fontSize: 17, lineHeight: 32, color: colors.ink, paddingBottom: 35 },
   navigation: { flexDirection: "row", gap: 10 },
   navigationButton: { flex: 1 },

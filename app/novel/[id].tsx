@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
@@ -13,6 +13,9 @@ import { CircleControls } from "../../src/components/novel/CircleControls";
 import { CompleteControl } from "../../src/components/novel/CompleteControl";
 import { AuthorList } from "../../src/components/novel/Members";
 import { ChapterList } from "../../src/components/novel/ChapterList";
+import { StoryLineList } from "../../src/components/novel/StoryLineList";
+import { storyLines } from "../../src/design/storyLines";
+import { themedStyles } from "../../src/theme/themed";
 import {
   useChapterTree,
   useMyDelivery,
@@ -115,6 +118,9 @@ export default function Detail() {
   const isOpen = novel.mode === "OPEN";
   const nodes = tree.data ?? [];
   const busy = mutation.isPending || decline.isPending;
+  // 가지가 갈라진 뒤에는 회차 대신 끝 열매마다 한 줄기로 보여 준다. 아직 한 줄기면 회차 목차 그대로.
+  const lines = isOpen ? storyLines(nodes) : [];
+  const showLines = lines.length > 1;
 
   return (
     <Screen title="이야기 펼치기">
@@ -156,9 +162,11 @@ export default function Detail() {
       )}
       {!!mutation.error && <ErrorBox error={mutation.error} />}
       {!!decline.error && <ErrorBox error={decline.error} />}
-      <Text style={ui.sectionTitle}>
-        {isOpen ? "이야기의 가지" : "이야기의 목차"}
-      </Text>
+      <ChaptersTitle
+        branching={isOpen}
+        lineCount={showLines ? lines.length : 0}
+        chapterLimit={novel.chapterLimit}
+      />
       {tree.isLoading && <Loading />}
       {!!tree.error && (
         <ErrorBox
@@ -168,9 +176,44 @@ export default function Detail() {
           }}
         />
       )}
-      <ChapterList novelId={id} chapters={nodes} branching={isOpen} />
+      {showLines ? (
+        <StoryLineList
+          novel={novel}
+          lines={lines}
+          myDeliveryChapterId={
+            detail.myDeliveryId ? myDelivery?.chapterId : undefined
+          }
+        />
+      ) : (
+        <ChapterList novelId={id} chapters={nodes} branching={isOpen} />
+      )}
       {novel.chapterCount === 0 && <EmptyChapters detail={detail} />}
     </Screen>
+  );
+}
+
+function ChaptersTitle({
+  branching,
+  lineCount,
+  chapterLimit,
+}: {
+  branching: boolean;
+  lineCount: number;
+  chapterLimit: number;
+}) {
+  const ui = useUi();
+  const styles = useStyles();
+  return (
+    <View style={styles.titleRow}>
+      <Text style={ui.sectionTitle}>
+        {branching ? "이야기의 가지" : "이야기의 목차"}
+      </Text>
+      {lineCount > 0 && (
+        <Text style={styles.titleSide}>
+          {`열매 ${lineCount}개 · 목표 ${chapterLimit}장`}
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -196,3 +239,13 @@ function EmptyChapters({ detail }: { detail: NovelDetail }) {
       : "첫 번째 장을 기다리고 있어요. 릴레이가 시작되면 첫 작가가 이야기를 열어요.";
   return <Text style={ui.hint}>{message}</Text>;
 }
+
+const useStyles = themedStyles((colors) => ({
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  titleSide: { fontSize: 13, fontWeight: "600", color: colors.muted },
+}));

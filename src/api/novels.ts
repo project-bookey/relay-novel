@@ -8,6 +8,10 @@ import type {
   NovelStatus,
   NovelDelivery,
   NovelHomeFeed,
+  BranchBin,
+  SunlightCheckout,
+  SunlightVerify,
+  SunlightWallet,
   RefreshCheckout,
   RefreshStore,
   RefreshVerify,
@@ -139,6 +143,36 @@ export const novels = {
   // 넘기기 — 열매가 다른 한 사람에게 다시 배달된다.
   decline: (deliveryId: number) =>
     api<void>(`${root}/deliveries/${deliveryId}/decline`, { method: "POST" }),
+  // 내 글 잇기 — 햇살을 내고 내가 쓴 회차를 나에게 배달한다. 그 뒤로는 받은 열매처럼 쓰고 발행한다.
+  // 햇살이 모자라면 402 NOVEL_SUNLIGHT_INSUFFICIENT.
+  selfDelivery: (id: number, chapterId: number) =>
+    api<NovelDelivery>(`${root}/${id}/chapters/${chapterId}/self-delivery`, {
+      method: "POST",
+    }),
+  // 나뭇가지 수거함 — 한 달 동안 조회가 50회를 못 넘겨 나무에서 숨긴 내 가지.
+  branchBin: () => api<BranchBin>(`${root}/me/branch-bin`),
+  // 햇살을 내고 나무로 되돌린다. 살린 날부터 한 달 뒤 다시 판정한다.
+  restoreBranch: (chapterId: number) =>
+    api<BranchBin>(`${root}/me/branch-bin/${chapterId}/restore`, {
+      method: "POST",
+    }),
+  // 바로 지우고 부모 회차의 가지 자리를 비운다.
+  discardBranch: (chapterId: number) =>
+    api<BranchBin>(`${root}/me/branch-bin/${chapterId}/discard`, {
+      method: "POST",
+    }),
+  sunlight: () => api<SunlightWallet>(`${root}/me/sunlight`),
+  checkoutSunlight: (provider: RefreshStore, productId: string) =>
+    api<SunlightCheckout>(`${root}/sunlight-purchases/checkout`, {
+      method: "POST",
+      body: { provider, productId },
+    }),
+  // 스토어 결제를 서버가 확인하면 햇살이 들어간 잔액을 준다. 같은 주문은 한 번만 넣는다.
+  verifySunlight: (body: SunlightVerify) =>
+    api<SunlightWallet>(`${root}/sunlight-purchases/verify`, {
+      method: "POST",
+      body,
+    }),
   genres: () => api<string[]>(`${root}/genres`),
   myGenres: () => api<string[]>(`${root}/me/genres`),
   saveMyGenres: (genres: string[]) =>

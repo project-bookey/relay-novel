@@ -7,7 +7,8 @@ import type { BaseWork, CreateNovel, NovelMode } from "../src/api/types";
 import { useSession } from "../src/state/session";
 import { BaseWorkPicker } from "../src/components/create/BaseWorkPicker";
 import {
-  DeliveryCountStepper,
+  BRANCH_LIMIT_DEFAULT,
+  BranchLimitStepper,
   ModePicker,
 } from "../src/components/create/ModePicker";
 import { RelayLimits } from "../src/components/create/RelayLimits";
@@ -36,7 +37,7 @@ interface Form {
   description: string;
   genre: string;
   mode: NovelMode;
-  deliveryCount: number;
+  branchLimit: number;
   inviteeIds: number[];
   chapterLimit: string;
   turnHours: string;
@@ -49,7 +50,7 @@ const emptyForm: Form = {
   description: "",
   genre: "판타지",
   mode: "OPEN",
-  deliveryCount: 3,
+  branchLimit: BRANCH_LIMIT_DEFAULT,
   inviteeIds: [],
   chapterLimit: "20",
   turnHours: "24",
@@ -86,7 +87,7 @@ function toRequest(form: Form): CreateNovel | string {
   };
   // 열매로 퍼뜨리는 작품은 누구나 읽고, 모여 만들기는 고른 작가만 본다.
   if (form.mode === "OPEN")
-    return { ...common, isPublic: true, deliveryCount: form.deliveryCount };
+    return { ...common, isPublic: true, branchLimit: form.branchLimit };
   return { ...common, isPublic: false, inviteeIds: form.inviteeIds };
 }
 
@@ -255,9 +256,9 @@ export default function Create() {
           onChange={(next) => update({ mode: next })}
         />
         {isOpen ? (
-          <DeliveryCountStepper
-            value={form.deliveryCount}
-            onChange={(deliveryCount) => update({ deliveryCount })}
+          <BranchLimitStepper
+            value={form.branchLimit}
+            onChange={(branchLimit) => update({ branchLimit })}
           />
         ) : (
           <FollowPicker

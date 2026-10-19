@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { SessionProvider } from "../src/state/session";
 import { AppearanceProvider, useAppearance } from "../src/state/appearance";
 import { useColors } from "../src/theme/themed";
+import { PurchaseProvider } from "../src/components/purchase/PurchaseProvider";
 const client = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 15000 } },
 });
@@ -31,7 +32,9 @@ export default function Layout() {
       <AppearanceProvider>
         <QueryClientProvider client={client}>
           <SessionProvider>
-            <ThemedStack />
+            <PurchaseProvider>
+              <ThemedStack />
+            </PurchaseProvider>
           </SessionProvider>
         </QueryClientProvider>
       </AppearanceProvider>

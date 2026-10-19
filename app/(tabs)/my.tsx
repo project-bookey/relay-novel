@@ -8,6 +8,8 @@ import type { NovelSummary } from "../../src/api/types";
 import { StoryCard } from "../../src/components/home/StoryCard";
 import { StoryRow } from "../../src/components/my/StoryRow";
 import { AppearancePicker } from "../../src/components/my/AppearancePicker";
+import { BranchBin } from "../../src/components/my/BranchBin";
+import { SunlightBalance } from "../../src/components/sunlight/SunlightBalance";
 import {
   Button,
   Card,
@@ -60,7 +62,7 @@ function StorySection({
   );
 }
 
-// 마이 페이지. 내 차례와 내 작품, 화면 모드, 관심 장르, 로그아웃을 모았다.
+// 마이 페이지. 내 차례와 내 작품, 나뭇가지 수거함, 햇살, 화면 모드, 관심 장르, 로그아웃을 모았다.
 export default function MyPage() {
   const ui = useUi();
   const { mode, logout } = useSession();
@@ -124,6 +126,8 @@ export default function MyPage() {
             emptyMessage="아직 함께 쓰는 이야기가 없어요."
             compact
           />
+          <BranchBin />
+          <SunlightBalance />
           <AppearancePicker />
           <View style={styles.actions}>
             <Button

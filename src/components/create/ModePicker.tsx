@@ -55,51 +55,56 @@ export function ModePicker({
   );
 }
 
-export const DELIVERY_MIN = 1;
-export const DELIVERY_MAX = 10;
+// 서버도 10~20으로 막는다. 배달은 늘 10명에게 가므로 상한이 그보다 작을 수 없다.
+export const BRANCH_LIMIT_MIN = 10;
+export const BRANCH_LIMIT_MAX = 20;
+export const BRANCH_LIMIT_DEFAULT = 10;
 
-// 한 번에 배달할 사람 수. 숫자를 직접 치지 않고 44pt 버튼으로 하나씩 바꾼다.
-export function DeliveryCountStepper({
+// 한 회차에 뻗을 수 있는 가지 수. 숫자를 직접 치지 않고 44pt 버튼으로 하나씩 바꾼다.
+export function BranchLimitStepper({
   value,
   onChange,
 }: {
   value: number;
-  onChange: (count: number) => void;
+  onChange: (limit: number) => void;
 }) {
   const ui = useUi();
   const styles = useStyles();
   const colors = useColors();
+  const atMin = value <= BRANCH_LIMIT_MIN;
+  const atMax = value >= BRANCH_LIMIT_MAX;
   return (
     <View style={styles.stepperBlock}>
-      <Text style={ui.label}>한 번에 배달할 사람 수</Text>
+      <Text style={ui.label}>한 회차에 뻗을 수 있는 가지</Text>
       <View style={styles.stepper}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="배달할 사람 한 명 줄이기"
-          accessibilityState={{ disabled: value <= DELIVERY_MIN }}
-          disabled={value <= DELIVERY_MIN}
+          accessibilityLabel="가지 하나 줄이기"
+          accessibilityState={{ disabled: atMin }}
+          disabled={atMin}
           onPress={() => onChange(value - 1)}
-          style={[styles.step, value <= DELIVERY_MIN && styles.stepDisabled]}
+          style={[styles.step, atMin && styles.stepDisabled]}
         >
           <Minus size={18} color={colors.ink} />
         </Pressable>
         <Text
           style={styles.count}
-          accessibilityLabel={`배달할 사람 ${value}명`}
-        >{`${value}명`}</Text>
+          accessibilityLabel={`가지 ${value}개`}
+        >{`${value}개`}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="배달할 사람 한 명 늘리기"
-          accessibilityState={{ disabled: value >= DELIVERY_MAX }}
-          disabled={value >= DELIVERY_MAX}
+          accessibilityLabel="가지 하나 늘리기"
+          accessibilityState={{ disabled: atMax }}
+          disabled={atMax}
           onPress={() => onChange(value + 1)}
-          style={[styles.step, value >= DELIVERY_MAX && styles.stepDisabled]}
+          style={[styles.step, atMax && styles.stepDisabled]}
         >
           <Plus size={18} color={colors.ink} />
         </Pressable>
       </View>
       <Text style={ui.hint}>
-        회차가 올라올 때마다 관심 장르가 맞는 사람부터 무작위로 골라 배달해요.
+        회차가 올라오면 관심 장르가 맞는 사람부터 10명에게 먼저 배달해요. 가지가
+        다 차면 더 보내지 않아요.
       </Text>
     </View>
   );

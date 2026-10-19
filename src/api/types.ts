@@ -230,3 +230,17 @@ export interface Tokens {
   accessToken: string;
   refreshToken: string;
 }
+export type StoryMode = "CONTINUE" | "PLOT" | "OPENING";
+export interface StoryOption {
+  title: string;
+  text: string;
+}
+export interface StorySuggestions {
+  suggestions: StoryOption[];
+}
+export interface StoryRequest {
+  turnNumber: number;
+  mode: StoryMode;
+  body: string;
+  prompt: string;
+}

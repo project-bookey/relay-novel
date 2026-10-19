@@ -1,5 +1,11 @@
 import { novels } from "../../api/novels";
-import type { Chapter, Draft, NovelDetail } from "../../api/types";
+import type {
+  Chapter,
+  Draft,
+  NovelDetail,
+  StoryRequest,
+  StorySuggestions,
+} from "../../api/types";
 
 // 원고를 어디에 쓰는지. 차례대로 쓰는 회차(모여 만들기, 열매로 퍼뜨리는 작품의 1회차)와
 // 받은 열매에서 뻗는 가지는 저장·발행 주소와 낡은 원고를 가르는 번호가 다르다.
@@ -12,6 +18,10 @@ export interface WriteTarget {
   turnOf: (detail: NovelDetail) => number;
   loadDraft: () => Promise<Draft>;
   rewrite: (turnNumber: number, text: string) => Promise<{ text: string }>;
+  story: (
+    turnNumber: number,
+    request: Omit<StoryRequest, "turnNumber">,
+  ) => Promise<StorySuggestions>;
   save: (turnNumber: number, title: string, body: string) => Promise<Draft>;
   publish: (
     turnNumber: number,
@@ -28,6 +38,8 @@ export function turnTarget(novelId: number, turnNumber?: number): WriteTarget {
     turnOf: (detail) => detail.turnNumber,
     loadDraft: () => novels.draft(novelId),
     rewrite: (turn, text) => novels.rewrite(novelId, turn, text),
+    story: (turn, request) =>
+      novels.story(novelId, { ...request, turnNumber: turn }),
     save: (turn, title, body) =>
       novels.saveDraft(novelId, { turnNumber: turn, title, body }),
     publish: (turn, title, body) =>
@@ -44,6 +56,8 @@ export function branchTarget(deliveryId: number): WriteTarget {
     turnOf: () => deliveryId,
     loadDraft: () => novels.deliveryDraft(deliveryId),
     rewrite: (_turn, text) => novels.rewriteDelivery(deliveryId, text),
+    story: (_turn, request) =>
+      novels.deliveryStory(deliveryId, { ...request, turnNumber: deliveryId }),
     save: (_turn, title, body) =>
       novels.saveDeliveryDraft(deliveryId, { title, body }),
     publish: (_turn, title, body) =>

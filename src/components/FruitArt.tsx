@@ -16,7 +16,7 @@ import {
 // 몸통 바닥이 칸 높이의 어디쯤인지. 땅에 놓을 때 이 지점을 땅에 맞춘다.
 export const FRUIT_BOTTOM = GROUND_LINE / 40;
 // 몸통 한가운데(칸 높이에 대한 비율). 구르거나 흔들릴 때 이 점을 축으로 돈다.
-const FRUIT_CENTER_Y = 0.58;
+export const FRUIT_CENTER_Y = 0.58;
 export const FRUIT_CENTER = {
   x: "50%",
   y: `${Math.round(FRUIT_CENTER_Y * 100)}%`,
@@ -38,18 +38,16 @@ function toPoints(corners: Point[]) {
     .join(" ");
 }
 
-// 면으로 이루어진 몸통. 빛을 받는 방향에 따라 면마다 밝기가 다르다.
-export function FruitBody({
+// 몸통의 면들. 40x40 칸 좌표라 다른 그림(이야기 나무의 가지 끝 열매 등) 안에도 그대로 넣을 수 있다.
+export function FruitFacets({
   shape,
   color,
-  size,
 }: {
   shape: FruitShape;
   color: string;
-  size: number;
 }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 40 40">
+    <>
       {fruitGeometries[shape].facets.map((facet, index) => {
         const tone = facetTone(color, facet.facing);
         // 같은 색 테두리를 얇게 둘러 면과 면 사이에 흰 틈이 보이지 않게 한다.
@@ -64,6 +62,23 @@ export function FruitBody({
           />
         );
       })}
+    </>
+  );
+}
+
+// 면으로 이루어진 몸통. 빛을 받는 방향에 따라 면마다 밝기가 다르다.
+export function FruitBody({
+  shape,
+  color,
+  size,
+}: {
+  shape: FruitShape;
+  color: string;
+  size: number;
+}) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 40 40">
+      <FruitFacets shape={shape} color={color} />
     </Svg>
   );
 }

@@ -2,6 +2,11 @@ import { Animated, Text, View } from "react-native";
 import type { NovelSummary } from "../api/types";
 import { statusLabel, storyColorOf, writersLabel } from "../theme";
 import { themedStyles } from "../theme/themed";
+import {
+  FULLY_RIPE_STAGE,
+  likesToNextStage,
+  ripeStageOf,
+} from "../design/fruitRipeness";
 
 // 집어 든 열매 위에 뜨는 말풍선. 그 소설을 열지 않고도 무엇인지 알 수 있게
 // 장르·제목·상태·회차·작가 수를 흰 카드에 짧게 보여준다. 나에게 배달된 열매면 그것도 알려 준다.
@@ -102,6 +107,7 @@ export function FruitBubble({
         <Text style={styles.meta} numberOfLines={1}>
           {`${statusLabel[story.status]} · ${chapters} · ${writers}`}
         </Text>
+        <RipeRow likeCount={story.likeCount} />
         {delivered && (
           <View style={styles.turnBadge}>
             <Text style={styles.turnText}>나에게 온 열매예요</Text>
@@ -114,6 +120,41 @@ export function FruitBubble({
         )}
       </Animated.View>
     </Animated.View>
+  );
+}
+
+function ripeLabelOf(stage: number, remaining: number | undefined) {
+  const base = `여문 정도 ${FULLY_RIPE_STAGE}단계 중 ${stage}단계`;
+  if (remaining === undefined) return `${base}, 다 여문 열매`;
+  return `${base}, 다음 단계까지 좋아요 ${remaining}개`;
+}
+
+// 좋아요로 여문 정도. 점 다섯 개(채운 수 = 단계)와 글로 함께 보여 준다. 풋열매(100개 미만)는 보이지 않는다.
+function RipeRow({ likeCount }: { likeCount: number }) {
+  const styles = useStyles();
+  const stage = ripeStageOf(likeCount);
+  if (stage === 0) return null;
+  const remaining = likesToNextStage(likeCount);
+  const text =
+    remaining === undefined
+      ? "다 여문 열매예요"
+      : `${stage}단계 · 다음까지 ♥ ${remaining}`;
+  return (
+    <View
+      accessible
+      accessibilityLabel={ripeLabelOf(stage, remaining)}
+      style={styles.ripeRow}
+    >
+      {Array.from({ length: FULLY_RIPE_STAGE }, (_, index) => (
+        <View
+          key={index}
+          style={[styles.ripeDot, index < stage && styles.ripeDotOn]}
+        />
+      ))}
+      <Text style={styles.ripeText} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
   );
 }
 
@@ -158,6 +199,16 @@ const useStyles = themedStyles((colors) => ({
     lineHeight: 21,
   },
   meta: { fontSize: 11, color: colors.muted },
+  ripeRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
+  ripeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.sparkle,
+  },
+  ripeDotOn: { backgroundColor: colors.sparkle },
+  ripeText: { fontSize: 11, color: colors.muted, marginLeft: 4, flexShrink: 1 },
   turnBadge: {
     alignSelf: "flex-start",
     marginTop: 4,

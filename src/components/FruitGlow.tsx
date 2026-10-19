@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useColors } from "../theme/themed";
+import { RipeRing } from "./RipeRing";
+import { FRUIT_CENTER_Y } from "./FruitArt";
 import { nativeDriverEnabled } from "./fruitMotion";
 import {
   ballRollShift,
@@ -63,6 +65,54 @@ export function FruitSparkles({
       })}
     </>
   );
+}
+
+// 땅에 가만히 있는 인기 열매의 둘레 효과. 다 여문 열매(1000개 이상)는 금빛 고리가 더해진다.
+export function FruitHalo({
+  ripe,
+  fruitLeft,
+  fruitTop,
+  size,
+  layer,
+  startDelayMs,
+  moving,
+}: {
+  ripe: boolean;
+  fruitLeft: number;
+  fruitTop: number;
+  size: number;
+  layer: number;
+  startDelayMs: number;
+  moving: boolean;
+}) {
+  return (
+    <>
+      {ripe && (
+        <RipeRing
+          centerX={fruitLeft + size / 2}
+          centerY={fruitTop + size * FRUIT_CENTER_Y}
+          diameter={size * 0.92}
+          layer={layer - 1}
+          moving={moving}
+        />
+      )}
+      <FruitSparkles
+        fruitLeft={fruitLeft}
+        fruitTop={fruitTop}
+        size={size}
+        layer={layer}
+        startDelayMs={startDelayMs}
+        moving={moving}
+      />
+    </>
+  );
+}
+
+// 그림을 볼 수 없는 사람도 인기 열매·다 여문 열매인 줄 알 수 있게 이름 앞에 붙인다.
+export function fruitLabelOf(title: string, popular: boolean, ripe: boolean) {
+  if (ripe) return `다 여문 ${title} 열매`;
+  if (popular) return `인기 ${title} 열매`;
+  return `${title} 열매`;
 }
 
 function Sparkle({

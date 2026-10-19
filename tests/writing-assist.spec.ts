@@ -19,7 +19,7 @@ async function openEditor(page: Page, branch = false, fail = false) {
   const calls = await mockBackend(
     page,
     async ({ path, method, body }, route) => {
-      if (path.endsWith("/writing-assist")) {
+      if (path.endsWith("/writing-assist") || path.endsWith("/story-assist")) {
         if (fail) {
           await route.fulfill({
             status: 429,
@@ -30,6 +30,30 @@ async function openEditor(page: Page, branch = false, fail = false) {
             headers: { "Access-Control-Allow-Origin": "*" },
           });
           return undefined;
+        }
+        if (path.endsWith("/story-assist")) {
+          if (body.mode === "PLOT")
+            return {
+              suggestions: [
+                { title: "낯선 편지", text: "문밖에서 낯선 편지가 도착한다." },
+                {
+                  title: "숲속의 발자국",
+                  text: "뒤를 돌아보니 작은 발자국이 이어진다.",
+                },
+                { title: "오래된 약속", text: "한때 잊었던 약속을 떠올린다." },
+              ],
+            };
+          return {
+            suggestions: [
+              {
+                title: body.mode === "OPENING" ? "비 오는 밤" : "낯선 문",
+                text:
+                  body.mode === "OPENING"
+                    ? "빗소리 사이로 편지 한 장이 도착했다."
+                    : "나뭇잎 사이로 작은 문이 모습을 드러냈다.",
+              },
+            ],
+          };
         }
         return { text: "그가 숲으로 달려갔다." };
       }
@@ -172,4 +196,110 @@ test("only the selected passage of a long manuscript is sent and replaced", asyn
   await page.screenshot({ path: test.info().outputPath("writing-assist.png") });
   await page.getByRole("button", { name: "제안 적용" }).click();
   await expect(input).toHaveValue(prefix + "그가 숲으로 달려갔다." + suffix);
+});
+
+test("continuation previews a paragraph before appending and never saves automatically", async ({
+  page,
+}) => {
+  const calls = await openEditor(page);
+  const input = page.getByRole("textbox", { name: "이어지는 이야기" });
+  await page.getByRole("button", { name: "다음 문단 제안받기" }).click();
+  await expect(
+    page.getByText("나뭇잎 사이로 작은 문이 모습을 드러냈다.", { exact: true }),
+  ).toBeVisible();
+  await expect(input).toHaveValue("그가 숲으로 달려갓다.");
+  expect(
+    calls.find((call) => call.path.endsWith("/story-assist"))?.body,
+  ).toEqual({
+    turnNumber: 1,
+    mode: "CONTINUE",
+    body: "그가 숲으로 달려갓다.",
+    prompt: "",
+  });
+  await page.getByRole("button", { name: "원고 끝에 넣기" }).click();
+  await expect(input).toHaveValue(
+    "그가 숲으로 달려갓다.\n\n나뭇잎 사이로 작은 문이 모습을 드러냈다.",
+  );
+  expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+});
+
+test("a branch can choose one of three plots and then generate a paragraph in that direction", async ({
+  page,
+}) => {
+  const calls = await openEditor(page, true);
+  await page.getByRole("tab", { name: "전개 추천" }).click();
+  await page.getByRole("button", { name: "전개 3가지 추천받기" }).click();
+  await expect(page.getByText("낯선 편지", { exact: true })).toBeVisible();
+  await expect(page.getByText("숲속의 발자국", { exact: true })).toBeVisible();
+  await expect(page.getByText("오래된 약속", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "2번 전개로 이어쓰기" }).click();
+  await expect(
+    page.getByRole("button", { name: "원고 끝에 넣기" }),
+  ).toBeEnabled();
+  const requests = calls.filter((call) => call.path.endsWith("/story-assist"));
+  expect(requests).toHaveLength(2);
+  expect(requests[0].path).toBe("/api/v1/novels/deliveries/5/story-assist");
+  expect(requests[1].body).toMatchObject({ turnNumber: 5, mode: "CONTINUE" });
+  expect(requests[1].body.prompt).toContain("숲속의 발자국");
+  await expect(
+    page.getByRole("textbox", { name: "이어지는 이야기" }),
+  ).toHaveValue("그가 숲으로 달려갓다.");
+});
+
+test("opening requires a seed and is inserted before the existing draft", async ({
+  page,
+}) => {
+  await openEditor(page);
+  await page.getByRole("tab", { name: "첫 문단" }).click();
+  await expect(
+    page.getByRole("button", { name: "첫 문단 만들기" }),
+  ).toBeDisabled();
+  await page
+    .getByRole("textbox", { name: "소재·분위기·원하는 방향" })
+    .fill("비 오는 밤, 신비로운 편지");
+  await page.getByRole("button", { name: "첫 문단 만들기" }).click();
+  await expect(
+    page.getByRole("button", { name: "원고 맨 앞에 넣기" }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "원고 맨 앞에 넣기" }).click();
+  await expect(
+    page.getByRole("textbox", { name: "이어지는 이야기" }),
+  ).toHaveValue(
+    "빗소리 사이로 편지 한 장이 도착했다.\n\n그가 숲으로 달려갓다.",
+  );
+});
+
+test("story suggestions cannot be applied after the manuscript or seed changes", async ({
+  page,
+}) => {
+  await openEditor(page);
+  await page.getByRole("button", { name: "다음 문단 제안받기" }).click();
+  await expect(
+    page.getByRole("button", { name: "원고 끝에 넣기" }),
+  ).toBeEnabled();
+  await page
+    .getByRole("textbox", { name: "소재·분위기·원하는 방향" })
+    .fill("다른 분위기");
+  await expect(
+    page.getByRole("button", { name: "원고 끝에 넣기" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText(
+      "요청한 뒤 원고나 소재가 바뀌었어요. 현재 내용으로 다시 제안받아 주세요.",
+    ),
+  ).toBeVisible();
+});
+
+test("story quota errors preserve the draft and are not retried", async ({
+  page,
+}) => {
+  const calls = await openEditor(page, false, true);
+  await page.getByRole("button", { name: "다음 문단 제안받기" }).click();
+  await expect(page.getByRole("alert")).toContainText("24시간에 10번");
+  await expect(
+    page.getByRole("textbox", { name: "이어지는 이야기" }),
+  ).toHaveValue("그가 숲으로 달려갓다.");
+  expect(
+    calls.filter((call) => call.path.endsWith("/story-assist")),
+  ).toHaveLength(1);
 });

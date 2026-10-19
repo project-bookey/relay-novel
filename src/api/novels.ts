@@ -23,6 +23,8 @@ import type {
   Write,
   CreateNovel,
   NovelCover,
+  StoryRequest,
+  StorySuggestions,
 } from "./types";
 import { ApiError } from "./transport";
 const root = "/api/v1/novels";
@@ -120,6 +122,16 @@ export const novels = {
     api<{ text: string }>(`${root}/deliveries/${deliveryId}/writing-assist`, {
       method: "POST",
       body: { turnNumber: deliveryId, text },
+    }),
+  story: (id: number, body: StoryRequest) =>
+    api<StorySuggestions>(`${root}/${id}/story-assist`, {
+      method: "POST",
+      body,
+    }),
+  deliveryStory: (deliveryId: number, body: StoryRequest) =>
+    api<StorySuggestions>(`${root}/deliveries/${deliveryId}/story-assist`, {
+      method: "POST",
+      body,
     }),
   saveDraft: (id: number, body: Write) =>
     api<Draft>(`${root}/${id}/draft`, { method: "PUT", body }),

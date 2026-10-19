@@ -8,6 +8,7 @@ import { Button, Card, ErrorBox, Field, Label, useUi } from "../ui";
 import { ParentChapterPeek } from "./ParentChapterPeek";
 import type { WriteTarget } from "./writeTarget";
 import { WritingAssist } from "./WritingAssist";
+import { StoryAssist } from "./StoryAssist";
 
 const MAX_BODY_LENGTH = 20000;
 
@@ -177,6 +178,17 @@ export function Editor({
         selection={selection}
         disabled={!writable || busy}
         rewrite={(text) => target.rewrite(draft.turnNumber, text)}
+        onApply={(updated) => {
+          setBody(updated);
+          setConfirm(false);
+          setSelection({ start: 0, end: 0 });
+        }}
+      />
+      <StoryAssist
+        body={body}
+        hasPrevious={detail.novel.chapterCount > 0}
+        disabled={!writable || busy}
+        generate={(request) => target.story(draft.turnNumber, request)}
         onApply={(updated) => {
           setBody(updated);
           setConfirm(false);

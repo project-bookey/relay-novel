@@ -107,6 +107,16 @@ export const novels = {
   chapter: (id: number, chapterId: number) =>
     api<Chapter>(`${root}/${id}/chapters/nodes/${chapterId}`),
   draft: (id: number) => api<Draft>(`${root}/${id}/draft`),
+  rewrite: (id: number, turnNumber: number, text: string) =>
+    api<{ text: string }>(`${root}/${id}/writing-assist`, {
+      method: "POST",
+      body: { turnNumber, text },
+    }),
+  rewriteDelivery: (deliveryId: number, text: string) =>
+    api<{ text: string }>(`${root}/deliveries/${deliveryId}/writing-assist`, {
+      method: "POST",
+      body: { turnNumber: deliveryId, text },
+    }),
   saveDraft: (id: number, body: Write) =>
     api<Draft>(`${root}/${id}/draft`, { method: "PUT", body }),
   publish: (id: number, body: Write) =>

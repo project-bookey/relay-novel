@@ -7,6 +7,7 @@ import { usedFruits } from "../../state/usedFruits";
 import { Button, Card, ErrorBox, Field, Label, useUi } from "../ui";
 import { ParentChapterPeek } from "./ParentChapterPeek";
 import type { WriteTarget } from "./writeTarget";
+import { WritingAssist } from "./WritingAssist";
 
 const MAX_BODY_LENGTH = 20000;
 
@@ -46,6 +47,7 @@ export function Editor({
   const ui = useUi();
   const [title, setTitle] = useState(draft.title);
   const [body, setBody] = useState(draft.body);
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [saved, setSaved] = useState(draft);
   const [confirm, setConfirm] = useState(false);
   const [validation, setValidation] = useState("");
@@ -156,8 +158,10 @@ export function Editor({
       <Field
         label="이어지는 이야기"
         value={body}
+        onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
         onChangeText={(value) => {
           setBody(value);
+          setSelection({ start: 0, end: 0 });
           setConfirm(false);
         }}
         multiline
@@ -168,6 +172,17 @@ export function Editor({
       <Text style={ui.hint}>
         {`${body.length.toLocaleString()} / ${MAX_BODY_LENGTH.toLocaleString()}자 · ${savedStatus}`}
       </Text>
+      <WritingAssist
+        body={body}
+        selection={selection}
+        disabled={!writable || busy}
+        rewrite={(text) => target.rewrite(draft.turnNumber, text)}
+        onApply={(updated) => {
+          setBody(updated);
+          setConfirm(false);
+          setSelection({ start: 0, end: 0 });
+        }}
+      />
       {!!validation && (
         <>
           <ErrorBox error={new Error(validation)} />

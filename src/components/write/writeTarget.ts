@@ -11,6 +11,7 @@ export interface WriteTarget {
   // 이 원고의 차례 번호. 서버 초안의 turnNumber와 같아야 한다.
   turnOf: (detail: NovelDetail) => number;
   loadDraft: () => Promise<Draft>;
+  rewrite: (turnNumber: number, text: string) => Promise<{ text: string }>;
   save: (turnNumber: number, title: string, body: string) => Promise<Draft>;
   publish: (
     turnNumber: number,
@@ -26,6 +27,7 @@ export function turnTarget(novelId: number, turnNumber?: number): WriteTarget {
     canWrite: (detail) => detail.canWrite,
     turnOf: (detail) => detail.turnNumber,
     loadDraft: () => novels.draft(novelId),
+    rewrite: (turn, text) => novels.rewrite(novelId, turn, text),
     save: (turn, title, body) =>
       novels.saveDraft(novelId, { turnNumber: turn, title, body }),
     publish: (turn, title, body) =>
@@ -41,6 +43,7 @@ export function branchTarget(deliveryId: number): WriteTarget {
     canWrite: (detail) => detail.myDeliveryId === deliveryId,
     turnOf: () => deliveryId,
     loadDraft: () => novels.deliveryDraft(deliveryId),
+    rewrite: (_turn, text) => novels.rewriteDelivery(deliveryId, text),
     save: (_turn, title, body) =>
       novels.saveDeliveryDraft(deliveryId, { title, body }),
     publish: (_turn, title, body) =>

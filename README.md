@@ -22,7 +22,7 @@ Expo Go 또는 개발 빌드로 앱을 실행합니다. 새로고침 결제(앱 
 
 ## 기존 백엔드 연결
 
-[project-bookey-backend](https://github.com/project-bookey/project-bookey-backend)의 기존 `/api/v1/novels` API를 사용합니다. 별도의 백엔드나 데이터베이스를 만들지 않습니다. 기존 백엔드 저장소는 이 작업에서 변경하지 않았습니다.
+[project-bookey-backend](https://github.com/project-bookey/project-bookey-backend)의 `/api/v1/novels` API를 사용합니다. 별도의 백엔드나 데이터베이스를 만들지 않습니다. 문장 다듬기는 기존 백엔드에서 서버 내부의 Bookey AI API를 호출합니다.
 
 ```sh
 cp .env.example .env.local
@@ -49,6 +49,29 @@ API 타입은 현재 백엔드 `NovelDtos.java` 계약에 맞췄습니다. 백�
 신규 회원가입, 소셜 로그인, 푸시 알림, 앱스토어 배포는 아직 포함하지 않습니다. Bundle ID는 초기값 `app.relaynovel.mobile`이며 스토어 출시 전 실제 계정에 맞춰 확정하세요.
 
 ## 검증
+
+### 글쓰기 보조
+
+집필 화면의 **AI로 문장 다듬기**를 누르면 의미와 말투를 유지하는 수정 제안을 받습니다.
+본문에서 일부를 선택하면 그 부분만 보내고, 선택하지 않으면 전체 본문을 보냅니다.
+한 번에 최대 2,000자이며 긴 원고는 다듬을 부분을 선택해야 합니다. **제안 적용**을 누르기
+전에는 원고가 바뀌지 않으며, 적용 후에도 임시저장과 발행은 직접 해야 합니다.
+요청 후 원고를 편집하면 이전 제안의 적용을 막아 새로 쓴 내용을 보호합니다.
+
+일반 집필 차례와 배달받은 열매의 가지 쓰기를 모두 지원합니다. 백엔드는 각 요청에서
+집필 권한과 차례·배달 유효성을 확인합니다. 한도는 사용자별 분당 3회, 첫 요청부터
+24시간 동안 10회이며 실패한 요청도 한도에 포함될 수 있습니다. 오류가 나도 원고는 유지합니다.
+
+앱에는 기존 `EXPO_PUBLIC_API_URL`만 필요하고 AI 인증키나 Groq 키는 넣지 않습니다.
+백엔드에는 `BOOKEY_AI_BASE_URL`과 `BOOKEY_AI_API_KEY`를 설정합니다. 운영 배포는 같은
+EC2의 `/opt/bookey-ai/ai-api-key`를 읽어 내부 인증키를 연결합니다.
+
+API 경로는 일반 집필 `/api/v1/novels/{id}/writing-assist`, 가지 집필
+`/api/v1/novels/deliveries/{deliveryId}/writing-assist`이고, 요청은
+`{"turnNumber":1,"text":"다듬을 글"}`, 응답은 `{"text":"다듬은 글"}`입니다.
+가지 집필의 `turnNumber`에는 기존 초안 계약처럼 배달 id를 보냅니다.
+
+### 코드 검증
 
 ```sh
 npm run typecheck

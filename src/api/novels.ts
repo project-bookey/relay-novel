@@ -38,6 +38,17 @@ export interface CoverImage {
   file?: Blob;
 }
 
+export interface CoverGenerationRequest {
+  title: string;
+  description: string;
+  genre: string;
+}
+
+export interface CoverGenerationConfig {
+  available: boolean;
+  dailyLimit: number;
+}
+
 async function readWebFile(uri: string) {
   try {
     return await (await fetch(uri)).blob();
@@ -190,6 +201,10 @@ export const novels = {
   saveMyGenres: (genres: string[]) =>
     api<string[]>(`${root}/me/genres`, { method: "PUT", body: { genres } }),
   baseWorks: () => api<BaseWork[]>(`${root}/base-works`),
+  coverGenerationConfig: () =>
+    api<CoverGenerationConfig>(`${root}/covers/generation-config`),
+  generateCover: (body: CoverGenerationRequest) =>
+    api<NovelCover>(`${root}/covers/generate`, { method: "POST", body }),
   // 소설에 붙지 않은 표지는 하루 뒤 서버가 지운다.
   uploadCover: async (image: CoverImage) =>
     api<NovelCover>(`${root}/covers`, {

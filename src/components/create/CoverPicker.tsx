@@ -1,8 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
-import { novels, type CoverImage } from "../../api/novels";
+import {
+  novels,
+  type CoverImage,
+  type CoverGenerationRequest,
+} from "../../api/novels";
 import { themedStyles } from "../../theme/themed";
 import { Button, ErrorBox, useUi } from "../ui";
 
@@ -40,9 +44,13 @@ function problemOf(asset: ImagePicker.ImagePickerAsset) {
 export function CoverPicker({
   picked,
   onChange,
+  story,
+  onBusyChange,
 }: {
   picked?: PickedCover;
   onChange: (cover: PickedCover | undefined) => void;
+  story?: CoverGenerationRequest;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const ui = useUi();
   const styles = useStyles();
@@ -55,8 +63,35 @@ export function CoverPicker({
       if (latest.current === image) onChange({ uri: image.uri, id: cover.id });
     },
   });
+  const config = useQuery({
+    queryKey: ["cover-generation-config"],
+    queryFn: novels.coverGenerationConfig,
+    enabled: !!story,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const generate = useMutation({
+    mutationFn: novels.generateCover,
+    // 응답이 끊겼어도 이미지 API에서 생성됐을 수 있어 자동 재시도하지 않는다.
+    retry: false,
+    onSuccess: (cover) => {
+      latest.current = undefined;
+      upload.reset();
+      setProblem("");
+      onChange({ uri: cover.url, id: cover.id });
+    },
+  });
+  const busy = upload.isPending || generate.isPending;
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+  const canGenerate =
+    !!story?.title.trim() &&
+    !!story?.description.trim() &&
+    !!story?.genre.trim();
 
   const choose = async () => {
+    if (busy) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
@@ -72,63 +107,97 @@ export function CoverPicker({
     setProblem(found);
     if (found) return;
     const image = toCoverImage(asset);
+    generate.reset();
     latest.current = image;
     onChange({ uri: image.uri });
     upload.mutate(image);
   };
   const remove = () => {
+    if (busy) return;
     latest.current = undefined;
     upload.reset();
+    generate.reset();
     onChange(undefined);
   };
   const retry = () => {
     if (latest.current) upload.mutate(latest.current);
   };
 
-  if (!picked)
-    return (
-      <View style={styles.empty}>
-        <Button outline onPress={() => void choose()}>
+  return (
+    <View style={styles.empty}>
+      {!picked ? (
+        <Button outline disabled={busy} onPress={() => void choose()}>
           표지 사진 고르기
         </Button>
-        {!!problem && <ErrorBox error={new Error(problem)} />}
-      </View>
-    );
-  const uploading = upload.isPending;
-  return (
-    <View style={styles.picked}>
-      <View style={styles.row}>
-        <Image
-          source={{ uri: picked.uri }}
-          style={[styles.cover, uploading && styles.uploading]}
-          accessibilityLabel="고른 표지"
-        />
-        <View style={styles.side}>
-          <Text style={ui.hint}>
-            {uploading ? "표지를 올리는 중이에요…" : "표지를 골랐어요."}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="표지 바꾸기"
-            hitSlop={8}
-            onPress={() => void choose()}
-            style={styles.action}
-          >
-            <Text style={styles.actionText}>바꾸기</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="표지 빼기"
-            hitSlop={8}
-            onPress={remove}
-            style={styles.action}
-          >
-            <Text style={styles.removeText}>빼기</Text>
-          </Pressable>
+      ) : (
+        <View style={styles.picked}>
+          <View style={styles.row}>
+            <Image
+              source={{ uri: picked.uri }}
+              style={[styles.cover, busy && styles.uploading]}
+              accessibilityLabel="고른 표지"
+            />
+            <View style={styles.side}>
+              <Text style={ui.hint}>
+                {upload.isPending
+                  ? "표지를 올리는 중이에요…"
+                  : generate.isPending
+                    ? "새 표지를 만들고 있어요…"
+                    : "표지를 골랐어요."}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="표지 바꾸기"
+                hitSlop={8}
+                disabled={busy}
+                onPress={() => void choose()}
+                style={styles.action}
+              >
+                <Text style={styles.actionText}>바꾸기</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="표지 빼기"
+                hitSlop={8}
+                disabled={busy}
+                onPress={remove}
+                style={styles.action}
+              >
+                <Text style={styles.removeText}>빼기</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
-      </View>
+      )}
+      {story && config.data?.available && (
+        <>
+          <Button
+            outline
+            disabled={busy || !canGenerate}
+            onPress={() =>
+              generate.mutate({
+                title: story.title.trim(),
+                description: story.description.trim(),
+                genre: story.genre.trim(),
+              })
+            }
+          >
+            {generate.isPending
+              ? "표지를 만들고 있어요…"
+              : picked
+                ? "AI로 새 표지 만들기"
+                : "AI로 표지 만들기"}
+          </Button>
+          <Text style={ui.hint}>
+            {canGenerate
+              ? `제목과 소개에 어울리는 표지를 만들어요. 생성 시도는 24시간에 ${config.data.dailyLimit}번까지 할 수 있어요.`
+              : "제목과 소개를 먼저 적어 주세요."}
+          </Text>
+        </>
+      )}
       {!!problem && <ErrorBox error={new Error(problem)} />}
       {!!upload.error && <ErrorBox error={upload.error} retry={retry} />}
+      {!!generate.error && <ErrorBox error={generate.error} />}
     </View>
   );
 }

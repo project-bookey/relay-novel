@@ -104,6 +104,7 @@ export default function Create() {
   const navigation = useNavigation();
   const [form, setForm] = useState<Form>(emptyForm);
   const [validation, setValidation] = useState("");
+  const [coverBusy, setCoverBusy] = useState(false);
   // 쓰던 내용을 두고 나가려 할 때의 안내. 입력 오류와 따로 둔다.
   const [leaveWarning, setLeaveWarning] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -151,6 +152,7 @@ export default function Create() {
 
   if (mode !== "authenticated") return <Redirect href="/login" />;
   const submit = () => {
+    if (coverBusy) return;
     const request = toRequest(form);
     if (typeof request === "string") {
       setValidation(request);
@@ -191,13 +193,6 @@ export default function Create() {
           )
         }
       />
-      <View style={styles.section}>
-        <Text style={ui.label}>표지 (선택)</Text>
-        <CoverPicker
-          picked={form.cover}
-          onChange={(cover) => update({ cover })}
-        />
-      </View>
       <View style={styles.section}>
         <Field
           label="이야기 제목"
@@ -250,6 +245,19 @@ export default function Create() {
         </ScrollView>
       </View>
       <View style={styles.section}>
+        <Text style={ui.label}>표지 (선택)</Text>
+        <CoverPicker
+          picked={form.cover}
+          onChange={(cover) => update({ cover })}
+          story={{
+            title: form.title,
+            description: form.description,
+            genre: form.genre,
+          }}
+          onBusyChange={setCoverBusy}
+        />
+      </View>
+      <View style={styles.section}>
         <Text style={ui.label}>만드는 방식</Text>
         <ModePicker
           value={form.mode}
@@ -277,7 +285,7 @@ export default function Create() {
       </View>
       {!!validation && <ErrorBox error={new Error(validation)} />}
       {!!mutation.error && <ErrorBox error={mutation.error} />}
-      <Button onPress={submit} disabled={mutation.isPending}>
+      <Button onPress={submit} disabled={mutation.isPending || coverBusy}>
         {submitLabel(form.mode, mutation.isPending)}
       </Button>
     </Screen>

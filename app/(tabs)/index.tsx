@@ -32,6 +32,7 @@ const NOTICE_MS = 3200;
 // 열매 자리는 몇 개뿐이라, 나에게 배달된 열매와 내가 이어 쓸 차례인 소설을 먼저 놓고
 // 나머지를 홈 묶음 순서대로 채운다. 이미 이어 쓴 소설은 홈 묶음에 남아 있어도 놓지 않는다
 // (다시 배달되거나 내 차례가 돌아오면 그때는 새 열매로 놓인다).
+// 내가 만든 이야기는 열매로 떨어뜨리지 않는다. 마이의 내 작품에서 연다.
 function fruitOrder(
   delivered: NovelSummary[],
   myTurns: NovelSummary[],
@@ -41,6 +42,7 @@ function fruitOrder(
   const seen = new Set<number>();
   const fresh = homeFeed.filter((story) => !used.includes(story.id));
   return [...delivered, ...myTurns, ...fresh].filter((story) => {
+    if (story.mine) return false;
     if (seen.has(story.id)) return false;
     seen.add(story.id);
     return true;

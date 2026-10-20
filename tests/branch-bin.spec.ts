@@ -205,7 +205,14 @@ test("the author of a chapter can pay sunlight to continue it, then writes it li
     };
   });
   await login(page);
-  await page.getByRole("button", { name: /토끼의 간 열매/ }).click();
+  // 내가 만든 이야기는 홈 묶음에 있어도 열매로 떨어지지 않는다.
+  await expect(
+    page.getByRole("button", { name: "새 이야기 심기" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /토끼의 간 열매/ }),
+  ).toHaveCount(0);
+  await page.goto("/novel/77");
   await page.getByRole("button", { name: /CHAPTER 01/ }).click();
   await page.getByRole("button", { name: "햇살 5개로 다음 회차 쓰기" }).click();
   await expect(

@@ -8,7 +8,7 @@ import { filterStories } from "../../design/fruitList";
 import { useSession } from "../../state/session";
 import { themedStyles, useColors } from "../../theme/themed";
 import { ErrorBox, Loading, useUi } from "../ui";
-import { FruitRow } from "./FruitRow";
+import { FruitRow, FruitRowDivider } from "./FruitRow";
 import { ListHead } from "./ListHead";
 
 export interface FruitListProps {
@@ -24,7 +24,6 @@ export function DemoFruitList({ filter, onStatusChange }: FruitListProps) {
       head={
         <ListHead
           genres={filter.genres}
-          total={stories.length}
           status={filter.status}
           onStatusChange={onStatusChange}
         />
@@ -58,10 +57,6 @@ export function ServerFruitList({ filter, onStatusChange }: FruitListProps) {
   const head = (
     <ListHead
       genres={filter.genres}
-      // 앞 조건의 결과를 보여 주는 동안에는 편수를 비운다.
-      total={
-        feed.isPlaceholderData ? undefined : feed.data?.pages[0]?.totalElements
-      }
       status={filter.status}
       onStatusChange={onStatusChange}
     />
@@ -139,6 +134,7 @@ function StoryList({
       data={stories}
       keyExtractor={(story) => String(story.id)}
       renderItem={({ item }) => <FruitRow story={item} />}
+      ItemSeparatorComponent={FruitRowDivider}
       ListHeaderComponent={head}
       ListEmptyComponent={
         <Text style={[ui.hint, styles.empty]}>{emptyMessage}</Text>
@@ -171,6 +167,6 @@ function emptyMessageOf(filter: FruitListProps["filter"]) {
 
 const useStyles = themedStyles(() => ({
   // 아래쪽 바에 마지막 줄이 가리지 않도록 여유를 둔다.
-  list: { paddingTop: 6, paddingBottom: 120 },
+  list: { paddingBottom: 120 },
   empty: { marginTop: 24 },
 }));

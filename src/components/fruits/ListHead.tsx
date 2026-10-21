@@ -17,33 +17,28 @@ const statusOptions: { value?: NovelStatus; label: string }[] = [
 const labelOf = (status?: NovelStatus) =>
   statusOptions.find((option) => option.value === status)?.label ?? "모든 상태";
 
-// 목록 바로 위 한 줄: 왼쪽에 고른 장르와 편수(고른 개수 n/3), 오른쪽에 상태 고르기.
+// 목록 바로 위 한 줄: 왼쪽에 고른 장르(고른 개수 n/3), 오른쪽에 상태 고르기. 편수는 사용자가 뺐다.
 // 상태는 자주 바꾸지 않아 작은 글자 하나로 두고, 누르면 아래에서 고르는 창이 올라온다.
 export function ListHead({
   genres,
-  total,
   status,
   onStatusChange,
 }: {
   genres: string[];
-  // 아직 모르면(불러오는 중) 비운다.
-  total?: number;
   status?: NovelStatus;
   onStatusChange: (status?: NovelStatus) => void;
 }) {
   const styles = useStyles();
   const colors = useColors();
   const [choosing, setChoosing] = useState(false);
-  const totalText = total === undefined ? "" : `${total}편`;
   return (
     <View style={styles.row}>
       <Text style={styles.summary} numberOfLines={1}>
         {genres.length > 0 && (
-          <Text style={styles.genres}>{`${genres.join(" · ")} `}</Text>
-        )}
-        {totalText}
-        {genres.length > 0 && (
-          <Text>{`  ${genres.length}/${FILTER_GENRES_MAX}`}</Text>
+          <>
+            <Text style={styles.genres}>{genres.join(" · ")}</Text>
+            <Text>{`  ${genres.length}/${FILTER_GENRES_MAX}`}</Text>
+          </>
         )}
       </Text>
       <Pressable
@@ -119,13 +114,14 @@ function StatusSheet({
 }
 
 const useStyles = themedStyles((colors) => ({
+  // 장르 탭 선 바로 아래에서 시작한다(사용자 요청으로 위 여백을 없앰). 누르는 칸 44가 글자 위아래 여백이 된다.
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    marginTop: 8,
   },
+  // 장르를 고르지 않아 비어 있어도 남은 너비를 차지해 상태 고르기를 오른쪽 끝에 둔다.
   summary: { flex: 1, fontSize: 14, color: colors.muted },
   genres: { color: colors.ink, fontWeight: "700" },
   statusButton: {

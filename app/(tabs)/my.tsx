@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
@@ -7,13 +8,16 @@ import { demoStories } from "../../src/api/demo";
 import { MyHeader } from "../../src/components/my/MyHeader";
 import { TurnRow } from "../../src/components/my/TurnRow";
 import { useMyStories } from "../../src/components/my/useMyStories";
-import { MyStoryRows } from "../../src/components/my/MyStoryRows";
+import {
+  MyStoryStrip,
+  STRIP_COUNT,
+} from "../../src/components/my/MyStoryStrip";
 import { SettingRows } from "../../src/components/my/SettingRows";
 import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
-import { themedStyles } from "../../src/theme/themed";
+import { themedStyles, useColors } from "../../src/theme/themed";
 
 // 마이 페이지(사용자가 고른 시안 A "책장" reference/sian/my-page/ + 내 정보 시안 B "숫자 줄" reference/sian/my-profile/).
-// 위에서부터 닉네임과 숫자 둘(내 작품·햇살) → 내 차례(진하게 강조하는 유일한 동작) → 내 작품 작은 줄 목록
+// 위에서부터 닉네임과 숫자 둘(내 작품·햇살) → 내 차례(진하게 강조하는 유일한 동작) → 내 작품 네 권 한 줄(더 보기 → 내 작품 화면)
 // → 설정 줄(수거함·화면 모드·관심 장르) → 멀리 떨어진 로그아웃.
 export default function MyPage() {
   const styles = useStyles();
@@ -114,11 +118,26 @@ function MyTurns() {
 function MyStories() {
   const ui = useUi();
   const styles = useStyles();
-  const { query: mine, isDemo, stories } = useMyStories();
+  const colors = useColors();
+  const { query: mine, isDemo, stories, total } = useMyStories();
+  // 한 줄(네 권)보다 많으면 "더 보기"로 내 작품 화면에서 모두 본다.
+  const hasMore = (total ?? 0) > STRIP_COUNT;
   return (
     <>
-      {/* 편수는 맨 위 숫자 줄(MyHeader)에 있다. */}
-      <Text style={styles.sectionTitle}>내 작품</Text>
+      <View style={styles.sectionHead}>
+        <Text style={styles.sectionTitle}>내 작품</Text>
+        {hasMore && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="내 작품 더 보기"
+            onPress={() => router.push("/my-stories")}
+            style={styles.more}
+          >
+            <Text style={styles.moreText}>더 보기</Text>
+            <ChevronRight size={16} color={colors.muted} />
+          </Pressable>
+        )}
+      </View>
       {!isDemo && mine.isPending && <Loading />}
       {!isDemo && !!mine.error && (
         <ErrorBox
@@ -131,23 +150,7 @@ function MyStories() {
       {(isDemo || mine.isSuccess) && stories.length === 0 && (
         <Text style={ui.hint}>아직 함께 쓰는 이야기가 없어요.</Text>
       )}
-      <MyStoryRows stories={stories} />
-      {/* 위 숫자는 전체 편수라, 아직 못 보여 준 작품이 있으면 이어서 불러온다. */}
-      {!isDemo && mine.hasNextPage && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="내 작품 더 보기"
-          disabled={mine.isFetchingNextPage}
-          onPress={() => {
-            void mine.fetchNextPage();
-          }}
-          style={styles.more}
-        >
-          <Text style={styles.moreText}>
-            {mine.isFetchingNextPage ? "불러오는 중…" : "더 보기"}
-          </Text>
-        </Pressable>
-      )}
+      <MyStoryStrip stories={stories} />
     </>
   );
 }
@@ -173,15 +176,22 @@ const useStyles = themedStyles((colors) => ({
   },
   noticeButtonText: { fontSize: 15, fontWeight: "700", color: colors.ink },
   turns: { marginTop: 20, gap: 10 },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: colors.ink,
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 30,
-    marginBottom: 6,
+    marginBottom: 12,
+    minHeight: 44,
   },
-  more: { marginTop: 4, minHeight: 44, justifyContent: "center" },
-  moreText: { fontSize: 14, fontWeight: "600", color: colors.ink },
+  sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.ink },
+  more: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  moreText: { fontSize: 14, color: colors.muted },
   settings: { marginTop: 36 },
   leave: {
     marginTop: 32,

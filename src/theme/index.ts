@@ -208,3 +208,9 @@ export const statusLabel = {
   ONGOING: "이야기 이어가는 중",
   COMPLETED: "완결된 이야기",
 };
+
+// 작품 장르(최대 3개)를 한 줄로. 장르 하나만 내려 주던 예전 응답은 그 장르만 쓴다.
+export function genresLabel(novel: { genre: string; genres?: string[] }) {
+  const genres = novel.genres?.length ? novel.genres : [novel.genre];
+  return genres.join(", ");
+}

@@ -14,6 +14,8 @@ interface DemoStorySeed {
   title: string;
   description: string;
   genre: string;
+  // 대표 장르 뒤에 더 고른 장르
+  moreGenres?: string[];
   status: NovelSummary["status"];
   chapterCount: number;
   memberCount: number;
@@ -90,6 +92,7 @@ const seeds: DemoStorySeed[] = [
     description:
       "밤이 되면 고양이들이 사서가 되는 도서관. 오늘 빌려 간 책은 한 권도 돌아오지 않았다.",
     genre: "판타지",
+    moreGenres: ["일상", "미스터리"],
     status: "ONGOING",
     chapterCount: 12,
     memberCount: 6,
@@ -102,6 +105,7 @@ const seeds: DemoStorySeed[] = [
     title: "마지막 별빛 정거장",
     description: "우주 끝 정거장에서 마지막 셔틀을 기다리는 사람들의 이야기.",
     genre: "SF",
+    moreGenres: ["드라마"],
     status: "COMPLETED",
     chapterCount: 20,
     memberCount: 6,
@@ -133,6 +137,7 @@ export const demoStories: NovelSummary[] = seeds.map((seed, index) => ({
   title: seed.title,
   description: seed.description,
   genre: seed.genre,
+  genres: [seed.genre, ...(seed.moreGenres ?? [])],
   status: seed.status,
   ownerNickname: writerNames[0],
   memberCount: seed.memberCount,

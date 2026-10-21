@@ -1,6 +1,6 @@
 import { Animated, Text, View } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { statusLabel, storyColorOf, writersLabel } from "../theme";
+import { genresLabel, statusLabel, storyColorOf, writersLabel } from "../theme";
 import { themedStyles } from "../theme/themed";
 import {
   FULLY_RIPE_STAGE,
@@ -99,7 +99,9 @@ export function FruitBubble({
           <View
             style={[styles.dot, { backgroundColor: storyColorOf(story.id) }]}
           />
-          <Text style={styles.genre}>{story.genre}</Text>
+          <Text style={styles.genre} numberOfLines={1}>
+            {genresLabel(story)}
+          </Text>
         </View>
         <Text style={styles.title} numberOfLines={2}>
           {story.title}

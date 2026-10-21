@@ -2,7 +2,12 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { NovelSummary } from "../../api/types";
 import type { ChapterLink } from "../../design/chapterTree";
-import { chaptersLabel, statusLabel, writersLabel } from "../../theme";
+import {
+  chaptersLabel,
+  genresLabel,
+  statusLabel,
+  writersLabel,
+} from "../../theme";
 import { StoryTree } from "../StoryTree";
 import { CoverThumb } from "../CoverThumb";
 import { ErrorBox, Label, useUi } from "../ui";
@@ -27,7 +32,7 @@ function CoverHeader({
         <CoverThumb novel={novel} width={108} onError={onCoverError} />
         <View style={styles.coverSide}>
           <Label>
-            {novel.genre} · {statusLabel[novel.status]}
+            {`${genresLabel(novel)} · ${statusLabel[novel.status]}`}
           </Label>
           <Text style={[ui.heading, styles.coverTitle]}>{novel.title}</Text>
           <Text style={ui.body}>{writersLabel(novel)}</Text>
@@ -70,9 +75,7 @@ export function NovelOverview({
     <>
       <View style={styles.header}>
         <StoryTree novel={novel} nodes={nodes} />
-        <Label>
-          {novel.genre} · {statusLabel[novel.status]}
-        </Label>
+        <Label>{`${genresLabel(novel)} · ${statusLabel[novel.status]}`}</Label>
         <Text style={[ui.heading, styles.title]}>{novel.title}</Text>
         <Text style={[ui.body, styles.centered]}>{novel.description}</Text>
       </View>

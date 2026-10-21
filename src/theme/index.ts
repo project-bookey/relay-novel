@@ -25,6 +25,9 @@ const lightColors = {
   // 표지 그림은 밝게·어둡게 모드와 상관없이 같아서 어두운 팔레트도 이 값을 그대로 쓴다.
   likeMark: "#526552",
   likeMarkOutline: "#FFFFFF",
+  // 열매 탭 목록의 진행 글자. 앱 초록(green)은 흰 바탕에서 진한 글자(ink)와 거의 같아 보여서
+  // 색으로 구분되는 맑은 초록을 따로 둔다(흰 바탕 대비 4.7:1).
+  progressInk: "#557D4E",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,
@@ -96,6 +99,8 @@ const darkColors: Palette = {
   line: "#4A4D52",
   green: "#9FC39C",
   mint: "#5F7F70",
+  // 밤은 앱 초록(green)으로도 진한 글자와 잘 구분된다.
+  progressInk: "#9FC39C",
   errorSurface: "#3A2622",
   errorInk: "#F0B7A4",
   ground: "#3A3E37",

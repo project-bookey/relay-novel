@@ -249,11 +249,11 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
           status: "ONGOING",
           ownerNickname: "나",
           memberCount: 1,
-          chapterCount: 0,
+          chapterCount: 1,
           chapterLimit: 20,
           isPublic: true,
           mine: true,
-          myTurn: true,
+          myTurn: false,
           createdAt: "2026-10-19T09:00:00Z",
           likeCount: 0,
           liked: false,
@@ -265,7 +265,7 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
         canWrite: false,
         canStart: false,
         canComplete: false,
-        turnNumber: 1,
+        turnNumber: 2,
       };
     if (path === "/api/v1/novels") return emptyPage;
     if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
@@ -285,12 +285,20 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
   await page.getByRole("button", { name: "가지 하나 늘리기" }).click();
   await page.getByRole("button", { name: "가지 하나 늘리기" }).click();
   await expect(page.getByLabel("가지 12개")).toBeVisible();
-  await page.getByRole("button", { name: "첫 회차 쓰러 가기" }).click();
+  await page.getByRole("textbox", { name: "1회차 제목" }).fill("첫 갈래");
+  await page
+    .getByRole("textbox", { name: "1회차 이야기" })
+    .fill("길이 열 갈래로 나뉘었다.");
+  await page.getByRole("button", { name: "1회차 올리고 열매 보내기" }).click();
   const created = calls.filter(
     (call) => call.path === "/api/v1/novels" && call.method === "POST",
   );
   await expect.poll(() => created.length).toBe(1);
   expect(created[0].body.branchLimit).toBe(12);
   expect(created[0].body.deliveryCount).toBeUndefined();
+  expect(created[0].body.firstChapter).toEqual({
+    title: "첫 갈래",
+    body: "길이 열 갈래로 나뉘었다.",
+  });
   expect(errors).toEqual([]);
 });

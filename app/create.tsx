@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Redirect, router, useNavigation } from "expo-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { novels } from "../src/api/novels";
 import type { BaseWork, CreateNovel, NovelMode } from "../src/api/types";
 import { useSession } from "../src/state/session";
@@ -13,6 +13,8 @@ import {
 } from "../src/components/create/ModePicker";
 import { RelayLimits } from "../src/components/create/RelayLimits";
 import { FollowPicker } from "../src/components/create/FollowPicker";
+import { GenrePicker } from "../src/components/create/GenrePicker";
+import { FirstChapterFields } from "../src/components/create/FirstChapterFields";
 import {
   CoverPicker,
   type PickedCover,
@@ -23,7 +25,6 @@ import {
   ErrorBox,
   Field,
   Label,
-  Loading,
   Screen,
   useUi,
 } from "../src/components/ui";
@@ -41,6 +42,8 @@ interface Form {
   inviteeIds: number[];
   chapterLimit: string;
   turnHours: string;
+  firstTitle: string;
+  firstBody: string;
   baseWork?: BaseWork;
   cover?: PickedCover;
 }
@@ -54,6 +57,8 @@ const emptyForm: Form = {
   inviteeIds: [],
   chapterLimit: "20",
   turnHours: "24",
+  firstTitle: "",
+  firstBody: "",
 };
 
 function isWholeNumberBetween(value: number, min: number, max: number) {
@@ -72,6 +77,8 @@ function toRequest(form: Form): CreateNovel | string {
     return `제한 시간은 1~${TURN_HOURS_MAX}시간으로 입력해 주세요.`;
   if (form.mode === "CIRCLE" && form.inviteeIds.length === 0)
     return "함께 쓸 작가를 한 명 이상 골라 주세요.";
+  if (!form.firstTitle.trim() || !form.firstBody.trim())
+    return "1회차 제목과 이야기를 써 주세요. 첫 회차는 만드는 사람이 직접 써요.";
   if (form.cover && form.cover.id === undefined)
     return "표지를 다 올린 뒤에 만들 수 있어요. 올리지 못했다면 다시 올리거나 빼 주세요.";
   const common = {
@@ -84,6 +91,10 @@ function toRequest(form: Form): CreateNovel | string {
     turnHours,
     baseWorkId: form.baseWork?.id,
     coverId: form.cover?.id,
+    firstChapter: {
+      title: form.firstTitle.trim(),
+      body: form.firstBody.trim(),
+    },
   };
   // 열매로 퍼뜨리는 작품은 누구나 읽고, 모여 만들기는 고른 작가만 본다.
   if (form.mode === "OPEN")
@@ -93,8 +104,8 @@ function toRequest(form: Form): CreateNovel | string {
 
 function submitLabel(mode: NovelMode, pending: boolean) {
   if (pending) return "이야기 만드는 중…";
-  if (mode === "OPEN") return "첫 회차 쓰러 가기";
-  return "모여 만들기 시작하기";
+  if (mode === "OPEN") return "1회차 올리고 열매 보내기";
+  return "1회차 올리고 모여 만들기 시작하기";
 }
 
 export default function Create() {
@@ -113,24 +124,12 @@ export default function Create() {
     setForm((current) => ({ ...current, ...changes }));
     setValidation("");
   };
-  const genres = useQuery({
-    queryKey: ["genres"],
-    queryFn: novels.genres,
-    enabled: mode === "authenticated",
-    staleTime: 60 * 60 * 1000,
-  });
   const mutation = useMutation({
     mutationFn: novels.create,
     onSuccess: (detail) => {
       created.current = true;
       void client.invalidateQueries({ queryKey: ["novels"] });
       router.replace(`/novel/${detail.novel.id}`);
-      // 열매로 퍼뜨리는 작품은 만든 사람이 1회차를 써야 배달이 시작된다.
-      if (detail.novel.mode === "OPEN" && detail.canWrite)
-        router.push({
-          pathname: "/novel/write",
-          params: { id: detail.novel.id },
-        });
     },
   });
   const dirty = form !== emptyForm;
@@ -214,40 +213,10 @@ export default function Create() {
           maxLength={500}
           placeholder="어떤 세계를 함께 만들고 싶나요?"
         />
-        <Text style={ui.label}>장르</Text>
-        {genres.isPending && <Loading />}
-        {!!genres.error && (
-          <ErrorBox
-            error={genres.error}
-            retry={() => {
-              void genres.refetch();
-            }}
-          />
-        )}
-        <ScrollView
-          horizontal
-          contentContainerStyle={styles.genres}
-          showsHorizontalScrollIndicator={false}
-        >
-          {(genres.data ?? []).map((genre) => (
-            <Pressable
-              key={genre}
-              accessibilityRole="button"
-              accessibilityState={{ selected: form.genre === genre }}
-              onPress={() => update({ genre })}
-              style={[ui.pill, form.genre === genre && ui.pillSelected]}
-            >
-              <Text
-                style={[
-                  ui.pillText,
-                  form.genre === genre && ui.pillTextSelected,
-                ]}
-              >
-                {genre}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <GenrePicker
+          value={form.genre}
+          onChange={(genre) => update({ genre })}
+        />
       </View>
       <View style={styles.section}>
         <Text style={ui.label}>만드는 방식</Text>
@@ -275,6 +244,15 @@ export default function Create() {
           onChange={update}
         />
       </View>
+      <View style={styles.section}>
+        <Text style={ui.label}>1회차는 직접 써요</Text>
+        <FirstChapterFields
+          mode={form.mode}
+          title={form.firstTitle}
+          body={form.firstBody}
+          onChange={update}
+        />
+      </View>
       {!!validation && <ErrorBox error={new Error(validation)} />}
       {!!mutation.error && <ErrorBox error={mutation.error} />}
       <Button onPress={submit} disabled={mutation.isPending}>
@@ -287,5 +265,4 @@ export default function Create() {
 const styles = StyleSheet.create({
   // 묶음 사이 간격은 묶음 안 간격보다 넓게 둔다.
   section: { marginTop: 28 },
-  genres: { gap: 8, paddingVertical: 14 },
 });

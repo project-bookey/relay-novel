@@ -1,8 +1,16 @@
 import { Pressable, Text, TextInput, View } from "react-native";
 import { Search } from "lucide-react-native";
+import { ICON_LINE_PX } from "../../theme";
 import { themedStyles, useColors } from "../../theme/themed";
+import { FruitsIcon } from "../BarIcons";
 
-// 열매 탭 맨 위. 평소에는 "열매" 제목 오른쪽에 검색 아이콘만 두고,
+// 제목은 글자 대신 아래 바의 열매 탭과 같은 열매 아이콘이다(사용자 요청).
+// 검색 아이콘(24)보다 크게 두어 제목으로 읽히게 한다.
+const TITLE_ICON_SIZE = 32;
+// 아이콘 그림은 24칸이라, 화면에서 ICON_LINE_PX 굵기로 보이도록 크기에 맞춰 환산한다.
+const TITLE_ICON_STROKE = (ICON_LINE_PX * 24) / TITLE_ICON_SIZE;
+
+// 열매 탭 맨 위. 평소에는 열매 아이콘 제목 오른쪽에 검색 아이콘만 두고,
 // 아이콘을 누르면 그 자리가 검색 입력줄과 "취소"로 바뀐다.
 export function FruitsTop({
   searching,
@@ -48,9 +56,14 @@ export function FruitsTop({
     );
   return (
     <View style={styles.row}>
-      <Text style={styles.title} accessibilityRole="header">
-        열매
-      </Text>
+      <View
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel="열매"
+        style={styles.titleIcon}
+      >
+        <FruitsIcon size={TITLE_ICON_SIZE} strokeWidth={TITLE_ICON_STROKE} />
+      </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="열매 찾기"
@@ -71,12 +84,8 @@ const useStyles = themedStyles((colors) => ({
     minHeight: 48,
     gap: 12,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: -0.8,
-    color: colors.ink,
-  },
+  // 그림 칸 안쪽 여백만큼 당겨 그림 왼쪽 끝을 목록의 왼쪽 끝(표지)에 맞춘다.
+  titleIcon: { marginLeft: -3 },
   // 아이콘은 24지만 누르는 칸은 48로 잡고, 아이콘 오른쪽 끝을 목록 글자의 오른쪽 여백에 맞춘다.
   searchButton: {
     width: 48,

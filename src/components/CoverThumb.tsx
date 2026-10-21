@@ -8,20 +8,24 @@ import { StoryTree } from "./StoryTree";
 export function CoverThumb({
   novel,
   width,
+  square = false,
   onError,
 }: {
   novel: NovelSummary;
   width: number;
+  // 모서리를 둥글리지 않는다(열매 탭 목록).
+  square?: boolean;
   onError?: () => void;
 }) {
   const styles = useStyles();
   const [failed, setFailed] = useState(false);
   const size = { width, height: Math.round((width * 4) / 3) };
+  const corner = square ? styles.square : undefined;
   if (novel.coverUrl && !failed)
     return (
       <Image
         source={{ uri: novel.coverUrl }}
-        style={[styles.cover, size]}
+        style={[styles.cover, size, corner]}
         accessibilityLabel={`${novel.title} 표지`}
         accessibilityIgnoresInvertColors
         onError={() => {
@@ -31,7 +35,7 @@ export function CoverThumb({
       />
     );
   return (
-    <View style={[styles.cover, styles.treeBox, size]}>
+    <View style={[styles.cover, styles.treeBox, size, corner]}>
       <StoryTree novel={novel} height={size.height - 12} />
     </View>
   );
@@ -39,6 +43,7 @@ export function CoverThumb({
 
 const useStyles = themedStyles((colors) => ({
   cover: { borderRadius: 8, backgroundColor: colors.line },
+  square: { borderRadius: 0 },
   treeBox: {
     backgroundColor: colors.paper,
     borderWidth: 1,

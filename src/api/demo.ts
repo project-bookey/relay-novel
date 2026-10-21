@@ -332,15 +332,21 @@ export function demoChapter(novelId: number, chapterId: number) {
 }
 
 // 둘러보기용 장르. 실제 목록은 서버가 준다.
+// 서버의 장르 목록(NovelGenres.ALL)과 같은 순서
 export const demoGenres = [
   "판타지",
-  "일상",
-  "미스터리",
+  "현대판타지",
   "로맨스",
-  "SF",
-  "드라마",
+  "로맨스판타지",
   "무협",
+  "미스터리",
+  "스릴러",
   "공포",
+  "SF",
+  "일상",
+  "드라마",
+  "역사",
+  "코미디",
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;

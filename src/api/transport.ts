@@ -12,7 +12,8 @@ interface Options {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   auth?: boolean;
-  query?: Record<string, string | number | undefined>;
+  // 목록 값은 같은 이름을 여러 번 붙인다(genres=무협&genres=스릴러).
+  query?: Record<string, string | number | string[] | undefined>;
 }
 interface Storage {
   get(): Promise<Tokens | null>;
@@ -48,8 +49,11 @@ export function createTransport(
     options: Options = {},
   ): Promise<T> {
     const url = new URL(base + path);
-    Object.entries(options.query || {}).forEach(([k, v]) => {
-      if (v !== undefined) url.searchParams.set(k, String(v));
+    Object.entries(options.query || {}).forEach(([name, value]) => {
+      if (value === undefined) return;
+      if (Array.isArray(value))
+        value.forEach((each) => url.searchParams.append(name, each));
+      else url.searchParams.set(name, String(value));
     });
     const send = async () => {
       const tokens = options.auth === false ? null : await storage.get();

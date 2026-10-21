@@ -21,6 +21,10 @@ const lightColors = {
   bud: "#F6E3A1",
   // 좋아요를 많이 받은 인기 열매 둘레에서 반짝이는 별. 꽃봉오리(bud)보다 짙은 따뜻한 노랑
   sparkle: "#F5C542",
+  // 열매 탭 표지 위쪽 왼편의 좋아요(테두리 하트와 수)와 그 둘레의 가는 흰 테두리.
+  // 표지 그림은 밝게·어둡게 모드와 상관없이 같아서 어두운 팔레트도 이 값을 그대로 쓴다.
+  likeMark: "#526552",
+  likeMarkOutline: "#FFFFFF",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,

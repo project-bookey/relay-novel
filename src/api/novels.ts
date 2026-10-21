@@ -63,9 +63,24 @@ async function coverForm(image: CoverImage) {
   return form;
 }
 
+export interface FeedFilter {
+  status?: NovelStatus;
+  genres?: string[];
+  query?: string;
+}
+
 export const novels = {
-  feed: (status?: NovelStatus, page = 0) =>
-    api<Page<NovelSummary>>(root, { query: { kind: "RELAY", status, page } }),
+  // 열매 탭 목록(최신순). 장르는 세 개까지, 하나라도 맞으면 보이고, q는 제목·만든 사람 닉네임에서 찾는다.
+  feed: (filter: FeedFilter = {}, page = 0) =>
+    api<Page<NovelSummary>>(root, {
+      query: {
+        kind: "RELAY",
+        status: filter.status,
+        genres: filter.genres?.length ? filter.genres : undefined,
+        q: filter.query?.trim() || undefined,
+        page,
+      },
+    }),
   mine: (page = 0) =>
     api<Page<NovelSummary>>(`${root}/mine`, { query: { kind: "RELAY", page } }),
   turns: () => api<NovelSummary[]>(`${root}/my-turns`),

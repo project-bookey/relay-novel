@@ -2,25 +2,21 @@ import { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react-native";
 import { novels } from "../../api/novels";
 import { useAppearance } from "../../state/appearance";
 import { useSession } from "../../state/session";
 import { themedStyles, useColors } from "../../theme/themed";
-import { SunlightShop } from "../sunlight/SunlightShop";
-import { useSunlightPurchase } from "../sunlight/sunlightPurchase";
-import { useSunlight } from "../sunlight/useSunlight";
 import { AppearancePicker, appearanceLabel } from "./AppearancePicker";
 import { useBranchBin } from "./BranchBin";
 
 // 마이 아래쪽 설정 묶음. 자주 쓰지 않으므로 "이름 … 지금 값 ›" 줄 목록으로 차분하게 두고,
-// 누르면 그 기능의 화면이나 아래에서 올라오는 창으로 간다.
+// 누르면 그 기능의 화면이나 아래에서 올라오는 창으로 간다. 햇살은 맨 위 숫자 줄(MyHeader)에 있다.
 export function SettingRows() {
   return (
     <View>
       <BinRow />
-      <SunlightRow />
       <AppearanceRow />
       <GenresRow />
     </View>
@@ -66,36 +62,6 @@ function BinRow() {
       value={countText(bin.data?.branches?.length, !!bin.error)}
       onPress={() => router.push("/branch-bin")}
     />
-  );
-}
-
-function SunlightRow() {
-  const { mode } = useSession();
-  const client = useQueryClient();
-  const wallet = useSunlight();
-  const [shopOpen, setShopOpen] = useState(false);
-  // 창을 열지 않아도, 지난번에 결제하고 확인하지 못한 햇살을 마이에 들어올 때 마저 받는다.
-  useSunlightPurchase({
-    onPaid: (paid) => client.setQueryData(["sunlight", mode], paid),
-    onError: () => {},
-  });
-  const balance = wallet.error
-    ? "불러오지 못했어요 · 다시 불러오기"
-    : countText(wallet.data?.balance, false);
-  return (
-    <>
-      <SettingRow
-        label="햇살"
-        value={wallet.error ? balance : `${balance} · 채우기`}
-        onPress={() => {
-          // 잔액을 못 불러왔으면 들어갈 화면이 없으니 이 줄에서 다시 불러온다.
-          if (wallet.error) void wallet.refetch();
-          else if (mode === "demo") router.push("/login");
-          else setShopOpen(true);
-        }}
-      />
-      {shopOpen && <SunlightShop onClose={() => setShopOpen(false)} />}
-    </>
   );
 }
 

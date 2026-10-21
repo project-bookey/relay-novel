@@ -1,34 +1,40 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { Redirect } from "expo-router";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
+import { BackHandler, View } from "react-native";
+import { Redirect, useFocusEffect } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
-import { demoStories } from "../../src/api/demo";
+import { demoGenres } from "../../src/api/demo";
 import type { NovelStatus } from "../../src/api/types";
-import { StatusFilters } from "../../src/components/home/HomeSections";
-import { StoryCard } from "../../src/components/home/StoryCard";
+import { toggleGenre } from "../../src/design/fruitList";
+import { FruitsTop } from "../../src/components/fruits/FruitsTop";
+import { GenreTabs } from "../../src/components/fruits/GenreTabs";
 import {
-  Button,
-  ErrorBox,
-  Label,
-  Loading,
-  Screen,
-  useUi,
-} from "../../src/components/ui";
+  DemoFruitList,
+  ServerFruitList,
+} from "../../src/components/fruits/FruitLists";
+import { ErrorBox, Loading, Screen } from "../../src/components/ui";
+import { themedStyles } from "../../src/theme/themed";
 
-// 열매 페이지. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 상태별로 골라 본다.
+// 검색어를 칠 때마다 서버에 묻지 않도록, 입력이 이만큼 멈추면 찾는다.
+const SEARCH_DELAY_MS = 300;
+
+// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 장르(세 개까지)·상태·검색어로 골라 본다.
 export default function FruitsPage() {
-  const ui = useUi();
+  const styles = useStyles();
   const { mode } = useSession();
+  const [genres, setGenres] = useState<string[]>([]);
   const [status, setStatus] = useState<NovelStatus>();
-  const feed = useInfiniteQuery({
-    queryKey: ["novels", "all", status ?? "ALL", mode],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => novels.feed(status, pageParam),
-    getNextPageParam: (last) => (last.hasNext ? last.page + 1 : undefined),
-    enabled: mode === "authenticated",
-  });
+  const [searching, setSearching] = useState(false);
+  const [typed, setTyped] = useState("");
+  const query = useSettled(typed, SEARCH_DELAY_MS);
+  const isDemo = mode === "demo";
+
+  const closeSearch = useCallback(() => {
+    setSearching(false);
+    setTyped("");
+  }, []);
+  useCloseSearchOnBack(searching, closeSearch);
 
   if (mode === "loading")
     return (
@@ -38,61 +44,107 @@ export default function FruitsPage() {
     );
   if (mode === "guest") return <Redirect href="/login" />;
 
-  // 둘러보기에서는 서버에 묻지 않고 예시 작품을 상태로만 거른다.
-  const isDemo = mode === "demo";
-  const stories = isDemo
-    ? demoStories.filter((story) => !status || story.status === status)
-    : (feed.data?.pages.flatMap((page) => page.content) ?? []);
-  const isLoading = !isDemo && feed.isPending;
-  const isEmpty = !isLoading && !feed.error && stories.length === 0;
-
+  const filter = { genres, status, query };
   return (
     <Screen scroll={false}>
       <View style={styles.frame}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <Label>ALL STORIES</Label>
-          <Text style={ui.heading}>열매</Text>
-          <StatusFilters selected={status} onSelect={setStatus} />
-          {isLoading && <Loading />}
-          {!!feed.error && (
-            <ErrorBox
-              error={feed.error}
-              retry={() => {
-                void feed.refetch();
-              }}
-            />
-          )}
-          {isEmpty && (
-            <Text style={ui.hint}>아직 여기에 열린 열매가 없어요.</Text>
-          )}
-          {stories.map((story) => (
-            <StoryCard key={story.id} story={story} />
-          ))}
-          {feed.hasNextPage && (
-            <Button
-              outline
-              disabled={feed.isFetchingNextPage}
-              onPress={() => {
-                void feed.fetchNextPage();
-              }}
-            >
-              열매 더 보기
-            </Button>
-          )}
-        </ScrollView>
+        <FruitsTop
+          searching={searching}
+          query={typed}
+          onQueryChange={setTyped}
+          onOpenSearch={() => setSearching(true)}
+          onCloseSearch={closeSearch}
+        />
+        <GenreTabsFromServer
+          isDemo={isDemo}
+          selected={genres}
+          onToggle={(genre) => setGenres((now) => toggleGenre(now, genre))}
+          onClear={() => setGenres([])}
+        />
+        {isDemo ? (
+          <DemoFruitList filter={filter} onStatusChange={setStatus} />
+        ) : (
+          <ServerFruitList filter={filter} onStatusChange={setStatus} />
+        )}
       </View>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+// 찾는 중에 안드로이드 뒤로 버튼을 누르면 화면을 떠나지 않고 찾기만 닫는다.
+// 탭 화면은 다른 곳으로 옮겨도 남아 있으므로, 열매 탭이 보이는 동안에만 뒤로 버튼을 가로챈다.
+function useCloseSearchOnBack(searching: boolean, closeSearch: () => void) {
+  useFocusEffect(
+    useCallback(() => {
+      if (!searching) return;
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          closeSearch();
+          return true;
+        },
+      );
+      return () => subscription.remove();
+    }, [searching, closeSearch]),
+  );
+}
+
+// 장르 목록은 서버가 정한다(GET /novels/genres). 둘러보기에서는 같은 목록의 예시를 쓴다.
+function GenreTabsFromServer({
+  isDemo,
+  selected,
+  onToggle,
+  onClear,
+}: {
+  isDemo: boolean;
+  selected: string[];
+  onToggle: (genre: string) => void;
+  onClear: () => void;
+}) {
+  const genres = useQuery({
+    queryKey: ["genres"],
+    queryFn: novels.genres,
+    enabled: !isDemo,
+    staleTime: 60 * 60 * 1000,
+  });
+  if (!isDemo && genres.error)
+    return (
+      <ErrorBox
+        error={genres.error}
+        retry={() => {
+          void genres.refetch();
+        }}
+      />
+    );
+  // 불러오는 동안에도 "전체" 탭은 보여 자리가 흔들리지 않게 한다.
+  const names = isDemo ? demoGenres : (genres.data ?? []);
+  return (
+    <GenreTabs
+      genres={names}
+      selected={selected}
+      onToggle={onToggle}
+      onClear={onClear}
+    />
+  );
+}
+
+// 값이 delay 동안 바뀌지 않으면 그 값을 돌려준다.
+function useSettled(value: string, delay: number) {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return settled;
+}
+
+const useStyles = themedStyles(() => ({
   frame: {
     flex: 1,
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
-  // 아래쪽 바에 마지막 내용이 가리지 않도록 여유를 둔다.
-  content: { paddingBottom: 120 },
-});
+}));

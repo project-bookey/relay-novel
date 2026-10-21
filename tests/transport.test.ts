@@ -157,3 +157,18 @@ test("an upload that hits an expired token is sent again with the refreshed toke
   );
   assert.equal(uploads[1].body, form);
 });
+test("list query values repeat the same name and empty or missing values are left out", async () => {
+  let requested = "";
+  const request: typeof fetch = async (input) => {
+    requested = String(input);
+    return json({ ok: true });
+  };
+  const api = createTransport("http://example.test", store(), request);
+  await api("/api/v1/novels", {
+    query: { kind: "RELAY", genres: ["무협", "스릴러"], q: undefined, page: 0 },
+  });
+  const url = new URL(requested);
+  assert.deepEqual(url.searchParams.getAll("genres"), ["무협", "스릴러"]);
+  assert.equal(url.searchParams.has("q"), false);
+  assert.equal(url.searchParams.get("page"), "0");
+});

@@ -306,11 +306,31 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   });
   await expect(recruiting).toBeVisible();
   // 완결만 고르면 다른 상태의 이야기는 목록에서 빠진다.
-  await page.getByRole("button", { name: "완결", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "받는 사람: 내일의 너, 완결된 이야기" }),
-  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "상태 고르기, 지금 모든 상태" })
+    .click();
+  await page
+    .getByRole("button", { name: "완결된 이야기", exact: true })
+    .click();
+  const completed = page.getByRole("button", {
+    name: "받는 사람: 내일의 너, 완결된 이야기",
+  });
+  await expect(completed).toBeVisible();
   await expect(recruiting).toHaveCount(0);
+  // 장르를 고르면 그 장르의 이야기만 남고, 다시 누르면 풀린다.
+  await page.getByRole("button", { name: "SF", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "마지막 별빛 정거장, 완결된 이야기" }),
+  ).toBeVisible();
+  await expect(completed).toHaveCount(0);
+  await page.getByRole("button", { name: "SF", exact: true }).click();
+  await expect(completed).toBeVisible();
+  // 제목으로 찾고, 취소하면 다시 모든 완결 이야기가 보인다.
+  await page.getByRole("button", { name: "열매 찾기" }).click();
+  await page.getByRole("textbox", { name: "열매 찾기" }).fill("별빛");
+  await expect(completed).toHaveCount(0);
+  await page.getByRole("button", { name: "찾기 닫기" }).click();
+  await expect(completed).toBeVisible();
   await page.getByRole("button", { name: "홈", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "달빛을 파는 가게 열매" }),

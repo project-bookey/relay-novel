@@ -170,3 +170,15 @@ test("the branch steps down one level per run and stays within its width", () =>
   assert.equal(runLabel(shape.runs[0], 7), "1–33장 · 앞 열매 7개");
   assert.equal(runLabel(shape.runs[2], 0), "39–47장");
 });
+
+test("the first story line follows the first writer's trunk", () => {
+  const withTrunk = [
+    { id: 1, trunk: true },
+    { id: 2, parentChapterId: 1 },
+    { id: 3, parentChapterId: 1, trunk: true },
+    { id: 4, parentChapterId: 3, trunk: true },
+  ];
+  const [first, second] = storyLines(withTrunk);
+  assert.equal(first.tip.id, 4);
+  assert.equal(second.tip.id, 2);
+});

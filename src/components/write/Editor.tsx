@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from "react-native";
 import { router, useNavigation } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Draft, NovelDetail } from "../../api/types";
-import { usedFruits } from "../../state/usedFruits";
 import { Button, Card, ErrorBox, Field, Label, useUi } from "../ui";
 import { ParentChapterPeek } from "./ParentChapterPeek";
 import type { WriteTarget } from "./writeTarget";
@@ -11,7 +10,8 @@ import { WritingAssist } from "./WritingAssist";
 import { StoryAssist } from "./StoryAssist";
 import { MAX_BODY_LENGTH } from "./limits";
 
-// 발행하면 무엇이 일어나는지. 차례대로 쓰는 작품은 다음 작가에게 넘어가고, 열매로 퍼뜨리는 작품은 다시 배달된다.
+// 발행하면 무엇이 일어나는지. 차례대로 쓰는 작품은 다음 작가에게 넘어가고, 열매로 퍼뜨리는 작품은
+// 발행한 회차가 다른 사람들의 홈에 이어 쓸 수 있는 열매로 놓인다.
 function publishCopy(target: WriteTarget, detail: NovelDetail) {
   const spreads = target.kind === "branch" || detail.novel.mode === "OPEN";
   if (!spreads)
@@ -19,11 +19,20 @@ function publishCopy(target: WriteTarget, detail: NovelDetail) {
       hint: "발행한 회차는 수정할 수 없고, 다음 작가에게 집필 차례가 넘어가요.",
       action: "발행하고 다음 작가에게 넘기기",
     };
-  const count = detail.novel.deliveryCount ?? 0;
   return {
-    hint: `발행한 회차는 수정할 수 없고, 이 회차가 ${count}명에게 열매로 배달돼요.`,
-    action: "발행하고 열매 보내기",
+    hint: "발행한 회차는 수정할 수 없고, 다른 사람들이 이 회차에서 가지를 뻗어 이어 쓸 수 있어요.",
+    action: "발행하고 열매 맺기",
   };
+}
+
+// 편집기 위 작은 제목. 첫 작가의 줄기는 회차 수(가지 포함)와 깊이가 달라 몇 장인지 쓰지 않는다.
+function subtitleOf(target: WriteTarget, detail: NovelDetail) {
+  if (target.kind === "branch")
+    return "맡은 회차에서 뻗는 새 가지 · 당신의 상상을 더할 차례";
+  if (detail.novel.mode === "OPEN")
+    return "내 줄기의 다음 회차 · 줄기는 위로 자라고 떨어지지 않아요";
+  const nextNumber = String(detail.novel.chapterCount + 1).padStart(2, "0");
+  return `CHAPTER ${nextNumber} · 당신의 상상을 더할 차례`;
 }
 
 export function Editor({
@@ -41,7 +50,7 @@ export function Editor({
   target: WriteTarget;
   writable: boolean;
   sessionExpired: boolean;
-  // 받은 열매에서 뻗을 때 이어받은 회차
+  // 맡은 열매에서 뻗을 때 이어받은 회차
   parentChapterId?: number;
 }) {
   const ui = useUi();
@@ -72,15 +81,14 @@ export function Editor({
       target.publish(draft.turnNumber, title.trim(), body.trim()),
     onSuccess: async () => {
       setSaved({ ...saved, title, body });
-      // 이어 쓴 열매는 홈에서 사라진다. 홈이 목록을 다시 받기 전에 적어 둔다.
-      await usedFruits.add(novelId);
+      // 이어 쓴 회차는 서버가 홈 열매에서 뺀다. 홈 묶음(["novels", "home-feed"])도 다시 받는다.
       await Promise.all([
-        client.invalidateQueries({ queryKey: ["used-fruits"] }),
         client.invalidateQueries({ queryKey: ["novel", novelId] }),
         client.invalidateQueries({ queryKey: ["novels"] }),
         client.invalidateQueries({ queryKey: ["my-turns"] }),
         client.invalidateQueries({ queryKey: ["deliveries"] }),
         client.invalidateQueries({ queryKey: ["chapter-tree", novelId] }),
+        client.invalidateQueries({ queryKey: ["chapter", novelId] }),
       ]);
       router.replace(`/novel/${novelId}`);
     },
@@ -109,18 +117,13 @@ export function Editor({
     if (discard) router.replace(`/novel/${novelId}`);
   }, [discard, novelId]);
   const busy = save.isPending || publish.isPending;
-  const nextNumber = isBranch
-    ? undefined
-    : String(detail.novel.chapterCount + 1).padStart(2, "0");
 
   return (
     <>
       <Label>{isBranch ? "YOUR NEW BRANCH" : "YOUR NEXT CHAPTER"}</Label>
       <Text style={ui.heading}>{detail.novel.title}</Text>
       <Text style={[ui.body, styles.subtitle]}>
-        {isBranch
-          ? "받은 회차에서 뻗는 새 가지 · 당신의 상상을 더할 차례"
-          : `CHAPTER ${nextNumber} · 당신의 상상을 더할 차례`}
+        {subtitleOf(target, detail)}
       </Text>
       {isBranch && parentChapterId !== undefined && (
         <ParentChapterPeek novelId={novelId} chapterId={parentChapterId} />

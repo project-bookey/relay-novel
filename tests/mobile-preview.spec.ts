@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
+test("mobile demo lets a visitor pick a chapter fruit, read it and is sent to log in to continue it", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -11,7 +11,10 @@ test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
   });
   await page.goto("/");
   await page.getByText("먼저 둘러보기 →").click();
-  const fruit = page.getByRole("button", { name: "달빛을 파는 가게 열매" });
+  // 열매 하나는 지금 이어 쓸 수 있는 회차 하나다.
+  const fruit = page.getByRole("button", {
+    name: "비 오는 날의 우체부 4장 「밤의 끝」 열매",
+  });
   await expect(fruit).toBeVisible();
   // 열매가 모두 하늘에서 떨어져 땅에 멈출 때까지 기다린 뒤 찍는다.
   // 아직 떨어지기 전인 열매는 화면 위 바깥에 멈춰 있으므로, 먼저 모두 땅으로 내려왔는지 본다.
@@ -32,16 +35,19 @@ test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
     fullPage: true,
   });
   await fruit.click();
-  await expect(page.getByText("함께 쓰는 작가들")).toBeVisible();
-  await page.getByRole("button", { name: /CHAPTER 01/ }).click();
+  // 누르면 그 회차를 읽고, 남은 가지 자리를 보고 이어 쓸 수 있다.
   await expect(
-    page.getByText("그 가게를 발견한 건 마지막 버스를 놓친 밤이었다.", {
-      exact: false,
-    }),
+    page.getByText("창밖의 풍경이 조금씩 달라지고 있었다.", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "다음 장" }).click();
+  await expect(page.getByText(/이어 쓸 자리가 3개 남았어요/)).toBeVisible();
+  await page.getByRole("button", { name: "이전 장" }).click();
   await expect(
-    page.getByText("잊어버린 꿈", { exact: true }).last(),
+    page.getByText("엇갈린 약속", { exact: true }).last(),
+  ).toBeVisible();
+  // 둘러보기에서는 이어 쓰기 전에 로그인한다.
+  await page.getByRole("button", { name: "이 회차에서 이어 쓰기" }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Bookey 계정 이메일" }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -318,11 +324,8 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   });
   await expect(completed).toBeVisible();
   await expect(recruiting).toHaveCount(0);
-  // 장르를 고르면 그 장르의 이야기만 남고, 다시 누르면 풀린다.
+  // 장르를 고르면 그 장르의 이야기만 남고(완결된 SF는 없다), 다시 누르면 풀린다.
   await page.getByRole("button", { name: "SF", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "마지막 별빛 정거장, 완결된 이야기" }),
-  ).toBeVisible();
   await expect(completed).toHaveCount(0);
   await page.getByRole("button", { name: "SF", exact: true }).click();
   await expect(completed).toBeVisible();
@@ -334,7 +337,9 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   await expect(completed).toBeVisible();
   await page.getByRole("button", { name: "홈", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "달빛을 파는 가게 열매" }),
+    page.getByRole("button", {
+      name: "비 오는 날의 우체부 4장 「밤의 끝」 열매",
+    }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -346,7 +351,9 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await page.getByText("먼저 둘러보기 →").click();
-  const fruit = page.getByRole("button", { name: "달빛을 파는 가게 열매" });
+  const fruit = page.getByRole("button", {
+    name: "비 오는 날의 우체부 4장 「밤의 끝」 열매",
+  });
   const fruits = page.getByRole("button", { name: / 열매$/ });
   await expect
     .poll(
@@ -380,16 +387,17 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
     x: before.x + before.width / 2,
     y: before.y + before.height * 0.3,
   };
-  const bubbleMeta = page.getByText("이야기 이어가는 중 · 3화 · 작가 4/6명", {
-    exact: true,
-  });
+  const bubbleMeta = page.getByText("4장 · 밤의 끝", { exact: true });
 
-  // 길게 누르면 말풍선으로 무슨 소설인지 보이고, 끌지 않고 놓으면 그 자리에 그대로 있다.
+  // 길게 누르면 말풍선으로 어느 작품의 몇 장인지 보이고, 끌지 않고 놓으면 그 자리에 그대로 있다.
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.waitForTimeout(600);
   await expect(bubbleMeta).toBeVisible();
-  await expect(page.getByText("판타지", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("이어 쓸 자리 3개 · 작가 5명", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("일상", { exact: true })).toBeVisible();
   await page.mouse.up();
   await expect(bubbleMeta).toHaveCount(0);
   const peeked = (await fruit.boundingBox())!;
@@ -423,7 +431,7 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
   // 앞쪽으로 옮기면 가까워진 만큼 커 보인다.
   expect(held.height).toBeGreaterThan(before.height);
   await expect(
-    page.getByText("달빛을 파는 가게", { exact: true }),
+    page.getByText("비 오는 날의 우체부", { exact: true }),
   ).toBeVisible();
 
   // 놓으면 바로 아래 땅으로 떨어져 멈추고 말풍선은 사라진다.
@@ -436,9 +444,11 @@ test("mobile demo lets a visitor pick up a fruit, move it forward and drop it", 
   );
   expect(bottomOf(after)).toBeGreaterThan(bottomOf(held) + 10);
 
-  // 옮긴 열매도 누르면 그 소설로 간다.
+  // 옮긴 열매도 누르면 그 회차로 간다.
   await fruit.click();
-  await expect(page.getByText("함께 쓰는 작가들")).toBeVisible();
+  await expect(
+    page.getByText("창밖의 풍경이 조금씩 달라지고 있었다.", { exact: false }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -456,7 +466,19 @@ test("mobile demo shows a popular story's likes and sends a visitor to log in to
   // 좋아요가 100개를 넘은 열매는 별이 반짝이고 흔들리지만, 누르는 영역은 그대로라 바로 누를 수 있다.
   // 그림을 볼 수 없는 사람도 알 수 있게 이름 앞에 "인기"가 붙는다.
   await page
-    .getByRole("button", { name: "인기 마지막 별빛 정거장 열매" })
+    .getByRole("button", {
+      name: "인기 마지막 별빛 정거장 6장 「이야기의 끝」 열매",
+    })
+    .click();
+  await expect(page.getByText(/이어 쓸 자리가/)).toBeVisible();
+  // 좋아요는 작품 화면에 있다. 열매 탭에서 그 작품을 연다.
+  await page
+    .getByLabel("뒤로", { exact: true })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole("button", { name: "열매", exact: true }).click();
+  await page
+    .getByRole("button", { name: "마지막 별빛 정거장, 이야기 이어가는 중" })
     .click();
   const like = page.getByRole("button", { name: "좋아요 311개" });
   await expect(like).toBeVisible();

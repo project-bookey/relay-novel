@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
@@ -20,7 +20,11 @@ import {
   LineProgress,
   SiblingSwitcher,
 } from "../../src/components/novel/LineReading";
-import { SelfContinue } from "../../src/components/novel/SelfContinue";
+import {
+  ContinueActions,
+  canContinue,
+  continueOptionsOf,
+} from "../../src/components/novel/ContinueActions";
 import { ApiError } from "../../src/api/transport";
 import {
   Button,
@@ -37,10 +41,13 @@ export default function Read() {
     id: string;
     chapterId: string;
     tipId?: string;
+    // 홈 열매에서 바로 열었으면 "home". 작품 화면을 거치지 않았으니 "작품 보기"로 잇는다.
+    from?: string;
   }>();
   const id = Number(params.id);
   const chapterId = Number(params.chapterId);
   const tipId = params.tipId ? Number(params.tipId) : undefined;
+  const fromHome = params.from === "home";
   const { mode } = useSession();
   const detail = useQuery({
     queryKey: ["novel", id, mode],
@@ -64,7 +71,9 @@ export default function Read() {
   return (
     <Screen title={detail.data?.novel.title || "이야기 읽기"}>
       {query.isPending && <Loading />}
-      {isHiddenBranch(query.error) && <HiddenBranch novelId={id} />}
+      {isHiddenBranch(query.error) && (
+        <HiddenBranch novelId={id} fromHome={fromHome} />
+      )}
       {!!query.error && !isHiddenBranch(query.error) && (
         <ErrorBox
           error={query.error}
@@ -79,6 +88,7 @@ export default function Read() {
           nodes={tree.data ?? []}
           detail={detail.data}
           tipId={tipId}
+          fromHome={fromHome}
         />
       )}
     </Screen>
@@ -90,11 +100,13 @@ function ChapterBody({
   nodes,
   detail,
   tipId,
+  fromHome,
 }: {
   chapter: Chapter;
   nodes: ChapterNode[];
   detail?: NovelDetail;
   tipId?: number;
+  fromHome: boolean;
 }) {
   const ui = useUi();
   const styles = useStyles();
@@ -107,19 +119,15 @@ function ChapterBody({
     lines.length > 1 ? lineThrough(lines, nodes, chapter.id, tipId) : undefined;
   const lineIndex =
     line?.path.findIndex((node) => node.id === chapter.id) ?? -1;
-  // 줄기를 못 찾으면(나무가 아직 갱신 전 등) 먼저 쓴 가지로 잇는다. 한 줄기 작품은 다음 회차가 하나뿐이다.
+  // 줄기를 못 찾으면(나무가 아직 갱신 전 등) 첫 작가의 줄기, 그다음 먼저 쓴 가지로 잇는다. 한 줄기 작품은 다음 회차가 하나뿐이다.
   const nextChapter = line ? line.path[lineIndex + 1] : next[0];
   const myDelivery = useMyDelivery(novelId, detail?.myDeliveryId);
   const goTo = (chapterId: number, nextTipId = line?.tip.id) =>
     router.setParams({ chapterId, tipId: nextTipId });
-  // 차례대로 쓰는 작품은 마지막 장을 읽은 다음 작가가, 열매로 받은 작품은 받은 회차를 읽은 사람이 이어 쓴다.
-  const canContinueTurn =
-    !!detail?.canWrite && !branching && nodes.length > 0 && next.length === 0;
-  const canContinueBranch =
-    !!detail?.myDeliveryId && myDelivery?.chapterId === chapter.id;
   const atLineEnd = !!line && !nextChapter;
-  // 서버가 내 회차라 햇살로 이어 쓸 수 있다고 할 때만. 받은 열매가 있으면 그쪽이 먼저다.
-  const canSelfContinue = !!chapter.canSelfContinue && !canContinueBranch;
+  const options = continueOptionsOf(chapter, nodes, detail, myDelivery);
+  // 이어 쓰기가 이 화면의 주요 동작이면 "다음 장"은 차분한 테두리 버튼으로 둔다(강조는 하나만).
+  const writingFirst = canContinue(options);
 
   return (
     <>
@@ -147,6 +155,7 @@ function ChapterBody({
         <Text style={ui.body}>
           {`${chapter.authorNickname} · ${new Date(chapter.createdAt).toLocaleDateString("ko-KR")}`}
         </Text>
+        {fromHome && <NovelLink novelId={novelId} />}
       </View>
       <Text selectable style={styles.body}>
         {chapter.body}
@@ -167,39 +176,24 @@ function ChapterBody({
         )}
         {!!nextChapter && (
           <View style={styles.navigationButton}>
-            <Button onPress={() => goTo(nextChapter.id)}>다음 장</Button>
+            <Button outline={writingFirst} onPress={() => goTo(nextChapter.id)}>
+              다음 장
+            </Button>
           </View>
         )}
         {atLineEnd && (
           <View style={styles.navigationButton}>
-            <Button outline onPress={() => backToNovel(novelId)}>
+            <Button outline onPress={() => backToNovel(novelId, fromHome)}>
               다른 열매 보기
             </Button>
           </View>
         )}
       </View>
-      {canContinueTurn && (
-        <Button
-          onPress={() =>
-            router.push({ pathname: "/novel/write", params: { id: novelId } })
-          }
-        >
-          이제 당신의 이야기 이어 쓰기
-        </Button>
-      )}
-      {canContinueBranch && (
-        <Button
-          onPress={() =>
-            router.push({
-              pathname: "/novel/write",
-              params: { id: novelId, deliveryId: detail?.myDeliveryId },
-            })
-          }
-        >
-          이 회차에서 가지 뻗어 이어 쓰기
-        </Button>
-      )}
-      {canSelfContinue && <SelfContinue chapter={chapter} />}
+      <ContinueActions
+        chapter={chapter}
+        options={options}
+        deliveryId={detail?.myDeliveryId}
+      />
     </>
   );
 }
@@ -209,22 +203,47 @@ function isHiddenBranch(error: unknown) {
   return error instanceof ApiError && error.status === 404;
 }
 
-function HiddenBranch({ novelId }: { novelId: number }) {
+function HiddenBranch({
+  novelId,
+  fromHome,
+}: {
+  novelId: number;
+  fromHome: boolean;
+}) {
   const ui = useUi();
   return (
     <View>
       <Text style={ui.sectionTitle}>이 가지는 지금 볼 수 없어요.</Text>
       <Text style={ui.body}>나무에서 내려왔거나 사라졌을 수 있어요.</Text>
-      <Button outline onPress={() => backToNovel(novelId)}>
+      <Button outline onPress={() => backToNovel(novelId, fromHome)}>
         다른 열매 보기
       </Button>
     </View>
   );
 }
 
-// 읽기는 상세의 줄기 목록에서 들어오므로 뒤로 가면 다른 열매를 고를 수 있다.
-function backToNovel(novelId: number) {
-  if (router.canGoBack()) router.back();
+// 홈 열매로 바로 연 회차에서 그 작품(좋아요·이야기 나무·줄기 목록)으로 가는 길
+function NovelLink({ novelId }: { novelId: number }) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="작품 보기"
+      hitSlop={8}
+      onPress={() =>
+        router.push({ pathname: "/novel/[id]", params: { id: novelId } })
+      }
+      style={({ pressed }) => [styles.novelLink, pressed && styles.pressed]}
+    >
+      <Text style={styles.novelLinkText}>작품 보기 ›</Text>
+    </Pressable>
+  );
+}
+
+// 작품 화면의 줄기 목록에서 열었으면 뒤로 가 다른 열매를 고른다. 홈 열매에서 바로 열었으면 뒤가 홈이라
+// 작품 화면으로 바꿔 넣는다(뒤로 가면 다시 홈).
+function backToNovel(novelId: number, fromHome: boolean) {
+  if (!fromHome && router.canGoBack()) router.back();
   else router.replace({ pathname: "/novel/[id]", params: { id: novelId } });
 }
 
@@ -235,4 +254,11 @@ const useStyles = themedStyles((colors) => ({
   body: { fontSize: 17, lineHeight: 32, color: colors.ink, paddingBottom: 35 },
   navigation: { flexDirection: "row", gap: 10 },
   navigationButton: { flex: 1 },
+  novelLink: {
+    alignSelf: "flex-start",
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  novelLinkText: { fontSize: 14, fontWeight: "600", color: colors.green },
+  pressed: { opacity: 0.6 },
 }));

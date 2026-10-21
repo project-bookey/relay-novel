@@ -21,8 +21,8 @@ export function useChapterTree(novelId: number, detail?: NovelDetail) {
   });
 }
 
-// 이 소설에서 내가 들고 있는 열매. 홈이 불러 둔 받은 열매 목록을 같이 쓴다.
-// 이어 쓸 수 있는지는 상세의 myDeliveryId가 정하고, 이것은 어느 회차에서 받았는지 보여 주는 데만 쓴다.
+// 이 소설에서 내가 자리를 맡은 열매. 홈이 불러 둔 쓰는 중인 열매 목록을 같이 쓴다.
+// 이어 쓸 수 있는지는 상세의 myDeliveryId가 정하고, 이것은 어느 회차에서 잇는지 보여 주는 데만 쓴다.
 export function useMyDelivery(novelId: number, deliveryId?: number) {
   const { mode } = useSession();
   const deliveries = useQuery({

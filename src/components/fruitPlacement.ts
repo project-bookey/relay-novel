@@ -1,11 +1,11 @@
-import type { NovelSummary } from "../api/types";
 import type { FruitFlight } from "../design/fruitFlight";
+import type { HomeFruit } from "../design/homeFruits";
 
 // 홈 열매 하나가 놓일 자리와 그 자리로 오는 움직임.
 
 // 열매 밭이 처음 정해 준 자리와 하늘에서 떨어지는 움직임
 export interface PlacedFruit {
-  story: NovelSummary;
+  item: HomeFruit;
   rest: { x: number; y: number; depth: number };
   flight: FruitFlight;
   delayMs: number;

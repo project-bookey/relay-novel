@@ -3,10 +3,10 @@ import type { NovelMode } from "../../api/types";
 import { MAX_BODY_LENGTH } from "../write/limits";
 import { Field, useUi } from "../ui";
 
-// 다음에 무엇이 일어나는지. 1회차는 작품과 함께 올라가 바로 배달되거나 다음 작가에게 넘어간다.
+// 다음에 무엇이 일어나는지. 1회차는 작품과 함께 올라가 홈의 열매가 되거나 다음 작가에게 넘어간다.
 function afterPublishHint(mode: NovelMode) {
   if (mode === "OPEN")
-    return "만들면 1회차가 바로 올라가 10명에게 열매로 배달돼요. 올린 회차는 수정할 수 없어요.";
+    return "만들면 1회차가 바로 올라가 다른 사람들의 홈에 이어 쓸 수 있는 열매로 놓여요. 올린 회차는 수정할 수 없어요.";
   return "만들면 1회차가 바로 올라가고 다음 작가에게 차례가 넘어가요. 올린 회차는 수정할 수 없어요.";
 }
 

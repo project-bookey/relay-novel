@@ -5,12 +5,16 @@ import type {
   Chapter,
   ChapterNode,
   BranchBin,
+  HomeFruitView,
   SunlightWallet,
 } from "./types";
 
+// 둘러보기에서 열매로 퍼뜨린 작품의 회차 하나에 붙는 가지 수(서버 기본값과 같다)
+const DEMO_BRANCH_LIMIT = 3;
+
 // 로그인 없이 "먼저 둘러보기"에서 쓰는 예시 작품. 서버에 저장되거나 발행되지 않는다.
-// 홈의 열매 자리가 모두 차고, 네 가지 열매 모양과 모집·연재·완결 상태가 다 보이도록 일곱 편을 둔다.
-// 앞의 네 편은 모여 만들기(한 줄기), 뒤의 세 편은 열매로 퍼뜨려 가지가 갈라진 작품이다.
+// 네 가지 열매 모양과 모집·연재·완결 상태가 다 보이도록 일곱 편을 둔다(열매 탭·마이). 앞의 네 편은 모여 만들기(한 줄기),
+// 뒤의 세 편은 열매로 퍼뜨려 가지가 갈라진 작품이다. 홈 열매는 뒤의 세 편에서 아직 이어 쓸 수 있는 회차다(demoHomeFruits).
 interface DemoStorySeed {
   title: string;
   description: string;
@@ -107,7 +111,7 @@ const seeds: DemoStorySeed[] = [
     description: "우주 끝 정거장에서 마지막 셔틀을 기다리는 사람들의 이야기.",
     genre: "SF",
     moreGenres: ["드라마"],
-    status: "COMPLETED",
+    status: "ONGOING",
     chapterCount: 20,
     memberCount: 6,
     memberLimit: 6,
@@ -132,9 +136,8 @@ export const demoStories: NovelSummary[] = seeds.map((seed, index) => ({
   id: index + 1,
   kind: "RELAY",
   mode: seed.mode ?? "CIRCLE",
-  // 열매로 퍼뜨리는 작품은 작가 수 제한이 없고, 새 회차를 10명에게 먼저 보낸다.
-  deliveryCount: seed.mode === "OPEN" ? 10 : undefined,
-  branchLimit: seed.mode === "OPEN" ? 10 : undefined,
+  // 열매로 퍼뜨리는 작품은 작가 수 제한이 없고, 회차마다 가지가 세 개까지 붙는다.
+  branchLimit: seed.mode === "OPEN" ? DEMO_BRANCH_LIMIT : undefined,
   title: seed.title,
   description: seed.description,
   genre: seed.genre,
@@ -183,11 +186,14 @@ export function demoDetail(id: number): NovelDetail {
   };
 }
 
-// 둘러보기의 회차는 내가 쓴 것이 아니라 햇살로 이어 쓸 수 없다.
+// 둘러보기의 회차는 내가 쓴 것이 아니라 햇살로 이어 쓸 수 없다. 자리를 맡을 수 있는지는 열매로 퍼뜨린 작품만 따로 센다.
 const demoReading = {
   viewCount: 0,
   canSelfContinue: false,
   selfContinueCost: 5,
+  trunk: false,
+  canClaim: false,
+  slotsLeft: 0,
 };
 
 // 첫 작품은 실제로 읽어 볼 수 있게 이어지는 이야기를 직접 써 두었다.
@@ -268,7 +274,8 @@ function chainChapters(chapters: Chapter[]): Chapter[] {
   }));
 }
 
-function branchChapters(chapters: Chapter[]): Chapter[] {
+// 뿌리에서 먼저 쓴 가지를 따라 올라간 마디가 첫 작가의 줄기다. 줄기가 아닌 가지만 가지 자리를 차지한다.
+function branchChapters(chapters: Chapter[], novel: NovelSummary): Chapter[] {
   const linked: Chapter[] = [];
   chapters.forEach((chapter, index) => {
     const parentIndex = demoBranchParents[index % demoBranchParents.length];
@@ -277,9 +284,34 @@ function branchChapters(chapters: Chapter[]): Chapter[] {
       ...chapter,
       parentChapterId: parent?.id,
       chapterNumber: parent ? parent.chapterNumber + 1 : 1,
+      trunk:
+        !parent ||
+        (parent.trunk &&
+          !linked.some((other) => other.parentChapterId === parent.id)),
     });
   });
-  return linked;
+  const growing = novel.status === "ONGOING";
+  return linked.map((chapter) => {
+    const branches = linked.filter(
+      (other) => other.parentChapterId === chapter.id && !other.trunk,
+    ).length;
+    const slotsLeft = Math.max(0, DEMO_BRANCH_LIMIT - branches);
+    const canGrow = growing && chapter.chapterNumber < novel.chapterLimit;
+    return {
+      ...chapter,
+      authorNickname: authorOf(chapter, novel),
+      slotsLeft,
+      canClaim: canGrow && slotsLeft > 0,
+    };
+  });
+}
+
+// 줄기는 만든 사람이 쓰고, 가지는 다른 작가들이 쓴다(만든 사람은 남의 회차에 가지를 뻗지 않는다).
+function authorOf(chapter: Chapter, novel: NovelSummary) {
+  if (chapter.trunk) return novel.ownerNickname;
+  if (chapter.authorNickname !== novel.ownerNickname)
+    return chapter.authorNickname;
+  return writerNames[1];
 }
 
 // 둘러보기 작품의 회차. 작품의 회차 수만큼 만들어 목차와 읽기 화면이 서로 맞게 한다.
@@ -287,7 +319,7 @@ export function demoChaptersOf(novelId: number): Chapter[] {
   const novel = demoStory(novelId);
   const written = writtenDemoChapters(novelId);
   return novel.mode === "OPEN"
-    ? branchChapters(written)
+    ? branchChapters(written, novel)
     : chainChapters(written);
 }
 
@@ -301,7 +333,40 @@ export function demoChapterTreeOf(novelId: number): ChapterNode[] {
     authorNickname: chapter.authorNickname,
     excerpt: chapter.body.slice(0, 140),
     createdAt: chapter.createdAt,
+    trunk: chapter.trunk,
   }));
+}
+
+// 둘러보기 홈의 열매 — 열매로 퍼뜨린 작품에서 아직 이어 쓸 수 있는 회차. 최근에 쓴 회차부터 작품을 돌아가며 놓는다.
+// 새로고침하면 홈이 이 목록을 섞어 다시 떨어뜨린다.
+export function demoHomeFruits(): HomeFruitView[] {
+  const byNovel = demoStories
+    .filter((story) => story.mode === "OPEN" && story.status === "ONGOING")
+    .map((story) =>
+      demoChaptersOf(story.id)
+        .filter((chapter) => chapter.canClaim)
+        .sort((first, second) => second.id - first.id)
+        .map((chapter) => fruitOf(story, chapter)),
+    );
+  const fruits: HomeFruitView[] = [];
+  for (let round = 0; byNovel.some((list) => round < list.length); round++)
+    byNovel.forEach((list) => {
+      if (round < list.length) fruits.push(list[round]);
+    });
+  return fruits;
+}
+
+function fruitOf(novel: NovelSummary, chapter: Chapter): HomeFruitView {
+  return {
+    chapterId: chapter.id,
+    chapterNumber: chapter.chapterNumber,
+    chapterTitle: chapter.title,
+    excerpt: chapter.body.slice(0, 140),
+    authorNickname: chapter.authorNickname,
+    createdAt: chapter.createdAt,
+    slotsLeft: chapter.slotsLeft,
+    novel,
+  };
 }
 
 function writtenDemoChapters(novelId: number): Chapter[] {

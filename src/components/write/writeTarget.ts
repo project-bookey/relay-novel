@@ -8,7 +8,7 @@ import type {
 } from "../../api/types";
 
 // 원고를 어디에 쓰는지. 차례대로 쓰는 회차(모여 만들기, 열매로 퍼뜨리는 작품의 1회차)와
-// 받은 열매에서 뻗는 가지는 저장·발행 주소와 낡은 원고를 가르는 번호가 다르다.
+// 자리를 맡은 열매에서 뻗는 가지는 저장·발행 주소와 낡은 원고를 가르는 번호가 다르다.
 export interface WriteTarget {
   kind: "turn" | "branch";
   draftKey: unknown[];
@@ -47,7 +47,7 @@ export function turnTarget(novelId: number, turnNumber?: number): WriteTarget {
   };
 }
 
-// 받은 열매의 초안은 turnNumber 자리에 배달 id가 들어 있다.
+// 맡은 열매의 초안은 turnNumber 자리에 열매 id가 들어 있다.
 export function branchTarget(deliveryId: number): WriteTarget {
   return {
     kind: "branch",

@@ -1,5 +1,5 @@
 import { Animated, Text, View } from "react-native";
-import type { NovelSummary } from "../api/types";
+import type { HomeFruit } from "../design/homeFruits";
 import { genresLabel, statusLabel, storyColorOf, writersLabel } from "../theme";
 import { themedStyles } from "../theme/themed";
 import {
@@ -8,8 +8,9 @@ import {
   ripeStageOf,
 } from "../design/fruitRipeness";
 
-// 집어 든 열매 위에 뜨는 말풍선. 그 소설을 열지 않고도 무엇인지 알 수 있게
-// 장르·제목·상태·회차·작가 수를 흰 카드에 짧게 보여준다. 나에게 배달된 열매면 그것도 알려 준다.
+// 집어 든 열매 위에 뜨는 말풍선. 열지 않고도 무엇인지 알 수 있게 흰 카드에 짧게 보여준다.
+// 회차 열매는 장르·작품 제목·몇 장 무슨 회차인지·남은 가지 자리를, 내 차례 열매는 상태·회차·작가 수를 보여 준다.
+// 내가 쓰는 중이거나 내 차례인 열매면 그것도 알려 준다.
 
 const BUBBLE_WIDTH = 200;
 // 말풍선이 화면 양옆에 붙지 않게 띄우는 거리
@@ -23,16 +24,13 @@ const TAIL_INSET = 14;
 const RISE = 6;
 
 export function FruitBubble({
-  story,
-  delivered,
+  item,
   centerX,
   top,
   appear,
   screenWidth,
 }: {
-  story: NovelSummary;
-  // 나에게 배달돼 이어 쓸 수 있는 열매인지
-  delivered: boolean;
+  item: HomeFruit;
   // 든 열매의 가운데 x와 위쪽 끝 y(열매 밭 기준)
   centerX: Animated.Value;
   top: Animated.Value;
@@ -63,8 +61,7 @@ export function FruitBubble({
     inputRange: [0, 1],
     outputRange: [RISE, 0],
   });
-  const chapters = `${story.chapterCount}화`;
-  const writers = writersLabel(story);
+  const { story, chapter } = item;
 
   return (
     <Animated.View
@@ -106,16 +103,29 @@ export function FruitBubble({
         <Text style={styles.title} numberOfLines={2}>
           {story.title}
         </Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {`${statusLabel[story.status]} · ${chapters} · ${writers}`}
-        </Text>
+        {chapter ? (
+          <>
+            <Text style={styles.meta} numberOfLines={1}>
+              {`${chapter.number}장 · ${chapter.title}`}
+            </Text>
+            {chapter.slotsLeft !== undefined && (
+              <Text style={styles.meta} numberOfLines={1}>
+                {`이어 쓸 자리 ${chapter.slotsLeft}개 · ${writersLabel(story)}`}
+              </Text>
+            )}
+          </>
+        ) : (
+          <Text style={styles.meta} numberOfLines={1}>
+            {`${statusLabel[story.status]} · ${story.chapterCount}화 · ${writersLabel(story)}`}
+          </Text>
+        )}
         <RipeRow likeCount={story.likeCount} />
-        {delivered && (
+        {item.kind === "writing" && (
           <View style={styles.turnBadge}>
-            <Text style={styles.turnText}>나에게 온 열매예요</Text>
+            <Text style={styles.turnText}>내가 쓰는 중이에요</Text>
           </View>
         )}
-        {!delivered && story.myTurn && (
+        {item.kind === "turn" && (
           <View style={styles.turnBadge}>
             <Text style={styles.turnText}>내 차례예요</Text>
           </View>

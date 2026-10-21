@@ -4,8 +4,8 @@ import { router } from "expo-router";
 import type { NovelDelivery, NovelDetail } from "../../api/types";
 import { Button, Card, Label, useUi } from "../ui";
 
-// 열매로 퍼뜨리는 작품의 이어 쓰기 안내. 누가 쓸 수 있는지는 서버가 준 myDeliveryId·canWrite만 따른다.
-// 받은 열매가 있으면 그 회차에서 가지를 뻗어 이어 쓰는 것이 이 화면의 단 하나의 주요 동작이다.
+// 열매로 퍼뜨리는 작품의 이어 쓰기 안내. 누가 무엇을 쓸 수 있는지는 서버가 준 myDeliveryId·canWrite만 따른다.
+// 자리를 맡은 열매가 있으면 그 회차에서 가지를 뻗는 것이, 첫 작가면 줄기를 잇는 것이 이 화면의 단 하나의 주요 동작이다.
 export function OpenRelayCard({
   detail,
   delivery,
@@ -13,12 +13,11 @@ export function OpenRelayCard({
   onDecline,
 }: {
   detail: NovelDetail;
-  // 홈에서 받은 열매 목록. 어느 회차에서 이어 쓰는지 보여 주는 데만 쓴다.
+  // 홈의 내가 쓰는 중인 열매 목록. 어느 회차에서 이어 쓰는지 보여 주는 데만 쓴다.
   delivery?: NovelDelivery;
   busy: boolean;
   onDecline: () => void;
 }) {
-  const ui = useUi();
   const { novel } = detail;
   if (detail.myDeliveryId)
     return (
@@ -30,68 +29,95 @@ export function OpenRelayCard({
         onDecline={onDecline}
       />
     );
-  if (detail.canWrite)
-    return (
-      <Card>
-        <Label>PLANT THE FIRST BRANCH</Label>
-        <Text style={[ui.sectionTitle, styles.message]}>
-          첫 회차를 써 주세요.
-        </Text>
-        <Text style={ui.body}>
-          첫 회차를 올리면 {novel.deliveryCount ?? 0}명에게 열매로 배달돼요.
-        </Text>
-        <Button
-          onPress={() =>
-            router.push({ pathname: "/novel/write", params: { id: novel.id } })
-          }
-        >
-          첫 회차 쓰기
-        </Button>
-      </Card>
-    );
+  if (detail.canWrite) return <TrunkCard novelId={novel.id} />;
+  if (novel.mine) return <TrunkGrownCard />;
+  return <GrowingCard branchLimit={novel.branchLimit} />;
+}
+
+// 첫 작가는 자기 회차로만 이어지는 줄기를 마감 없이 계속 쓴다. 줄기는 나무를 위로 키우고 떨어지지 않는다.
+function TrunkCard({ novelId }: { novelId: number }) {
+  const ui = useUi();
   return (
     <Card>
-      <Label>THE BRANCHES GROW</Label>
+      <Label>YOUR TRUNK</Label>
       <Text style={[ui.sectionTitle, styles.message]}>
-        열매가 퍼지며 가지가 자라고 있어요.
+        내 줄기를 이어 써요.
       </Text>
-      <Text style={ui.body}>{growingMessage(novel)}</Text>
+      <Text style={ui.body}>
+        내가 쓴 마지막 회차에서 위로 이어 써요. 줄기는 떨어지지 않고, 다른
+        작가들은 회차마다 가지를 뻗어요.
+      </Text>
+      <Button
+        onPress={() =>
+          router.push({ pathname: "/novel/write", params: { id: novelId } })
+        }
+      >
+        줄기 이어 쓰기
+      </Button>
     </Card>
   );
 }
 
-function growingMessage(novel: NovelDetail["novel"]) {
-  const delivered = `새 회차가 올라올 때마다 ${novel.deliveryCount ?? 0}명에게 열매로 배달돼요.`;
-  if (!novel.branchLimit) return delivered;
-  return `${delivered} 한 회차에 가지는 ${novel.branchLimit}개까지 뻗어요.`;
+function TrunkGrownCard() {
+  const ui = useUi();
+  return (
+    <Card>
+      <Label>YOUR TRUNK</Label>
+      <Text style={[ui.sectionTitle, styles.message]}>
+        내 줄기가 목표 회차까지 자랐어요.
+      </Text>
+      <Text style={ui.body}>
+        다른 작가들은 자리가 남은 회차에서 계속 가지를 뻗어요. 다 자라면 작품을
+        완결할 수 있어요.
+      </Text>
+    </Card>
+  );
 }
 
-// 무작위로 온 열매와 햇살을 내고 내 회차에 이어 쓰는 열매는 넘길 때 결과가 달라 문구를 나눈다.
+function GrowingCard({ branchLimit }: { branchLimit?: number }) {
+  const ui = useUi();
+  const limit = branchLimit
+    ? ` 한 회차에 가지는 ${branchLimit}개까지 뻗어요.`
+    : "";
+  return (
+    <Card>
+      <Label>THE BRANCHES GROW</Label>
+      <Text style={[ui.sectionTitle, styles.message]}>
+        회차마다 가지가 자라고 있어요.
+      </Text>
+      <Text style={ui.body}>
+        {`마음에 드는 회차를 읽고 그 회차에서 이어 써 보세요.${limit}`}
+      </Text>
+    </Card>
+  );
+}
+
+// 열매가 온 길마다 내려놓을 때 결과가 달라 문구를 나눈다.
 function deliveryCopy(delivery?: NovelDelivery) {
   if (delivery?.source === "SELF")
     return {
       label: "MY OWN BRANCH",
       title: "내가 이어 쓰는 가지예요.",
-      declineHint:
-        "그만두면 낸 햇살을 돌려받아요. 이 가지는 다른 사람에게 가지 않아요.",
+      declineHint: "그만두면 낸 햇살을 돌려받아요. 맡은 자리는 다시 비어요.",
       declineAction: "그만두고 햇살 돌려받기",
       declineOpen: "그만두기",
     };
-  // 홈의 받은 열매 목록이 아직 없으면 어떤 열매인지 몰라 결과를 단정하지 않는다.
-  if (!delivery)
+  if (delivery?.source === "CLAIM")
     return {
-      label: "A FRUIT FOR YOU",
-      title: "나에게 온 열매예요.",
-      declineHint: "내려놓으면 이 열매로는 더 이어 쓸 수 없어요.",
-      declineAction: "열매 내려놓기",
-      declineOpen: "열매 내려놓기",
+      label: "YOUR BRANCH",
+      title: "자리를 맡은 열매예요.",
+      declineHint:
+        "내려놓으면 맡은 자리가 비어 다른 사람이 이 회차에서 이어 쓸 수 있어요.",
+      declineAction: "자리 내려놓기",
+      declineOpen: "내려놓기",
     };
+  // 예전에 무작위로 온 열매이거나, 홈의 목록이 아직 없어 어떤 열매인지 모르는 경우
   return {
     label: "A FRUIT FOR YOU",
-    title: "나에게 온 열매예요.",
-    declineHint: "넘기면 이 열매는 다른 사람에게 가요. 다시 받을 수 없어요.",
-    declineAction: "열매 넘기기",
-    declineOpen: "다른 사람에게 넘기기",
+    title: "이어 쓰는 중인 열매예요.",
+    declineHint: "내려놓으면 이 열매로는 더 이어 쓸 수 없어요.",
+    declineAction: "열매 내려놓기",
+    declineOpen: "내려놓기",
   };
 }
 
@@ -112,8 +138,8 @@ function DeliveryCard({
   const [confirmingDecline, setConfirmingDecline] = useState(false);
   const copy = deliveryCopy(delivery);
   const from = delivery
-    ? `${delivery.chapterNumber}화 「${delivery.chapterTitle}」에서 가지를 뻗어 이어 써요.`
-    : "받은 회차에서 가지를 뻗어 이어 써요.";
+    ? `${delivery.chapterNumber}장 「${delivery.chapterTitle}」에서 가지를 뻗어 이어 써요.`
+    : "맡은 회차에서 가지를 뻗어 이어 써요.";
   return (
     <Card>
       <Label>{copy.label}</Label>
@@ -132,22 +158,22 @@ function DeliveryCard({
           })
         }
       >
-        받은 가지 이어 쓰기
+        가지 이어 쓰기
       </Button>
-      {/* 넘기기는 되돌릴 수 없어 주요 버튼과 떨어뜨리고, 한 번 더 묻는다. */}
+      {/* 내려놓기는 되돌릴 수 없어 주요 버튼과 떨어뜨리고, 한 번 더 묻는다. */}
       <View style={styles.declineArea}>
         {confirmingDecline ? (
           <>
             <Text style={ui.hint}>{copy.declineHint}</Text>
             <Button outline disabled={busy} onPress={onDecline}>
-              {busy ? "넘기는 중…" : copy.declineAction}
+              {busy ? "내려놓는 중…" : copy.declineAction}
             </Button>
             <Button
               outline
               disabled={busy}
               onPress={() => setConfirmingDecline(false)}
             >
-              계속 들고 있기
+              계속 쓰기
             </Button>
           </>
         ) : (

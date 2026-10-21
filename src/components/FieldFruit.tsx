@@ -7,7 +7,7 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
-import type { NovelSummary } from "../api/types";
+import { fruitNameOf, type HomeFruit } from "../design/homeFruits";
 import { fruitShapeOf, mix, storyColorOf } from "../theme";
 import { useColors } from "../theme/themed";
 import { FRUIT_BOTTOM, FruitShadow, SHADOW_ORIGIN } from "./FruitArt";
@@ -46,13 +46,12 @@ const keepTouchOnWeb =
     ? ({ touchAction: "none" } as unknown as ViewStyle)
     : undefined;
 
-// 홈 열매 하나. 하늘에서 떨어져 내려앉고, 누르면 그 소설로 간다.
+// 홈 열매 하나. 하늘에서 떨어져 내려앉고, 누르면 그 회차나 소설로 간다.
 // 끌거나 길게 누르면 집혀 손가락 아래에 붙어 따라오고, 놓으면 바로 아래 땅으로 떨어져 튄 뒤 멈춘다.
 export function FieldFruit({
   fruitKey,
   fruit,
-  story,
-  delivered,
+  item,
   ground,
   neighbors,
   reduced,
@@ -60,23 +59,22 @@ export function FieldFruit({
   onOpen,
   onTouch,
 }: {
-  // 열매 밭에서 이 열매를 가리키는 key(새로고침 차례와 소설 id)
+  // 열매 밭에서 이 열매를 가리키는 key(새로고침 차례와 열매 key)
   fruitKey: string;
   fruit: PlacedFruit;
-  // 지금 소설 정보. 배치한 뒤 좋아요 수 등이 바뀌어도 최신 것을 보여 준다.
-  story: NovelSummary;
-  // 나에게 배달된 열매인지. 말풍선과 접근성 이름에 알린다.
-  delivered: boolean;
+  // 지금 열매 정보. 배치한 뒤 좋아요 수 등이 바뀌어도 최신 것을 보여 준다.
+  item: HomeFruit;
   ground: FieldGround;
   neighbors: FruitNeighbors;
   reduced: boolean;
   // 홈이 지금 보이는지. 가려져 있으면 인기 열매의 흔들림·반짝임을 멈춘다.
   onScreen: boolean;
-  onOpen: (story: NovelSummary) => void;
+  onOpen: (item: HomeFruit) => void;
   // 열매를 누르거나 집어 든 동안 true, 놓으면 false를 알린다(풀밭 캐릭터가 놀라 달아난다).
   onTouch?: (touching: boolean) => void;
 }) {
   const colors = useColors();
+  const { story } = item;
   const shape = fruitShapeOf(story.id);
   const isBall = rollsLikeBall(shape);
 
@@ -163,7 +161,7 @@ export function FieldFruit({
 
   const onPress = () => {
     if (hand.justHeld()) return;
-    onOpen(story);
+    onOpen(item);
   };
 
   // 멀리 있는 열매는 바탕색 쪽으로 살짝 옅어 보이게 한다. 앞줄보다 가까이 옮긴 열매는 제 색 그대로 둔다.
@@ -179,8 +177,11 @@ export function FieldFruit({
   const popular = isPopular(story.likeCount);
   const glowing = popular && settled && !held;
   const glowMoves = onScreen && !reduced;
-  const sway = useSway(glowing && glowMoves, swayDelayOf(story.id), size);
-  const label = `${delivered ? "나에게 온 " : ""}${fruitLabelOf(story.title, popular, ripe)}`;
+  // 흔들림 박자는 열매마다 다르게 한다(모양·색은 작품을 따르지만, 같은 작품의 회차 열매가 같이 흔들리지 않게).
+  const swayDelay = swayDelayOf(Math.abs(item.key));
+  const sway = useSway(glowing && glowMoves, swayDelay, size);
+  // 내가 쓰는 중인 열매는 이름 앞에 알린다. 회차 열매는 몇 장 무슨 회차인지 붙인다(예: "인기 고양이 도서관 3장 「같은 꿈」 열매").
+  const label = `${item.kind === "writing" ? "내가 쓰는 " : ""}${fruitLabelOf(fruitNameOf(item), popular, ripe)}`;
   // 앞쪽 열매가 겹칠 때 앞에 보이도록 땅 위 자리 순서로 쌓는다. 그림자는 열매 몸통보다 아래에 둔다.
   const layer = Math.round(rest.y) * 2;
 
@@ -257,15 +258,14 @@ export function FieldFruit({
           fruitTop={top}
           size={size}
           layer={layer + 1}
-          startDelayMs={swayDelayOf(story.id)}
+          startDelayMs={swayDelay}
           moving={glowMoves}
         />
       )}
       {held && (
         <View style={[styles.bubbleLayer, { zIndex: BUBBLE_LAYER }]}>
           <FruitBubble
-            story={story}
-            delivered={delivered}
+            item={item}
             centerX={hand.bubble.centerX}
             top={hand.bubble.top}
             appear={hand.bubble.appear}

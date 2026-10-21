@@ -1,6 +1,6 @@
 /** Contract: project-bookey-backend /api/v1/novels (NovelDtos.java). */
 export type NovelStatus = "RECRUITING" | "ONGOING" | "COMPLETED";
-// OPEN: 회차마다 무작위로 고른 사람에게 열매로 배달되고, 받은 사람이 가지를 뻗어 이어 쓴다.
+// OPEN: 자리가 남은 회차가 홈 열매로 놓이고, 고른 사람이 자리를 맡아 가지를 뻗어 이어 쓴다. 첫 작가는 줄기를 계속 잇는다.
 // CIRCLE: 만든 사람이 고른 작가들이 차례대로 한 줄기로 쓴다.
 export type NovelMode = "OPEN" | "CIRCLE";
 export interface Page<T> {
@@ -39,9 +39,9 @@ export interface NovelSummary {
   // 내가 좋아요를 눌렀는지
   liked: boolean;
   mode: NovelMode;
-  // OPEN: 회차 하나를 처음 배달하는 사람 수(늘 10)
+  // 예전 앱 호환용 — 무작위 배달을 없애서 앱은 읽지 않는다.
   deliveryCount?: number;
-  // OPEN: 회차 하나에 붙을 수 있는 가지 수(10~20). 예전 서버에서는 비어 있다.
+  // OPEN: 회차 하나에 붙을 수 있는 가지 수(2~5). 첫 작가의 줄기는 따로 센다.
   branchLimit?: number;
 }
 // 좋아요 토글 결과. 누른 뒤 서버의 실제 상태다.
@@ -89,6 +89,12 @@ export interface Chapter {
   canSelfContinue: boolean;
   // 내 글 잇기에 드는 햇살
   selfContinueCost: number;
+  // 첫 작가의 줄기 회차인지. 줄기는 수거되지 않고 나무가 이 회차들을 따라 위로 자란다.
+  trunk: boolean;
+  // 내가 이 회차에서 자리를 맡고 이어 쓸 수 있는지. 서버가 가지 자리·목표 회차·내 회차인지를 따져 정한다.
+  canClaim: boolean;
+  // 이 회차에 남은 가지 자리
+  slotsLeft: number;
 }
 // 회차 나무의 마디 하나. chapterNumber는 가지의 깊이다(뿌리 = 1).
 export interface ChapterNode {
@@ -99,12 +105,28 @@ export interface ChapterNode {
   authorNickname: string;
   excerpt: string;
   createdAt: string;
+  // 첫 작가의 줄기 회차인지
+  trunk: boolean;
+}
+// 홈 열매 하나(NovelHomeFruitView) — 지금 이어 쓸 수 있는 회차. 같은 작품의 다른 회차가 따로 열매가 될 수 있다.
+export interface HomeFruitView {
+  chapterId: number;
+  chapterNumber: number;
+  chapterTitle: string;
+  excerpt: string;
+  authorNickname: string;
+  createdAt: string;
+  // 이 회차에 남은 가지 자리
+  slotsLeft: number;
+  novel: NovelSummary;
 }
 // 홈 열매 밭에 지금 놓인 묶음과 오늘 남은 무료 새로고침(NovelHomeFeedView).
-// 나에게 온 열매와 내 차례 소설은 묶음을 만들 때 뺀다. 그 뒤에 배달되거나 차례가 된 작품은 함께 올 수 있어
-// 홈이 id로 한 번만 놓는다.
+// 내가 자리를 맡은 열매와 내 차례 소설은 홈이 이 묶음보다 먼저 놓는다.
 export interface NovelHomeFeed {
+  // 예전 앱 호환용 — fruits의 작품을 한 번씩. 앱은 fruits를 읽는다.
   novels: NovelSummary[];
+  // 피드 자리에 놓을 열매, 서버가 저장한 순서대로
+  fruits: HomeFruitView[];
   freeRefreshesLeftToday: number;
   dailyFreeRefreshes: number;
   // 무료 새로고침이 다시 채워지는 때(다음 한국 시간 자정)
@@ -135,9 +157,10 @@ export interface RefreshVerify {
   // Apple의 거래 id
   originalTransactionId?: string;
 }
-// RANDOM: 무작위로 온 열매, SELF: 햇살을 내고 내 회차에 이어 쓰는 열매(넘기면 햇살을 돌려받는다)
-export type DeliverySource = "RANDOM" | "SELF";
-// 내가 받은 열매. 이 회차에서 가지를 뻗어 이어 쓸 수 있다.
+// CLAIM: 홈의 열매를 골라 맡은 자리, SELF: 햇살을 내고 내 회차에 이어 쓰는 열매(그만두면 햇살을 돌려받는다),
+// RANDOM: 예전에 무작위로 온 열매(새로 생기지 않는다)
+export type DeliverySource = "CLAIM" | "SELF" | "RANDOM";
+// 내가 자리를 맡은 열매. 마감 전에 이 회차에서 가지를 뻗어 이어 쓸 수 있다.
 export interface NovelDelivery {
   deliveryId: number;
   novel: NovelSummary;
@@ -200,7 +223,7 @@ export interface BaseWork {
   synopsis: string;
   source: string;
 }
-// 배달받은 열매에서 뻗는 가지. 낡은 쓰기는 배달 id와 그 상태로 서버가 막는다.
+// 자리를 맡은 열매에서 뻗는 가지. 낡은 쓰기는 열매 id와 그 상태로 서버가 막는다.
 export interface BranchWrite {
   title: string;
   body: string;
@@ -228,7 +251,7 @@ export interface CreateNovel {
   isPublic: boolean;
   chapterLimit: number;
   turnHours: number;
-  // OPEN: 회차 하나에 붙을 수 있는 가지 수(10~20). 배달은 늘 10명에게 간다.
+  // OPEN: 회차 하나에 붙을 수 있는 가지 수(2~5). 첫 작가의 줄기는 따로 센다.
   branchLimit?: number;
   // CIRCLE: 함께 쓸 팔로우한 작가(본인 빼고 최대 9명)
   inviteeIds?: number[];

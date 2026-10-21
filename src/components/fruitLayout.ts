@@ -1,4 +1,4 @@
-import type { NovelSummary } from "../api/types";
+import type { HomeFruit } from "../design/homeFruits";
 import { fruitShapeOf, type FruitShape } from "../theme";
 import {
   groundViewThrough,
@@ -131,7 +131,7 @@ export function fieldPlacementOf(width: number, height: number) {
 export function layoutField(
   width: number,
   height: number,
-  stories: NovelSummary[],
+  items: HomeFruit[],
   seed: number,
   hanging: Hanging | undefined,
 ) {
@@ -146,10 +146,10 @@ export function layoutField(
     { y: fieldTop + BACK_ROW_Y * scale, depth: BACK_ROW_DEPTH },
     { y: fieldTop + FRONT_ROW_Y * scale, depth: 1 },
   );
-  const shown = stories.slice(0, FRUIT_FIELD_LIMIT).map((story, order) => ({
-    story,
-    shape: fruitShapeOf(story.id),
-    rollsLikeBall: rollsLikeBall(fruitShapeOf(story.id)),
+  const shown = items.slice(0, FRUIT_FIELD_LIMIT).map((item, order) => ({
+    item,
+    shape: fruitShapeOf(item.story.id),
+    rollsLikeBall: rollsLikeBall(fruitShapeOf(item.story.id)),
     landing: toScreenSpot(landingSpots[order]),
   }));
   const bounds = {
@@ -174,8 +174,8 @@ export function layoutField(
   const plansFor = (trySeed: number) =>
     planDrops(
       ground,
-      shown.map(({ story, rollsLikeBall, landing }) => ({
-        id: story.id,
+      shown.map(({ item, rollsLikeBall, landing }) => ({
+        id: item.key,
         rollsLikeBall,
         landing,
       })),
@@ -205,7 +205,7 @@ export function layoutField(
 
   let waitSeconds = FIRST_DROP_SECONDS;
   const placed: PlacedFruit[] = shown.map(
-    ({ story, shape, rollsLikeBall }, order) => {
+    ({ item, shape, rollsLikeBall }, order) => {
       const { bounce, rest, rollAway } = plans[order];
       const style = flightStyleFor(bounce, rollsLikeBall);
       const restWorld = toWorld(view, rest);
@@ -216,8 +216,8 @@ export function layoutField(
           view,
           size: fruitSize,
           rollsLikeBall,
-          // 소설마다 다 굴러간 뒤 기울어지는 정도가 조금씩 다르다.
-          restTilt: 12 + ((story.id * 7) % 16),
+          // 열매마다 다 굴러간 뒤 기울어지는 정도가 조금씩 다르다.
+          restTilt: 12 + ((Math.abs(item.key) * 7) % 16),
           style: {
             ...style,
             // 화면이 작으면 열매가 가는 길도 짧으므로 중력도 그만큼 작게 준다.
@@ -227,7 +227,7 @@ export function layoutField(
       const spot = spots[order];
       if (hanging && spot) {
         return {
-          story,
+          item,
           rest,
           flight: hangingFlightOf(hanging, spot, order, {
             shape,
@@ -247,7 +247,7 @@ export function layoutField(
         : waitSeconds * 1000;
       waitSeconds +=
         DROP_GAP_SECONDS * DROP_GAP_RHYTHM[order % DROP_GAP_RHYTHM.length];
-      return { story, rest, flight: flightFrom(SKY_ENTRY_Y), delayMs };
+      return { item, rest, flight: flightFrom(SKY_ENTRY_Y), delayMs };
     },
   );
   // 뒤쪽 열매부터 그려야 겹칠 때 앞쪽 열매가 앞에 보인다.

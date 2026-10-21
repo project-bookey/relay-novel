@@ -3,7 +3,7 @@ import { Text } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";
-import type { Draft, NovelDetail } from "../../src/api/types";
+import type { Draft, NovelDetail, NovelMode } from "../../src/api/types";
 import { useSession } from "../../src/state/session";
 import { useMyDelivery } from "../../src/components/novel/useNovelChapters";
 import { Editor } from "../../src/components/write/Editor";
@@ -20,7 +20,8 @@ import {
   useUi,
 } from "../../src/components/ui";
 
-// 회차 쓰기. deliveryId가 있으면 받은 열매에서 가지를 뻗고, 없으면 내 차례의 다음 회차를 쓴다.
+// 회차 쓰기. deliveryId가 있으면 자리를 맡은 열매에서 가지를 뻗고, 없으면 내 차례의 다음 회차
+// (열매로 퍼뜨리는 작품이면 첫 작가의 줄기)를 쓴다.
 export default function WriteScreen() {
   const params = useLocalSearchParams<{ id: string; deliveryId?: string }>();
   const id = Number(params.id);
@@ -68,8 +69,7 @@ export default function WriteScreen() {
     target.canWrite(current) &&
     target.turnOf(current) === initial.current?.draft.turnNumber &&
     !detail.error;
-  const title =
-    target.kind === "branch" ? "가지 뻗어 이어 쓰기" : "다음 장 이어 쓰기";
+  const title = titleOf(target.kind, detail.data?.novel.mode);
 
   if (initial.current)
     return (
@@ -96,8 +96,15 @@ export default function WriteScreen() {
           }}
         />
       )}
-      {!!current && !target.canWrite(current) && (
-        <NotWritable novelId={id} branch={target.kind === "branch"} />
+      {!!current && !target.canWrite(current) && detail.isFetching && (
+        <Loading />
+      )}
+      {!!current && !target.canWrite(current) && !detail.isFetching && (
+        <NotWritable
+          novelId={id}
+          branch={target.kind === "branch"}
+          trunk={current.novel.mode === "OPEN"}
+        />
       )}
       {!!current && target.canWrite(current) && draft.isPending && <Loading />}
       {!!current &&
@@ -123,26 +130,45 @@ export default function WriteScreen() {
   );
 }
 
+function titleOf(kind: "turn" | "branch", mode?: NovelMode) {
+  if (kind === "branch") return "가지 뻗어 이어 쓰기";
+  if (mode === "OPEN") return "줄기 이어 쓰기";
+  return "다음 장 이어 쓰기";
+}
+
+// 지금 쓸 수 없는 까닭. 가지는 맡은 자리가, 첫 작가의 줄기는 작품 상태가, 모여 만들기는 차례가 정한다.
+function notWritableCopy(branch: boolean, trunk: boolean) {
+  if (branch)
+    return {
+      title: "이 열매는 이제 이어 쓸 수 없어요.",
+      body: "자리를 맡은 시간이 지났거나 이미 가지를 뻗었을 수 있어요.",
+    };
+  if (trunk)
+    return {
+      title: "지금은 줄기를 이어 쓸 수 없어요.",
+      body: "줄기가 목표 회차에 닿았거나 작품이 완결됐을 수 있어요.",
+    };
+  return {
+    title: "지금은 당신의 집필 차례가 아니에요.",
+    body: "차례가 바뀌었거나 제한 시간이 지났을 수 있어요.",
+  };
+}
+
 function NotWritable({
   novelId,
   branch,
+  trunk,
 }: {
   novelId: number;
   branch: boolean;
+  trunk: boolean;
 }) {
   const ui = useUi();
+  const copy = notWritableCopy(branch, trunk);
   return (
     <Card>
-      <Text style={ui.sectionTitle}>
-        {branch
-          ? "이 열매는 이제 이어 쓸 수 없어요."
-          : "지금은 당신의 집필 차례가 아니에요."}
-      </Text>
-      <Text style={ui.body}>
-        {branch
-          ? "이어 쓸 수 있는 시간이 지났거나 이미 가지를 뻗었을 수 있어요."
-          : "차례가 바뀌었거나 제한 시간이 지났을 수 있어요."}
-      </Text>
+      <Text style={ui.sectionTitle}>{copy.title}</Text>
+      <Text style={ui.body}>{copy.body}</Text>
       <Button onPress={() => router.replace(`/novel/${novelId}`)}>
         작품으로 돌아가기
       </Button>

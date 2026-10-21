@@ -79,3 +79,25 @@ test("a straight chain has a single tip at its end", () => {
   );
   assert.deepEqual(straightChain(0), []);
 });
+
+test("the first writer's trunk comes first among siblings even when written later", () => {
+  const withTrunk = [
+    { id: 10, trunk: true },
+    { id: 11, parentChapterId: 10 },
+    { id: 12, parentChapterId: 10, trunk: true },
+    { id: 13, parentChapterId: 12, trunk: true },
+  ];
+  assert.deepEqual(
+    arrangeChapterTree(withTrunk).map((row) => [row.node.id, row.label]),
+    [
+      [10, "1"],
+      [12, "1_1"],
+      [13, "1_1_1"],
+      [11, "1_2"],
+    ],
+  );
+  assert.deepEqual(
+    branchesFrom(withTrunk, 10).map((node) => node.id),
+    [12, 11],
+  );
+});

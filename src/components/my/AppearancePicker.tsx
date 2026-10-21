@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import {
   useAppearance,
   type AppearancePreference,
 } from "../../state/appearance";
-import { useUi } from "../ui";
+import { themedStyles } from "../../theme/themed";
 
 const options: { value: AppearancePreference; label: string }[] = [
   { value: "system", label: "기기 설정" },
@@ -11,48 +11,51 @@ const options: { value: AppearancePreference; label: string }[] = [
   { value: "dark", label: "어둡게" },
 ];
 
-// 마이의 화면 모드 고르기. 기기 설정을 따르거나 밝게·어둡게로 고정한다.
-export function AppearancePicker() {
-  const ui = useUi();
-  const { preference, setPreference } = useAppearance();
-
+export function appearanceLabel(preference: AppearancePreference) {
   return (
-    <>
-      <Text style={ui.sectionTitle}>화면 모드</Text>
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel="화면 모드"
-        style={styles.row}
-      >
-        {options.map((option) => {
-          const selected = preference === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              accessibilityRole="radio"
-              aria-checked={selected}
-              accessibilityLabel={option.label}
-              onPress={() => setPreference(option.value)}
-              style={[ui.pill, styles.option, selected && ui.pillSelected]}
-            >
-              <Text style={[ui.pillText, selected && ui.pillTextSelected]}>
-                {selected ? `✓ ${option.label}` : option.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </>
+    options.find((option) => option.value === preference)?.label ?? "기기 설정"
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: "row", gap: 8 },
-  // 세 칸을 같은 너비로 나누고, 누르는 높이는 44를 지킨다.
+// 화면 모드 고르기(마이의 "화면 모드" 줄을 누르면 아래 창에 뜨고, 고르면 닫힌다). 기기 설정을 따르거나 밝게·어둡게로 고정한다.
+// 고른 줄은 굵은 글자 + ✓(색만으로 구분하지 않음).
+export function AppearancePicker({ onPicked }: { onPicked?: () => void }) {
+  const styles = useStyles();
+  const { preference, setPreference } = useAppearance();
+
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel="화면 모드">
+      {options.map((option) => {
+        const selected = preference === option.value;
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="radio"
+            aria-checked={selected}
+            accessibilityLabel={option.label}
+            onPress={() => {
+              setPreference(option.value);
+              onPicked?.();
+            }}
+            style={styles.option}
+          >
+            <Text style={[styles.text, selected && styles.selectedText]}>
+              {selected ? `✓ ${option.label}` : option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const useStyles = themedStyles((colors) => ({
   option: {
-    flex: 1,
-    minHeight: 44,
-    alignItems: "center",
+    minHeight: 52,
     justifyContent: "center",
+    borderBottomWidth: 1,
+    borderColor: colors.line,
   },
-});
+  text: { fontSize: 16, color: colors.ink },
+  selectedText: { fontWeight: "800" },
+}));

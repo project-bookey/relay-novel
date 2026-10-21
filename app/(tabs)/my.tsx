@@ -1,81 +1,20 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
 import { demoStories } from "../../src/api/demo";
-import type { NovelSummary } from "../../src/api/types";
-import { StoryCard } from "../../src/components/home/StoryCard";
-import { StoryRow } from "../../src/components/my/StoryRow";
-import { AppearancePicker } from "../../src/components/my/AppearancePicker";
-import { BranchBin } from "../../src/components/my/BranchBin";
-import { SunlightBalance } from "../../src/components/sunlight/SunlightBalance";
-import {
-  Button,
-  Card,
-  ErrorBox,
-  Label,
-  Loading,
-  Screen,
-  useUi,
-} from "../../src/components/ui";
+import { TurnRow } from "../../src/components/my/TurnRow";
+import { Bookshelf } from "../../src/components/my/Bookshelf";
+import { SettingRows } from "../../src/components/my/SettingRows";
+import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
+import { themedStyles } from "../../src/theme/themed";
 
-function StorySection({
-  title,
-  stories,
-  query,
-  emptyMessage,
-  compact = false,
-}: {
-  title: string;
-  stories: NovelSummary[];
-  // 둘러보기에서는 서버에 묻지 않으므로 쿼리가 없다.
-  query?: UseQueryResult<unknown>;
-  emptyMessage: string;
-  // 책장처럼 짧은 줄로 보여 준다(내 작품).
-  compact?: boolean;
-}) {
-  const ui = useUi();
-  return (
-    <>
-      <Text style={ui.sectionTitle}>{title}</Text>
-      {!!query?.isPending && <Loading />}
-      {!!query?.error && (
-        <ErrorBox
-          error={query.error}
-          retry={() => {
-            void query.refetch();
-          }}
-        />
-      )}
-      {!query?.isPending && !query?.error && stories.length === 0 && (
-        <Text style={ui.hint}>{emptyMessage}</Text>
-      )}
-      {stories.map((story) =>
-        compact ? (
-          <StoryRow key={story.id} story={story} />
-        ) : (
-          <StoryCard key={story.id} story={story} />
-        ),
-      )}
-    </>
-  );
-}
-
-// 마이 페이지. 내 차례와 내 작품, 나뭇가지 수거함, 햇살, 화면 모드, 관심 장르, 로그아웃을 모았다.
+// 마이 페이지(사용자가 고른 시안 A "책장", reference/sian/my-page/). 위에서부터
+// 내 차례(진하게 강조하는 유일한 동작) → 내 작품 책장 → 설정 줄(수거함·햇살·화면 모드·관심 장르) → 멀리 떨어진 로그아웃.
 export default function MyPage() {
-  const ui = useUi();
+  const styles = useStyles();
   const { mode, logout } = useSession();
-  const turns = useQuery({
-    queryKey: ["my-turns", mode],
-    queryFn: novels.turns,
-    enabled: mode === "authenticated",
-  });
-  const mine = useQuery({
-    queryKey: ["novels", "mine", mode],
-    queryFn: () => novels.mine(0),
-    enabled: mode === "authenticated",
-  });
 
   if (mode === "loading")
     return (
@@ -86,75 +25,197 @@ export default function MyPage() {
   if (mode === "guest") return <Redirect href="/login" />;
 
   const isDemo = mode === "demo";
-  const myTurns = isDemo
-    ? demoStories.filter((story) => story.myTurn)
-    : (turns.data ?? []);
-  const myStories = isDemo
-    ? demoStories.filter((story) => story.mine)
-    : (mine.data?.content ?? []);
   const leave = () => {
     void logout().then(() => router.replace("/login"));
   };
 
   return (
     <Screen scroll={false}>
-      <View style={styles.frame}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <Label>MY PAGE</Label>
-          <Text style={ui.heading}>마이</Text>
-          {isDemo && (
-            <Card>
-              <Text style={ui.body}>
-                디자인 미리보기예요. 로그인하면 내 차례와 내 작품을 볼 수
-                있어요.
-              </Text>
-              <Button outline onPress={() => router.push("/login")}>
-                Bookey 계정으로 로그인
-              </Button>
-            </Card>
-          )}
-          <StorySection
-            title="내 차례"
-            stories={myTurns}
-            query={isDemo ? undefined : turns}
-            emptyMessage="지금 이어 쓸 차례인 이야기가 없어요."
-          />
-          <StorySection
-            title="내 작품"
-            stories={myStories}
-            query={isDemo ? undefined : mine}
-            emptyMessage="아직 함께 쓰는 이야기가 없어요."
-            compact
-          />
-          <BranchBin />
-          <SunlightBalance />
-          <AppearancePicker />
-          <View style={styles.actions}>
-            <Button
-              outline
-              onPress={() => router.push(isDemo ? "/login" : "/genres")}
-            >
-              관심 장르 고르기
-            </Button>
-            <Button outline onPress={leave}>
-              {isDemo ? "둘러보기 끝내기" : "로그아웃"}
-            </Button>
-          </View>
-        </ScrollView>
-      </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title} accessibilityRole="header">
+          마이
+        </Text>
+        {isDemo && <DemoNotice />}
+        <MyTurns />
+        <MyStories />
+        <View style={styles.settings}>
+          <SettingRows />
+        </View>
+        {/* 되돌리기 어려운 동작이라 다른 버튼들과 멀리 떨어뜨린다. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isDemo ? "둘러보기 끝내기" : "로그아웃"}
+          onPress={leave}
+          style={styles.leave}
+        >
+          <Text style={styles.leaveText}>
+            {isDemo ? "둘러보기 끝내기" : "로그아웃"}
+          </Text>
+        </Pressable>
+      </ScrollView>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  frame: {
-    flex: 1,
+function DemoNotice() {
+  const ui = useUi();
+  const styles = useStyles();
+  return (
+    <View style={styles.notice}>
+      <Text style={ui.body}>
+        디자인 미리보기예요. 로그인하면 내 차례와 내 작품을 볼 수 있어요.
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Bookey 계정으로 로그인"
+        onPress={() => router.push("/login")}
+        style={styles.noticeButton}
+      >
+        <Text style={styles.noticeButtonText}>Bookey 계정으로 로그인</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// 내 차례가 없으면 자리를 비운다(고를 것을 줄인다). 불러오는 중·오류는 보여 준다.
+function MyTurns() {
+  const styles = useStyles();
+  const { mode } = useSession();
+  const isDemo = mode === "demo";
+  const turns = useQuery({
+    queryKey: ["my-turns", mode],
+    queryFn: novels.turns,
+    enabled: mode === "authenticated",
+  });
+  if (!isDemo && turns.isPending) return <Loading />;
+  if (!isDemo && turns.error)
+    return (
+      <ErrorBox
+        error={turns.error}
+        retry={() => {
+          void turns.refetch();
+        }}
+      />
+    );
+  const myTurns = isDemo
+    ? demoStories.filter((story) => story.myTurn)
+    : (turns.data ?? []);
+  if (myTurns.length === 0) return null;
+  return (
+    <View style={styles.turns}>
+      {myTurns.map((story) => (
+        <TurnRow key={story.id} story={story} />
+      ))}
+    </View>
+  );
+}
+
+function MyStories() {
+  const ui = useUi();
+  const styles = useStyles();
+  const { mode } = useSession();
+  const isDemo = mode === "demo";
+  const mine = useInfiniteQuery({
+    queryKey: ["novels", "mine", mode],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => novels.mine(pageParam),
+    getNextPageParam: (last) => (last.hasNext ? last.page + 1 : undefined),
+    enabled: mode === "authenticated",
+  });
+  const stories = isDemo
+    ? demoStories.filter((story) => story.mine)
+    : (mine.data?.pages.flatMap((page) => page.content) ?? []);
+  const total = isDemo ? stories.length : mine.data?.pages[0]?.totalElements;
+  return (
+    <>
+      <View style={styles.sectionHead}>
+        <Text style={styles.sectionTitle}>내 작품</Text>
+        {total !== undefined && (
+          <Text style={styles.count}>{String(total)}</Text>
+        )}
+      </View>
+      {!isDemo && mine.isPending && <Loading />}
+      {!isDemo && !!mine.error && (
+        <ErrorBox
+          error={mine.error}
+          retry={() => {
+            void mine.refetch();
+          }}
+        />
+      )}
+      {(isDemo || mine.isSuccess) && stories.length === 0 && (
+        <Text style={ui.hint}>아직 함께 쓰는 이야기가 없어요.</Text>
+      )}
+      <Bookshelf stories={stories} />
+      {/* 옆 숫자는 전체 편수라, 아직 못 보여 준 작품이 있으면 이어서 불러온다. */}
+      {!isDemo && mine.hasNextPage && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="내 작품 더 보기"
+          disabled={mine.isFetchingNextPage}
+          onPress={() => {
+            void mine.fetchNextPage();
+          }}
+          style={styles.more}
+        >
+          <Text style={styles.moreText}>
+            {mine.isFetchingNextPage ? "불러오는 중…" : "더 보기"}
+          </Text>
+        </Pressable>
+      )}
+    </>
+  );
+}
+
+const useStyles = themedStyles((colors) => ({
+  // 아래쪽 버튼에 마지막 내용이 가리지 않도록 여유를 둔다.
+  content: {
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 120,
   },
-  // 아래쪽 버튼에 마지막 내용이 가리지 않도록 여유를 둔다.
-  content: { paddingBottom: 120 },
-  actions: { marginTop: 24 },
-});
+  title: {
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -0.8,
+    color: colors.ink,
+    minHeight: 48,
+  },
+  notice: { marginTop: 12, gap: 8 },
+  noticeButton: {
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.ink,
+    alignSelf: "flex-start",
+  },
+  noticeButtonText: { fontSize: 15, fontWeight: "700", color: colors.ink },
+  turns: { marginTop: 20, gap: 10 },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+    marginTop: 34,
+    marginBottom: 14,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.ink },
+  count: { fontSize: 13, fontWeight: "500", color: colors.muted },
+  more: { marginTop: 16, minHeight: 44, justifyContent: "center" },
+  moreText: { fontSize: 14, fontWeight: "600", color: colors.ink },
+  settings: { marginTop: 36 },
+  leave: {
+    marginTop: 32,
+    minHeight: 44,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
+  leaveText: {
+    fontSize: 14,
+    color: colors.muted,
+    textDecorationLine: "underline",
+  },
+}));

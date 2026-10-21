@@ -36,9 +36,8 @@ test("mobile demo shows the branch bin on the my page and sends a visitor to log
   await page.goto("/");
   await page.getByText("먼저 둘러보기 →").click();
   await page.getByRole("button", { name: "마이", exact: true }).click();
-  await expect(
-    page.getByText("나뭇가지 수거함", { exact: true }),
-  ).toBeVisible();
+  // 마이에는 개수만 있고, 줄을 누르면 수거함 화면으로 들어간다.
+  await page.getByRole("button", { name: "나뭇가지 수거함, 2개" }).click();
   await expect(page.getByText("젖은 편지의 주소")).toBeVisible();
   await expect(page.getByText("멈춘 시계탑")).toBeVisible();
   await expect(page.getByText("햇살 0개")).toBeVisible();
@@ -96,6 +95,7 @@ test("restoring without enough sunlight opens the sunlight sheet, and discarding
   });
   await login(page);
   await page.getByRole("button", { name: "마이", exact: true }).click();
+  await page.getByRole("button", { name: "나뭇가지 수거함, 1개" }).click();
   await expect(page.getByText("늦은 편지")).toBeVisible();
   await expect(page.getByText(/조회 12 · \d+일 뒤 사라져요/)).toBeVisible();
   await expect(page.getByText("햇살 1개")).toBeVisible();

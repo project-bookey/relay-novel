@@ -1,4 +1,5 @@
 import type {
+  MyProfile,
   NovelSummary,
   NovelDetail,
   Chapter,
@@ -397,4 +398,11 @@ export const demoSunlight: SunlightWallet = {
     { productId: "relaynovel.sunlight.30", quantity: 30, amountKrw: 3300 },
     { productId: "relaynovel.sunlight.100", quantity: 100, amountKrw: 9900 },
   ],
+};
+
+// 둘러보기의 내 정보. 예시 작품 가운데 내 작품을 만든 작가로 둔다.
+export const demoProfile: MyProfile = {
+  id: 0,
+  handle: "moonpiece",
+  nickname: writerNames[0],
 };

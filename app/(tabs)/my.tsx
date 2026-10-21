@@ -1,17 +1,20 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
 import { demoStories } from "../../src/api/demo";
+import { MyHeader } from "../../src/components/my/MyHeader";
 import { TurnRow } from "../../src/components/my/TurnRow";
+import { useMyStories } from "../../src/components/my/useMyStories";
 import { Bookshelf } from "../../src/components/my/Bookshelf";
 import { SettingRows } from "../../src/components/my/SettingRows";
 import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
 import { themedStyles } from "../../src/theme/themed";
 
-// 마이 페이지(사용자가 고른 시안 A "책장", reference/sian/my-page/). 위에서부터
-// 내 차례(진하게 강조하는 유일한 동작) → 내 작품 책장 → 설정 줄(수거함·햇살·화면 모드·관심 장르) → 멀리 떨어진 로그아웃.
+// 마이 페이지(사용자가 고른 시안 A "책장" reference/sian/my-page/ + 내 정보 시안 B "숫자 줄" reference/sian/my-profile/).
+// 위에서부터 닉네임과 숫자 둘(내 작품·햇살) → 내 차례(진하게 강조하는 유일한 동작) → 내 작품 책장
+// → 설정 줄(수거함·화면 모드·관심 장르) → 멀리 떨어진 로그아웃.
 export default function MyPage() {
   const styles = useStyles();
   const { mode, logout } = useSession();
@@ -32,9 +35,7 @@ export default function MyPage() {
   return (
     <Screen scroll={false}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title} accessibilityRole="header">
-          마이
-        </Text>
+        <MyHeader />
         {isDemo && <DemoNotice />}
         <MyTurns />
         <MyStories />
@@ -113,27 +114,11 @@ function MyTurns() {
 function MyStories() {
   const ui = useUi();
   const styles = useStyles();
-  const { mode } = useSession();
-  const isDemo = mode === "demo";
-  const mine = useInfiniteQuery({
-    queryKey: ["novels", "mine", mode],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => novels.mine(pageParam),
-    getNextPageParam: (last) => (last.hasNext ? last.page + 1 : undefined),
-    enabled: mode === "authenticated",
-  });
-  const stories = isDemo
-    ? demoStories.filter((story) => story.mine)
-    : (mine.data?.pages.flatMap((page) => page.content) ?? []);
-  const total = isDemo ? stories.length : mine.data?.pages[0]?.totalElements;
+  const { query: mine, isDemo, stories } = useMyStories();
   return (
     <>
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>내 작품</Text>
-        {total !== undefined && (
-          <Text style={styles.count}>{String(total)}</Text>
-        )}
-      </View>
+      {/* 편수는 맨 위 숫자 줄(MyHeader)에 있다. */}
+      <Text style={styles.sectionTitle}>내 작품</Text>
       {!isDemo && mine.isPending && <Loading />}
       {!isDemo && !!mine.error && (
         <ErrorBox
@@ -147,7 +132,7 @@ function MyStories() {
         <Text style={ui.hint}>아직 함께 쓰는 이야기가 없어요.</Text>
       )}
       <Bookshelf stories={stories} />
-      {/* 옆 숫자는 전체 편수라, 아직 못 보여 준 작품이 있으면 이어서 불러온다. */}
+      {/* 위 숫자는 전체 편수라, 아직 못 보여 준 작품이 있으면 이어서 불러온다. */}
       {!isDemo && mine.hasNextPage && (
         <Pressable
           accessibilityRole="button"
@@ -177,14 +162,7 @@ const useStyles = themedStyles((colors) => ({
     paddingTop: 12,
     paddingBottom: 120,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: -0.8,
-    color: colors.ink,
-    minHeight: 48,
-  },
-  notice: { marginTop: 12, gap: 8 },
+  notice: { marginTop: 24, gap: 8 },
   noticeButton: {
     minHeight: 48,
     justifyContent: "center",
@@ -195,15 +173,13 @@ const useStyles = themedStyles((colors) => ({
   },
   noticeButtonText: { fontSize: 15, fontWeight: "700", color: colors.ink },
   turns: { marginTop: 20, gap: 10 },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 6,
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: colors.ink,
     marginTop: 34,
     marginBottom: 14,
   },
-  sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.ink },
-  count: { fontSize: 13, fontWeight: "500", color: colors.muted },
   more: { marginTop: 16, minHeight: 44, justifyContent: "center" },
   moreText: { fontSize: 14, fontWeight: "600", color: colors.ink },
   settings: { marginTop: 36 },

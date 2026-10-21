@@ -3,7 +3,7 @@ import Svg, { Circle, Defs, G, Mask, Path, Rect } from "react-native-svg";
 import { useColors } from "../theme/themed";
 import { SPROUT_LEAVES, SPROUT_STEM } from "../design/refreshSprout";
 
-// 하단 바의 아이콘들(홈·사용자·열매·씨앗주머니)과 홈 새로고침 버튼의 새싹. 모두 24칸에 선(밝은 모드는 검정, 어두운 모드는 밝은 색)으로 그린다.
+// 하단 바의 아이콘들(홈·사용자·열매·씨앗주머니), 홈 새로고침 버튼의 새싹, 마이의 햇살 해. 모두 24칸에 선(밝은 모드는 검정, 어두운 모드는 밝은 색)으로 그린다.
 // strokeWidth도 24칸 기준이라, 화면에서 같은 굵기로 보이려면 그리는 크기에 맞춰 환산해 넘긴다.
 // 새싹이 휘청일 때 흩날리는 작은 잎(SmallLeaf)만은 6칸에 받은 색으로 칠한다.
 export interface BarIconProps {
@@ -122,6 +122,25 @@ export function FruitsIcon({ size, strokeWidth }: BarIconProps) {
       {FRUIT_LEAVES.map((leaf) => (
         <Path key={leaf} d={leaf} fill={ink} />
       ))}
+    </Svg>
+  );
+}
+
+// 햇살: 가운데 원과 짧은 빛살 여덟 개. 빛살은 원에서 조금 떨어져 시작한다.
+const SUN_RAYS = Array.from({ length: 8 }, (_, index) => {
+  const angle = (index * Math.PI) / 4;
+  const point = (radius: number) =>
+    `${(12 + Math.cos(angle) * radius).toFixed(2)} ${(12 + Math.sin(angle) * radius).toFixed(2)}`;
+  return `M${point(7.4)}L${point(10)}`;
+}).join("");
+
+// 마이의 햇살 수 옆에 놓는 해.
+export function SunIcon({ size, strokeWidth }: BarIconProps) {
+  const ink = useColors().iconInk;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx={12} cy={12} r={4.2} {...line(strokeWidth, ink)} />
+      <Path d={SUN_RAYS} {...line(strokeWidth, ink)} />
     </Svg>
   );
 }

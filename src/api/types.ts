@@ -245,6 +245,13 @@ export interface NovelCover {
   width?: number;
   height?: number;
 }
+// 내 정보 (GET /api/v1/me, 북키 계정과 같은 MeResponse 중 마이에서 쓰는 것만)
+export interface MyProfile {
+  id: number;
+  handle: string;
+  nickname: string;
+  avatarUrl?: string;
+}
 // 팔로우 목록의 한 사람 (GET /api/v1/follows/following)
 export interface FollowUser {
   userId: number;

@@ -296,7 +296,8 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
     page.getByRole("button", { name: "새 이야기 심기" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "마이", exact: true }).click();
-  await expect(page.getByText("내 작품", { exact: true })).toBeVisible();
+  // 마이 맨 위 숫자 줄에 내 작품 수가 있다.
+  await expect(page.getByLabel("내 작품 1편")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
   ).toBeVisible();
@@ -478,7 +479,8 @@ test("mobile demo switches to the dark screen mode on the my page and keeps it a
   };
   await page.goto("/");
   await openMyPage();
-  const heading = page.getByText("마이", { exact: true });
+  // 마이 맨 위는 닉네임(둘러보기에서는 예시 작가 "달조각")이다.
+  const heading = page.getByRole("heading", { name: "달조각" });
   // 밝은 모드 잉크색(#30362F)
   await expect(heading).toHaveCSS("color", "rgb(48, 54, 47)");
 
@@ -500,7 +502,7 @@ test("mobile demo switches to the dark screen mode on the my page and keeps it a
     "aria-checked",
     "true",
   );
-  await expect(page.getByText("마이", { exact: true })).toHaveCSS(
+  await expect(page.getByRole("heading", { name: "달조각" })).toHaveCSS(
     "color",
     "rgb(230, 232, 225)",
   );

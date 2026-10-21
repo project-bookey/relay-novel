@@ -13,7 +13,7 @@ import {
 } from "../src/components/create/ModePicker";
 import { RelayLimits } from "../src/components/create/RelayLimits";
 import { FollowPicker } from "../src/components/create/FollowPicker";
-import { GenrePicker } from "../src/components/create/GenrePicker";
+import { GENRES_MAX, GenrePicker } from "../src/components/create/GenrePicker";
 import { FirstChapterFields } from "../src/components/create/FirstChapterFields";
 import {
   CoverPicker,
@@ -36,7 +36,7 @@ const TURN_HOURS_MAX = 168;
 interface Form {
   title: string;
   description: string;
-  genre: string;
+  genres: string[];
   mode: NovelMode;
   branchLimit: number;
   inviteeIds: number[];
@@ -51,7 +51,7 @@ interface Form {
 const emptyForm: Form = {
   title: "",
   description: "",
-  genre: "판타지",
+  genres: ["판타지"],
   mode: "OPEN",
   branchLimit: BRANCH_LIMIT_DEFAULT,
   inviteeIds: [],
@@ -71,6 +71,8 @@ function toRequest(form: Form): CreateNovel | string {
   const turnHours = Number(form.turnHours);
   if (!form.title.trim() || !form.description.trim())
     return "제목과 소개를 입력해 주세요.";
+  if (form.genres.length === 0 || form.genres.length > GENRES_MAX)
+    return `장르를 1~${GENRES_MAX}개 골라 주세요.`;
   if (!isWholeNumberBetween(chapterLimit, 1, CHAPTER_LIMIT_MAX))
     return `목표 회차는 1~${CHAPTER_LIMIT_MAX}화로 입력해 주세요.`;
   if (!isWholeNumberBetween(turnHours, 1, TURN_HOURS_MAX))
@@ -86,7 +88,8 @@ function toRequest(form: Form): CreateNovel | string {
     mode: form.mode,
     title: form.title.trim(),
     description: form.description.trim(),
-    genre: form.genre,
+    genre: form.genres[0],
+    genres: form.genres,
     chapterLimit,
     turnHours,
     baseWorkId: form.baseWork?.id,
@@ -100,6 +103,12 @@ function toRequest(form: Form): CreateNovel | string {
   if (form.mode === "OPEN")
     return { ...common, isPublic: true, branchLimit: form.branchLimit };
   return { ...common, isPublic: false, inviteeIds: form.inviteeIds };
+}
+
+// 베이스 작품의 장르를 맨 앞(대표 장르)에 두고, 이미 고른 장르는 세 개까지 남긴다.
+function withBaseWorkGenre(baseGenre: string, picked: string[]) {
+  const others = picked.filter((genre) => genre !== baseGenre);
+  return [baseGenre, ...others].slice(0, GENRES_MAX);
 }
 
 function submitLabel(mode: NovelMode, pending: boolean) {
@@ -184,7 +193,7 @@ export default function Create() {
               ? {
                   baseWork: work,
                   description: work.synopsis,
-                  genre: work.genre,
+                  genres: withBaseWorkGenre(work.genre, form.genres),
                 }
               : { baseWork: undefined },
           )
@@ -214,8 +223,8 @@ export default function Create() {
           placeholder="어떤 세계를 함께 만들고 싶나요?"
         />
         <GenrePicker
-          value={form.genre}
-          onChange={(genre) => update({ genre })}
+          value={form.genres}
+          onChange={(genres) => update({ genres })}
         />
       </View>
       <View style={styles.section}>

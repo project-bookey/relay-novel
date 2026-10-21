@@ -17,7 +17,10 @@ export interface NovelSummary {
   status: NovelStatus;
   title: string;
   description: string;
+  // 대표 장르(genres의 첫 번째)
   genre: string;
+  // 작품 장르(1~3개, 고른 순서)
+  genres: string[];
   coverUrl?: string;
   ownerNickname: string;
   // OPEN은 회차를 쓴 작가 수, CIRCLE은 참가자 수
@@ -218,7 +221,10 @@ export interface CreateNovel {
   mode: NovelMode;
   title: string;
   description: string;
-  genre: string;
+  // 대표 장르. genres를 모르는 예전 서버도 받도록 genres의 첫 번째를 함께 보낸다.
+  genre?: string;
+  // 작품 장르(1~3개, 고른 순서). 첫 번째가 대표 장르가 된다.
+  genres: string[];
   isPublic: boolean;
   chapterLimit: number;
   turnHours: number;

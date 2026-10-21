@@ -2,7 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ArrowUpRight, BookOpen, Users } from "lucide-react-native";
 import type { NovelSummary } from "../../api/types";
-import { statusLabel, writersLabel } from "../../theme";
+import { genresLabel, statusLabel, writersLabel } from "../../theme";
 import { themedStyles, useColors } from "../../theme/themed";
 import { StoryTree } from "../StoryTree";
 import { Card, useUi } from "../ui";
@@ -21,7 +21,9 @@ export function StoryCard({ story }: { story: NovelSummary }) {
       <Card style={styles.card}>
         <View style={styles.art}>
           <View style={styles.artText}>
-            <Text style={styles.genre}>{story.genre}</Text>
+            <Text style={styles.genre} numberOfLines={1}>
+              {genresLabel(story)}
+            </Text>
             <Text style={styles.chapterNumber}>
               CHAPTER {String(story.chapterCount).padStart(2, "0")}
             </Text>

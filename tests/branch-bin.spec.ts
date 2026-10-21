@@ -245,7 +245,8 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
           branchLimit: body.branchLimit,
           title: body.title,
           description: body.description,
-          genre: body.genre,
+          genre: body.genres[0],
+          genres: body.genres,
           status: "ONGOING",
           ownerNickname: "나",
           memberCount: 1,
@@ -269,7 +270,7 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
       };
     if (path === "/api/v1/novels") return emptyPage;
     if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
-    if (path.endsWith("/genres")) return ["판타지", "일상"];
+    if (path.endsWith("/genres")) return ["판타지", "일상", "미스터리", "SF"];
     return [];
   });
   await login(page);
@@ -278,6 +279,12 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
   await page
     .getByRole("textbox", { name: "이야기 소개" })
     .fill("갈래마다 다른 이야기");
+  // 장르는 세 개까지, 고른 순서대로 보낸다.
+  await page.getByRole("checkbox", { name: "일상" }).click();
+  await page.getByRole("checkbox", { name: "미스터리" }).click();
+  await page.getByRole("checkbox", { name: "SF" }).click();
+  await expect(page.getByText(/장르는 3개까지 고를 수 있어요/)).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "SF" })).not.toBeChecked();
   await expect(page.getByLabel("가지 10개")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "가지 하나 줄이기" }),
@@ -296,6 +303,8 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
   await expect.poll(() => created.length).toBe(1);
   expect(created[0].body.branchLimit).toBe(12);
   expect(created[0].body.deliveryCount).toBeUndefined();
+  expect(created[0].body.genres).toEqual(["판타지", "일상", "미스터리"]);
+  expect(created[0].body.genre).toBe("판타지");
   expect(created[0].body.firstChapter).toEqual({
     title: "첫 갈래",
     body: "길이 열 갈래로 나뉘었다.",

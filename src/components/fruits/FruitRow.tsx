@@ -82,9 +82,11 @@ const useStyles = themedStyles((colors) => ({
     color: colors.ink,
     marginTop: 4,
   },
+  // 선 색(line)을 반쯤 비쳐 바탕에 묻히게 한다(사용자 요청). 밝게·밤 모두 같은 비율로 옅어진다.
   divider: {
     height: 1,
     marginLeft: COVER_WIDTH + COVER_TEXT_GAP,
     backgroundColor: colors.line,
+    opacity: 0.5,
   },
 }));

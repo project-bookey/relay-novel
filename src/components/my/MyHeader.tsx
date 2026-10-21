@@ -14,15 +14,17 @@ import { useSunlight } from "../sunlight/useSunlight";
 import { ErrorBox } from "../ui";
 import { useMyStories } from "./useMyStories";
 
-const SUN_SIZE = 22;
+const SUN_SIZE = 16;
 
-// 마이 맨 위(사용자가 고른 시안 B "숫자 줄", reference/sian/my-profile/): 닉네임을 크게, 그 아래 @아이디,
-// 그 아래 큰 숫자 둘 — 내 작품 수와 햇살(해 아이콘). 햇살 숫자를 누르면 채우기 창이 열린다.
+// 마이 맨 위(시안 B "숫자 줄", reference/sian/my-profile/에서 사용자가 숫자를 이름 오른쪽 끝으로 옮김):
+// 왼쪽에 닉네임과 @아이디, 오른쪽 끝에 작은 숫자 둘 — 내 작품 수와 햇살(해 아이콘). 햇살을 누르면 채우기 창이 열린다.
 export function MyHeader() {
   const styles = useStyles();
   return (
-    <View>
-      <Profile />
+    <View style={styles.header}>
+      <View style={styles.profileBox}>
+        <Profile />
+      </View>
       <View style={styles.stats}>
         <StoryCount />
         <SunlightStat />
@@ -107,7 +109,8 @@ function SunlightStat() {
   const failed = !!wallet.error;
   const balance = wallet.data?.balance;
   const count = balance === undefined ? "–" : String(balance);
-  const caption = failed ? "햇살 · 다시 불러오기" : "햇살 · 채우기";
+  // 자리가 좁아 이름만 적고, 채우기는 접근성 이름과 누르기로 알린다.
+  const caption = failed ? "다시 불러오기" : "햇살";
   const press = () => {
     // 잔액을 못 불러왔으면 채우기 대신 다시 불러온다.
     if (failed) void wallet.refetch();
@@ -144,24 +147,27 @@ function sunlightLabel(balance: number | undefined) {
 }
 
 const useStyles = themedStyles((colors) => ({
-  profile: { minHeight: 58 },
+  header: { flexDirection: "row", alignItems: "center", gap: 16 },
+  profileBox: { flex: 1, minWidth: 0 },
+  profile: { minHeight: 58, justifyContent: "center" },
   name: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "800",
     letterSpacing: -0.8,
     color: colors.ink,
   },
   handle: { fontSize: 14, color: colors.muted, marginTop: 2 },
-  stats: { flexDirection: "row", gap: 40, marginTop: 20 },
-  stat: { minHeight: 44, justifyContent: "center", gap: 4 },
-  pressed: { opacity: 0.6 },
-  sunRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  number: {
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: "800",
-    letterSpacing: -1,
-    color: colors.ink,
+  stats: { flexDirection: "row", gap: 18 },
+  // 숫자 아래 작은 이름. 누르는 햇살 칸도 44는 되게 둔다.
+  stat: {
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
   },
-  caption: { fontSize: 12, color: colors.muted },
+  pressed: { opacity: 0.6 },
+  sunRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  number: { fontSize: 18, fontWeight: "800", color: colors.ink },
+  caption: { fontSize: 11, color: colors.muted },
 }));

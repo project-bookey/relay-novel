@@ -229,6 +229,8 @@ export interface CreateNovel {
   baseWorkId?: number;
   // 먼저 올린 표지(POST /novels/covers)의 id
   coverId?: number;
+  // 만든 사람이 쓰는 1회차. 작품과 함께 저장돼 회차 없는 작품이 생기지 않는다.
+  firstChapter: { title: string; body: string };
 }
 // 올린 표지 (NovelCoverView)
 export interface NovelCover {

@@ -9,8 +9,7 @@ import { ParentChapterPeek } from "./ParentChapterPeek";
 import type { WriteTarget } from "./writeTarget";
 import { WritingAssist } from "./WritingAssist";
 import { StoryAssist } from "./StoryAssist";
-
-const MAX_BODY_LENGTH = 20000;
+import { MAX_BODY_LENGTH } from "./limits";
 
 // 발행하면 무엇이 일어나는지. 차례대로 쓰는 작품은 다음 작가에게 넘어가고, 열매로 퍼뜨리는 작품은 다시 배달된다.
 function publishCopy(target: WriteTarget, detail: NovelDetail) {

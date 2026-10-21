@@ -46,10 +46,12 @@ test("mobile demo lets a visitor pick a fruit and read relay chapters", async ({
   expect(errors).toEqual([]);
 });
 
-test("backend contract supports login, circle creation with followed writers, draft save and turn handoff", async ({
+test("backend contract supports login, circle creation with the owner's first chapter, draft save and turn handoff", async ({
   page,
 }) => {
-  let phase: "recruiting" | "writing" | "published" = "recruiting";
+  // 만들면 1회차가 올라가 달조각 차례(created), 달조각이 2회차를 쓰면 다시 내 차례(writing), 3회차를 올리면 달조각 차례(published).
+  let phase: "created" | "writing" | "published" = "created";
+  const chapterCountOf = { created: 1, writing: 2, published: 3 };
   let liked = false;
   let likeCount = 12;
   const calls: { path: string; body: any }[] = [];
@@ -59,12 +61,12 @@ test("backend contract supports login, circle creation with followed writers, dr
     title: "별사탕 우체국",
     description: "함께 만드는 작은 우주",
     genre: "판타지",
-    status: phase === "recruiting" ? "RECRUITING" : "ONGOING",
+    status: "ONGOING",
     mode: "CIRCLE",
     ownerNickname: "별조각",
     memberCount: 2,
     memberLimit: 2,
-    chapterCount: phase === "published" ? 1 : 0,
+    chapterCount: chapterCountOf[phase],
     chapterLimit: 20,
     isPublic: false,
     mine: true,
@@ -88,16 +90,16 @@ test("backend contract supports login, circle creation with followed writers, dr
         nickname: "달조각",
         status: "ACTIVE",
         owner: false,
-        currentWriter: phase === "published",
+        currentWriter: phase !== "writing",
       },
     ],
     applications: [],
     myMembership: "ACTIVE",
     canApply: false,
     canWrite: phase === "writing",
-    canStart: phase === "recruiting",
-    canComplete: phase === "published",
-    turnNumber: phase === "published" ? 2 : 1,
+    canStart: false,
+    canComplete: true,
+    turnNumber: chapterCountOf[phase] + 1,
     currentWriterNickname: phase === "writing" ? "별조각" : "달조각",
   });
   await page.route("**/api/v1/**", async (route) => {
@@ -129,6 +131,11 @@ test("backend contract supports login, circle creation with followed writers, dr
       expect(body.mode).toBe("CIRCLE");
       expect(body.inviteeIds).toEqual([2]);
       expect(body.isPublic).toBe(false);
+      // 1회차는 만든 사람이 작품과 함께 올린다.
+      expect(body.firstChapter).toEqual({
+        title: "첫 번째 별",
+        body: "밤하늘에서 별사탕 하나가 떨어졌다.",
+      });
       data = detail();
     } else if (path.endsWith("/follows/following"))
       data = {
@@ -150,19 +157,20 @@ test("backend contract supports login, circle creation with followed writers, dr
       data = ["판타지", "일상", "미스터리", "로맨스", "SF"];
     else if (path.endsWith("/deliveries")) data = [];
     else if (path.endsWith("/chapter-tree"))
-      data =
-        phase === "published"
-          ? [
-              {
-                id: 100,
-                chapterNumber: 1,
-                title: "첫 번째 별",
-                authorNickname: "별조각",
-                excerpt: "밤하늘에서 별사탕 하나가 떨어졌다.",
-                createdAt: "2026-10-12T09:00:00Z",
-              },
-            ]
-          : [];
+      data = [
+        { title: "첫 번째 별", authorNickname: "별조각" },
+        { title: "두 번째 별", authorNickname: "달조각" },
+        { title: "세 번째 별", authorNickname: "별조각" },
+      ]
+        .slice(0, chapterCountOf[phase])
+        .map((chapter, index) => ({
+          ...chapter,
+          id: 100 + index,
+          parentChapterId: index === 0 ? undefined : 99 + index,
+          chapterNumber: index + 1,
+          excerpt: "밤하늘에서 별사탕 하나가 떨어졌다.",
+          createdAt: "2026-10-12T09:00:00Z",
+        }));
     else if (path.endsWith("/novels/home-feed"))
       data = {
         novels: [summary()],
@@ -179,24 +187,21 @@ test("backend contract supports login, circle creation with followed writers, dr
         totalPages: 1,
         size: 20,
       };
-    else if (path.endsWith("/start")) {
-      phase = "writing";
-      data = detail();
-    } else if (path.endsWith("/draft"))
+    else if (path.endsWith("/draft"))
       data = {
         ...body,
-        turnNumber: 1,
+        turnNumber: 3,
         title: body?.title || "",
         body: body?.body || "",
         savedAt: method === "PUT" ? "2026-10-12T09:00:00Z" : undefined,
       };
     else if (path.endsWith("/chapters") && method === "POST") {
-      expect(body.turnNumber).toBe(1);
+      expect(body.turnNumber).toBe(3);
       phase = "published";
       data = {
-        id: 100,
+        id: 102,
         novelId: 42,
-        chapterNumber: 1,
+        chapterNumber: 3,
         title: body.title,
         body: body.body,
         authorNickname: "별조각",
@@ -234,20 +239,29 @@ test("backend contract supports login, circle creation with followed writers, dr
   // 팔로우한 작가를 골라 모여 만든다.
   await page.getByRole("radio", { name: "모여 만들기" }).click();
   await page.getByRole("checkbox", { name: "달조각" }).click();
-  await page.getByRole("button", { name: "모여 만들기 시작하기" }).click();
+  await page.getByRole("textbox", { name: "1회차 제목" }).fill("첫 번째 별");
+  await page
+    .getByRole("textbox", { name: "1회차 이야기" })
+    .fill("밤하늘에서 별사탕 하나가 떨어졌다.");
+  await page
+    .getByRole("button", { name: "1회차 올리고 모여 만들기 시작하기" })
+    .click();
+  await expect(
+    page.getByText("달조각 님이 이어 쓰고 있어요.").last(),
+  ).toBeVisible();
   // 좋아요를 누르면 서버가 돌려준 실제 수로 맞춘다.
   await page.getByRole("button", { name: "좋아요 12개" }).click();
   await expect(page.getByRole("button", { name: "좋아요 30개" })).toBeVisible();
   expect(calls.filter((c) => c.path === "/api/v1/novels/42/like")).toHaveLength(
     1,
   );
-  await page
-    .getByRole("button", { name: "모인 작가들과 릴레이 시작하기" })
-    .click();
+  // 달조각이 2회차를 올려 차례가 돌아왔다.
+  phase = "writing";
+  await page.reload();
   await page.getByRole("button", { name: "다음 장 이어 쓰기" }).click();
   await page
     .getByRole("textbox", { name: "이번 장의 제목" })
-    .fill("첫 번째 별");
+    .fill("세 번째 별");
   await page
     .getByRole("textbox", { name: "이어지는 이야기" })
     .fill(

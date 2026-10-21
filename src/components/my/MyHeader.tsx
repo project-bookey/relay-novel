@@ -7,17 +7,19 @@ import { demoProfile } from "../../api/demo";
 import { useSession } from "../../state/session";
 import { ICON_LINE_PX } from "../../theme";
 import { themedStyles } from "../../theme/themed";
-import { SunIcon } from "../BarIcons";
+import { FruitsIcon, SunIcon } from "../BarIcons";
 import { SunlightShop } from "../sunlight/SunlightShop";
 import { useSunlightPurchase } from "../sunlight/sunlightPurchase";
 import { useSunlight } from "../sunlight/useSunlight";
 import { ErrorBox } from "../ui";
 import { useMyStories } from "./useMyStories";
 
-const SUN_SIZE = 16;
+// 숫자 앞 아이콘 크기. 내 작품은 하단 바의 열매 아이콘, 햇살은 해 아이콘이다.
+const STAT_ICON_SIZE = 16;
+const STAT_ICON_STROKE = (ICON_LINE_PX * 24) / STAT_ICON_SIZE;
 
 // 마이 맨 위(시안 B "숫자 줄", reference/sian/my-profile/에서 사용자가 숫자를 이름 오른쪽 끝으로 옮김):
-// 왼쪽에 닉네임과 @아이디, 오른쪽 끝에 작은 숫자 둘 — 내 작품 수와 햇살(해 아이콘). 햇살을 누르면 채우기 창이 열린다.
+// 왼쪽에 닉네임과 @아이디, 오른쪽 끝에 작은 숫자 둘 — 내 작품 수(열매 아이콘)와 햇살(해 아이콘). 햇살을 누르면 채우기 창이 열린다.
 export function MyHeader() {
   const styles = useStyles();
   return (
@@ -89,7 +91,10 @@ function StoryCount() {
         total === undefined ? "내 작품, 불러오는 중" : `내 작품 ${total}편`
       }
     >
-      <Text style={styles.number}>{count}</Text>
+      <View style={styles.iconRow}>
+        <FruitsIcon size={STAT_ICON_SIZE} strokeWidth={STAT_ICON_STROKE} />
+        <Text style={styles.number}>{count}</Text>
+      </View>
       <Text style={styles.caption}>내 작품</Text>
     </View>
   );
@@ -127,11 +132,8 @@ function SunlightStat() {
         onPress={press}
         style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
       >
-        <View style={styles.sunRow}>
-          <SunIcon
-            size={SUN_SIZE}
-            strokeWidth={(ICON_LINE_PX * 24) / SUN_SIZE}
-          />
+        <View style={styles.iconRow}>
+          <SunIcon size={STAT_ICON_SIZE} strokeWidth={STAT_ICON_STROKE} />
           <Text style={styles.number}>{count}</Text>
         </View>
         <Text style={styles.caption}>{caption}</Text>
@@ -167,7 +169,7 @@ const useStyles = themedStyles((colors) => ({
     gap: 2,
   },
   pressed: { opacity: 0.6 },
-  sunRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  iconRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   number: { fontSize: 18, fontWeight: "800", color: colors.ink },
   caption: { fontSize: 11, color: colors.muted },
 }));

@@ -56,10 +56,32 @@ export const emptyPage = {
   size: 20,
 };
 
-// 홈 열매 밭 묶음(NovelHomeFeedView)
-export function homeFeedOf(novels: unknown[], freeRefreshesLeftToday = 2) {
+// 홈 열매 하나(NovelHomeFruitView) — 작품의 이어 쓸 수 있는 회차. 접근성 이름은 "제목 1장 「첫 장」 열매"다.
+export function fruitOf(
+  novel: { id: number },
+  chapter: { id?: number; number?: number; title?: string } = {},
+) {
+  return {
+    chapterId: chapter.id ?? novel.id * 100 + 1,
+    chapterNumber: chapter.number ?? 1,
+    chapterTitle: chapter.title ?? "첫 장",
+    excerpt: "이야기가 시작된다.",
+    authorNickname: "자라",
+    createdAt: "2026-10-12T09:00:00Z",
+    slotsLeft: 3,
+    novel,
+  };
+}
+
+// 홈 열매 밭 묶음(NovelHomeFeedView). 작품마다 1장이 열매 하나로 놓인다. 회차를 정하려면 fruits를 넘긴다.
+export function homeFeedOf(
+  novels: { id: number }[],
+  freeRefreshesLeftToday = 2,
+  fruits = novels.map((novel) => fruitOf(novel)),
+) {
   return {
     novels,
+    fruits,
     freeRefreshesLeftToday,
     dailyFreeRefreshes: 2,
     resetsAt: "2026-10-15T15:00:00Z",

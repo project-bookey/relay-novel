@@ -9,7 +9,7 @@ const modes: { mode: NovelMode; title: string; description: string }[] = [
     mode: "OPEN",
     title: "열매로 퍼뜨리기",
     description:
-      "모르는 사람들에게 열매로 배달돼요. 받은 사람마다 새 가지를 뻗어 이어 써요.",
+      "회차가 홈에 열매로 놓여 누구나 골라 새 가지를 뻗어 이어 써요. 나는 내 줄기를 계속 위로 이어 써요.",
   },
   {
     mode: "CIRCLE",
@@ -55,10 +55,10 @@ export function ModePicker({
   );
 }
 
-// 서버도 10~20으로 막는다. 배달은 늘 10명에게 가므로 상한이 그보다 작을 수 없다.
-export const BRANCH_LIMIT_MIN = 10;
-export const BRANCH_LIMIT_MAX = 20;
-export const BRANCH_LIMIT_DEFAULT = 10;
+// 서버도 2~5로 막는다. 첫 작가의 줄기는 이 수와 따로 센다.
+export const BRANCH_LIMIT_MIN = 2;
+export const BRANCH_LIMIT_MAX = 5;
+export const BRANCH_LIMIT_DEFAULT = 3;
 
 // 한 회차에 뻗을 수 있는 가지 수. 숫자를 직접 치지 않고 44pt 버튼으로 하나씩 바꾼다.
 export function BranchLimitStepper({
@@ -103,8 +103,8 @@ export function BranchLimitStepper({
         </Pressable>
       </View>
       <Text style={ui.hint}>
-        회차가 올라오면 관심 장르가 맞는 사람부터 10명에게 먼저 배달해요. 가지가
-        다 차면 더 보내지 않아요.
+        회차마다 다른 작가가 이만큼 가지를 뻗을 수 있어요. 자리가 남은 회차는
+        홈에 열매로 놓이고, 내 줄기는 따로 이어 써요.
       </Text>
     </View>
   );

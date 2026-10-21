@@ -7,7 +7,7 @@ import { themedStyles } from "../../theme/themed";
 import { Card, Label, useUi } from "../ui";
 import { LineBranch } from "./LineBranch";
 
-// 줄기가 끝났는지는 서버가 준 값으로만 정한다: 작품 완결, 또는 끝 회차가 목표 회차에 닿음(그 가지는 더 배달되지 않는다).
+// 줄기가 끝났는지는 서버가 준 값으로만 정한다: 작품 완결, 또는 끝 회차가 목표 회차에 닿음(그 가지는 더 뻗지 않는다).
 export function isLineFinished(
   novel: Pick<NovelSummary, "status" | "chapterLimit">,
   line: StoryLine<ChapterNode>,
@@ -18,7 +18,7 @@ export function isLineFinished(
 }
 
 function stateTextOf(finished: boolean, mine: boolean) {
-  if (mine) return "나에게 온 열매";
+  if (mine) return "내가 잇는 중";
   return finished ? "완결" : "자라는 중";
 }
 
@@ -53,7 +53,7 @@ export function StoryLineList({
 }: {
   novel: NovelSummary;
   lines: StoryLine<ChapterNode>[];
-  // 내가 받은 열매의 회차. 그 회차가 끝인 줄기에 "나에게 온 열매"를 붙인다.
+  // 내가 자리를 맡은 회차. 그 회차가 끝인 줄기에 "내가 잇는 중"을 붙인다.
   myDeliveryChapterId?: number;
 }) {
   return (
@@ -131,7 +131,7 @@ function LineCard({
   );
 }
 
-// 상태는 색만이 아니라 글자와 모양(열매·봉오리)으로도 구분한다. 진하게 강조하는 건 나에게 온 열매 하나다.
+// 상태는 색만이 아니라 글자와 모양(열매·봉오리)으로도 구분한다. 진하게 강조하는 건 "내가 잇는 중" 하나다.
 function StateTag({
   novelId,
   finished,
@@ -145,7 +145,7 @@ function StateTag({
   if (mine)
     return (
       <View style={[styles.tag, styles.mineTag]}>
-        <Text style={[styles.tagText, styles.mineTagText]}>나에게 온 열매</Text>
+        <Text style={[styles.tagText, styles.mineTagText]}>내가 잇는 중</Text>
       </View>
     );
   // 가지 끝 그림과 같게: 끝난 줄기는 작품 색 열매, 자라는 줄기는 봉오리

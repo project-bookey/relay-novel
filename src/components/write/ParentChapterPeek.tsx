@@ -37,7 +37,7 @@ export function ParentChapterPeek({
   const { title, body, authorNickname, chapterNumber } = chapter.data;
   return (
     <Card>
-      <Label>{`이어받은 ${chapterNumber}화`}</Label>
+      <Label>{`이어받은 ${chapterNumber}장`}</Label>
       <Text style={[ui.label, styles.title]}>
         {`${title} · ${authorNickname}`}
       </Text>

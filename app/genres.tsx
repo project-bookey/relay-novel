@@ -15,7 +15,7 @@ import {
 
 const MAX_GENRES = 5;
 
-// 관심 장르 고르기. 이 장르의 작품이 열매로 먼저 배달된다.
+// 관심 장르 고르기. 이 장르의 작품 회차가 홈 열매로 먼저 놓인다.
 // 가입 직후(onboarding=1)와 마이에서 연다.
 export default function Genres() {
   const ui = useUi();
@@ -67,7 +67,7 @@ export default function Genres() {
       <Label>WHAT YOU LOVE</Label>
       <Text style={ui.heading}>어떤 이야기를{"\n"}받고 싶나요?</Text>
       <Text style={[ui.body, styles.intro]}>
-        고른 장르의 이야기가 열매로 먼저 배달돼요. 다섯 개까지 고를 수 있어요.
+        고른 장르의 이야기가 홈 열매로 먼저 놓여요. 다섯 개까지 고를 수 있어요.
       </Text>
       {isLoading && <Loading />}
       {!!error && (

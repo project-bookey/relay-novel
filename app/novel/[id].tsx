@@ -237,7 +237,7 @@ function EmptyChapters({ detail }: { detail: NovelDetail }) {
   const ui = useUi();
   const message =
     detail.novel.mode === "OPEN"
-      ? "만든 사람이 첫 회차를 쓰면 열매가 배달되기 시작해요."
+      ? "만든 사람이 첫 회차를 쓰면 열매가 맺히기 시작해요."
       : "첫 번째 장을 기다리고 있어요. 릴레이가 시작되면 첫 작가가 이야기를 열어요.";
   return <Text style={ui.hint}>{message}</Text>;
 }

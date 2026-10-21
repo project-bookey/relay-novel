@@ -1,7 +1,11 @@
 // 소설 하나의 "이야기 나무" 모양을 계산한다. React·Expo 의존성이 없어서 node 테스트가 가능하다.
-// 회차 하나가 가지 하나다. 먼저 쓴 가지를 따라 이어지는 큰 줄기는 줄기에 붙고,
+// 회차 하나가 가지 하나다. 첫 작가의 줄기(없으면 먼저 쓴 가지)를 따라 이어지는 큰 줄기는 몸통에 붙고,
 // 한 회차를 여러 사람이 이어 써서 갈라진 가지는 부모 가지에서 뻗는다. 아직 아무도 잇지 않은 끝 가지에는 열매가 맺힌다.
-import { straightChain, type ChapterLink } from "./chapterTree";
+import {
+  straightChain,
+  type ChapterLink,
+  compareSiblings,
+} from "./chapterTree";
 
 export const TREE_WIDTH = 300;
 export const TREE_HEIGHT = 260;
@@ -70,7 +74,7 @@ export interface StoryTreeInput {
   nodes?: ChapterLink[];
 }
 
-// 뿌리에서 먼저 쓴 가지만 따라 내려간 큰 줄기.
+// 뿌리에서 첫 작가의 줄기를(줄기가 없으면 먼저 쓴 가지를) 따라 올라간 큰 줄기. 줄기를 쓸수록 나무가 위로 자란다.
 function mainLineOf(
   nodes: ChapterLink[],
   childrenOf: Map<number, ChapterLink[]>,
@@ -92,7 +96,7 @@ function mainLineOf(
 
 function childrenMap(nodes: ChapterLink[]) {
   const map = new Map<number, ChapterLink[]>();
-  for (const node of [...nodes].sort((first, second) => first.id - second.id)) {
+  for (const node of [...nodes].sort(compareSiblings)) {
     if (node.parentChapterId == null) continue;
     const siblings = map.get(node.parentChapterId) ?? [];
     siblings.push(node);

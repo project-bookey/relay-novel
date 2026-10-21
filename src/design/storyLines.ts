@@ -7,7 +7,7 @@ import {
 } from "./chapterTree";
 
 export interface StoryLine<Node extends ChapterLink> {
-  // 1부터. 목차에서 먼저 쓴 가지를 따라 내려간 순서다.
+  // 1부터. 목차에서 첫 작가의 줄기, 그다음 먼저 쓴 가지를 따라 내려간 순서다.
   number: number;
   tip: Node;
   // 뿌리부터 끝 회차까지
@@ -59,7 +59,7 @@ export function storyLines<Node extends ChapterLink>(
   });
 }
 
-// 그 회차에서 먼저 쓴 가지만 따라 내려가 닿는 끝 회차.
+// 그 회차에서 첫 작가의 줄기(없으면 먼저 쓴 가지)만 따라 내려가 닿는 끝 회차.
 export function firstTipUnder<Node extends ChapterLink>(
   nodes: Node[],
   chapterId: number,
@@ -96,7 +96,7 @@ export function siblingsOf<Node extends ChapterLink>(
   };
 }
 
-// 읽고 있는 회차가 지나는 줄기. 고른 열매(tipId)의 줄기 위라면 그 줄기, 아니면 먼저 쓴 가지를 따라간 줄기.
+// 읽고 있는 회차가 지나는 줄기. 고른 열매(tipId)의 줄기 위라면 그 줄기, 아니면 첫 작가의 줄기·먼저 쓴 가지를 따라간 줄기.
 export function lineThrough<Node extends ChapterLink>(
   lines: StoryLine<Node>[],
   nodes: Node[],

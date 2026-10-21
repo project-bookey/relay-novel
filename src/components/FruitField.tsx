@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useIsFocused } from "expo-router";
 import type { NovelSummary } from "../api/types";
+import type { HomeFruit } from "../design/homeFruits";
 import { fruitShapeOf } from "../theme";
 import type { ScreenPoint } from "../design/fruitFlight";
 import { planCanopyShow, type CanopyShow } from "../design/canopyShow";
@@ -42,13 +43,13 @@ import {
 // 땅에 놓인 열매(FieldFruit)는 땅 위 자리 순서로 그보다 앞에 쌓인다.
 const LEAVING_LAYER = 0;
 
-// 새로고침 차례 하나. 열매가 튀고 굴러갈 결과(seed)와 나무 연출, 그 차례가 시작될 때 놓인 소설들이다.
+// 새로고침 차례 하나. 열매가 튀고 굴러갈 결과(seed)와 나무 연출, 그 차례가 시작될 때 놓인 열매들이다.
 // 홈에 처음 들어온 차례에는 나무 연출이 없다(열매만 하늘에서 떨어진다).
 interface Scene {
   round: number;
   seed: number;
   show?: CanopyShow;
-  storyIds: string;
+  fruitKeys: string;
 }
 
 // 새 묶음이 오면 땅에서 굴러 나가는 열매
@@ -68,8 +69,8 @@ interface ShownField {
 }
 
 // 열매마다, 새로고침할 때마다 굴러 나가는 방향을 조금씩 다르게 흩뜨리는 값(-1~1)
-function spreadOf(storyId: number, round: number) {
-  const random = seededRandom(storyId * 7919 + round * 104729);
+function spreadOf(fruitKey: number, round: number) {
+  const random = seededRandom(fruitKey * 7919 + round * 104729);
   return random() * 2 - 1;
 }
 
@@ -92,7 +93,7 @@ function departingFruits(
     const rest = now?.rest ?? fruit.rest;
     return {
       key,
-      story: fruit.story,
+      item: fruit.item,
       rest,
       angle: now?.angle ?? 0,
       fromCenter: Math.hypot(rest.x - center.x, rest.y - center.y),
@@ -104,7 +105,7 @@ function departingFruits(
       const size = ground.fruitSize * fruit.rest.depth;
       return {
         key: `leaving-${fruit.key}`,
-        story: fruit.story,
+        story: fruit.item.story,
         rest: fruit.rest,
         size,
         delayMs: rollAwayDelayOf(fruit.fromCenter, farthest),
@@ -113,30 +114,30 @@ function departingFruits(
           view: ground.view,
           area: ground.bounds,
           size,
-          rollsLikeBall: rollsLikeBall(fruitShapeOf(fruit.story.id)),
+          rollsLikeBall: rollsLikeBall(fruitShapeOf(fruit.item.story.id)),
           startAngle: fruit.angle,
           scale: ground.scale,
           edges,
-          spread: spreadOf(fruit.story.id, round),
+          spread: spreadOf(fruit.item.key, round),
         }),
       };
     })
     .sort((first, second) => first.rest.y - second.rest.y);
 }
 
-const idsOf = (stories: NovelSummary[]) =>
-  stories
+const keysOf = (items: HomeFruit[]) =>
+  items
     .slice(0, FRUIT_FIELD_LIMIT)
-    .map((story) => story.id)
+    .map((item) => item.key)
     .join(",");
 
 // 지금 놓을 열매가 모두 자리를 정해 둔 열매 가운데 있는지. 이어 쓴 열매가 사라질 때처럼 빠지기만 했으면
 // 남은 열매는 놓인 자리에 그대로 둔다.
-function onlyRemoved(laidOut: NovelSummary[], stories: NovelSummary[]) {
-  const placed = new Set(idsOf(laidOut).split(","));
-  return idsOf(stories)
+function onlyRemoved(laidOut: HomeFruit[], items: HomeFruit[]) {
+  const placed = new Set(keysOf(laidOut).split(","));
+  return keysOf(items)
     .split(",")
-    .every((id) => id === "" || placed.has(id));
+    .every((key) => key === "" || placed.has(key));
 }
 
 // 다시 새로고침할 수 있는 때(ms). 나무 연출이 있으면 나무가 다시 올라간 뒤, 없으면 하늘에서 떨어진 열매가
@@ -154,37 +155,30 @@ function settleTimeOf(
   );
 }
 
-function sceneOf(
-  round: number,
-  stories: NovelSummary[],
-  withTree: boolean,
-): Scene {
-  const fruitCount = Math.min(stories.length, FRUIT_FIELD_LIMIT);
+function sceneOf(round: number, items: HomeFruit[], withTree: boolean): Scene {
+  const fruitCount = Math.min(items.length, FRUIT_FIELD_LIMIT);
   return {
     round,
     seed: Math.floor(Math.random() * 2 ** 31),
     show: withTree ? planCanopyShow(fruitCount) : undefined,
-    storyIds: idsOf(stories),
+    fruitKeys: keysOf(items),
   };
 }
 
-// 홈 화면의 열매 밭. 둘레에 풀과 꽃을 흩뿌리고, 소설 열매가 하늘에서 떨어져 땅에 부딪혀 털썩 멈추거나,
+// 홈 화면의 열매 밭. 둘레에 풀과 꽃을 흩뿌리고, 열매(이어 쓸 수 있는 회차·내 차례 소설)가 하늘에서 떨어져 땅에 부딪혀 털썩 멈추거나,
 // 굴러가거나, 크게 튀어 다른 자리로 가서 멈춘다. 새로고침하면(round가 바뀌면) 땅의 열매가 굴러 나가고,
 // 화면 위에 숨어 있던 나무가 새 열매를 달고 툭 떨어져 캐릭터 셋이 방방 뛰어 열매를 떨어뜨린 뒤 다시 올라간다.
-// 열매를 누르면 그 소설로 가고, 끌거나 길게 누르면 집어서 앞쪽 빈 땅까지 옮겨 떨어뜨릴 수 있다.
+// 열매를 누르면 그 회차나 소설로 가고, 끌거나 길게 누르면 집어서 앞쪽 빈 땅까지 옮겨 떨어뜨릴 수 있다.
 export function FruitField({
-  stories,
-  deliveredIds,
+  items,
   round,
   onOpen,
   onShowEnd,
 }: {
-  stories: NovelSummary[];
-  // 나에게 배달된 열매의 소설 id
-  deliveredIds: Set<number>;
+  items: HomeFruit[];
   // 새로고침할 때마다 늘어나는 차례. 바뀔 때마다 새로고침 연출을 한다.
   round: number;
-  onOpen: (story: NovelSummary) => void;
+  onOpen: (item: HomeFruit) => void;
   // 열매가 다 내려앉고 나무도 다시 올라가면 알린다(새로고침 버튼을 다시 누를 수 있게).
   onShowEnd?: () => void;
 }) {
@@ -211,7 +205,7 @@ export function FruitField({
   );
 
   const shownRef = useRef<ShownField>({ fruits: [] });
-  const [scene, setScene] = useState(() => sceneOf(round, stories, false));
+  const [scene, setScene] = useState(() => sceneOf(round, items, false));
   // 나무가 다시 올라가 연출이 끝났는지. 끝나면 나무를 그리지 않아 그림 메모리를 돌려준다.
   const [treeGone, setTreeGone] = useState(false);
   // 열매가 다 내려앉았는지(나무 연출이 있으면 나무가 다시 올라간 뒤). 그 전에는 풀밭 캐릭터가 화면 밖에 숨어 있다.
@@ -222,11 +216,10 @@ export function FruitField({
   // 굴러 나가는 열매는 차례와 따로 둔다. 하나씩 사라질 때마다 열매 밭을 다시 배치하면
   // 나무에 매달린 새 열매가 처음부터 다시 움직여 가지와 박자가 어긋난다.
   const [leaving, setLeaving] = useState<Leaving[]>([]);
-  // 열매 자리를 정한 소설들. 열매가 빠지기만 하면 다시 배치하지 않고 빠진 열매만 지운다.
+  // 열매 자리를 정한 열매들. 열매가 빠지기만 하면 다시 배치하지 않고 빠진 열매만 지운다.
   // 새 열매가 들어오면 예전처럼 다시 배치한다.
-  const [laidOut, setLaidOut] = useState(stories);
-  if (scene.round === round && !onlyRemoved(laidOut, stories))
-    setLaidOut(stories);
+  const [laidOut, setLaidOut] = useState(items);
+  if (scene.round === round && !onlyRemoved(laidOut, items)) setLaidOut(items);
   if (scene.round !== round) {
     // 화면 가장자리(열매 밭 좌표). 열매가 이 밖으로 나가면 다 굴러 나간 것이다.
     const stageX = origin?.x ?? 0;
@@ -242,8 +235,8 @@ export function FruitField({
       edges,
       round,
     );
-    setScene(sceneOf(round, stories, true));
-    setLaidOut(stories);
+    setScene(sceneOf(round, items, true));
+    setLaidOut(items);
     setTreeGone(false);
     setSettled(false);
     setLeaving((before) => [...before, ...departing]);
@@ -259,39 +252,39 @@ export function FruitField({
       area.width === 0 ? undefined : fieldPlacementOf(area.width, area.height),
     [area.width, area.height],
   );
-  // 열매 자리는 어떤 소설들이 놓이는지에만 따른다. 좋아요 수처럼 내용만 바뀐 응답으로 다시 배치하면
-  // 손으로 옮긴 열매가 처음 자리로 돌아가므로, 배치는 자리를 정한 소설 id 목록이 바뀔 때만 다시 하고
-  // 열매에는 그릴 때마다 최신 소설 정보를 넘긴다.
-  const laidOutIds = idsOf(laidOut);
+  // 열매 자리는 어떤 열매들이 놓이는지에만 따른다. 좋아요 수처럼 내용만 바뀐 응답으로 다시 배치하면
+  // 손으로 옮긴 열매가 처음 자리로 돌아가므로, 배치는 자리를 정한 열매 목록이 바뀔 때만 다시 하고
+  // 열매에는 그릴 때마다 최신 정보를 넘긴다.
+  const laidOutKeys = keysOf(laidOut);
   const field = useMemo(() => {
     if (area.width === 0 || !frame) return undefined;
     // 차례가 시작될 때와 같은 열매들이면 나무에 매달았다 떨어뜨리고,
-    // 그 사이 배달이 와서 목록이 바뀌었으면 예전처럼 하늘에서 떨어뜨린다.
+    // 그 사이 목록이 바뀌었으면(자리를 맡은 열매가 생기는 등) 예전처럼 하늘에서 떨어뜨린다.
     const hanging =
-      show && laidOutIds === scene.storyIds ? { show, frame } : undefined;
+      show && laidOutKeys === scene.fruitKeys ? { show, frame } : undefined;
     return layoutField(area.width, area.height, laidOut, scene.seed, hanging);
   }, [
     area.width,
     area.height,
     frame,
-    laidOutIds,
+    laidOutKeys,
     scene.seed,
-    scene.storyIds,
+    scene.fruitKeys,
     show,
   ]);
   // 자리를 정한 열매 가운데 지금도 놓을 열매
-  const storyIds = idsOf(stories);
+  const itemKeys = keysOf(items);
   const fruits = useMemo(() => {
-    const kept = new Set(storyIds.split(","));
+    const kept = new Set(itemKeys.split(","));
     return (field?.fruits ?? []).filter((fruit) =>
-      kept.has(String(fruit.story.id)),
+      kept.has(String(fruit.item.key)),
     );
-  }, [field, storyIds]);
-  const fruitKeyOf = (fruit: PlacedFruit) => `${scene.round}:${fruit.story.id}`;
+  }, [field, itemKeys]);
+  const fruitKeyOf = (fruit: PlacedFruit) => `${scene.round}:${fruit.item.key}`;
   useEffect(() => {
     shownRef.current = {
       fruits: fruits.map((fruit) => ({
-        key: `${scene.round}:${fruit.story.id}`,
+        key: `${scene.round}:${fruit.item.key}`,
         fruit,
       })),
       ground: field?.ground,
@@ -330,7 +323,7 @@ export function FruitField({
     };
   }, [ready, show, clock, sceneRound]);
 
-  const latestStories = new Map(stories.map((story) => [story.id, story]));
+  const latestItems = new Map(items.map((item) => [item.key, item]));
   // 홈이 다른 탭이나 소설 화면에 가려져 있으면 인기 열매의 흔들림·숨쉬기를 멈춰 배터리를 아낀다.
   const onScreen = useIsFocused();
   const touchFruit = (key: string, touching: boolean) => {
@@ -426,8 +419,7 @@ export function FruitField({
             key={fruitKeyOf(fruit)}
             fruitKey={fruitKeyOf(fruit)}
             fruit={fruit}
-            story={latestStories.get(fruit.story.id) ?? fruit.story}
-            delivered={deliveredIds.has(fruit.story.id)}
+            item={latestItems.get(fruit.item.key) ?? fruit.item}
             ground={field.ground}
             neighbors={neighbors}
             reduced={reduced}

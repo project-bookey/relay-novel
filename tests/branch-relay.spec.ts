@@ -2,20 +2,22 @@ import { test, expect } from "@playwright/test";
 import {
   collectErrors,
   emptyPage,
+  fruitOf,
   homeFeedOf,
   mockBackend,
 } from "./mockBackend";
 
-test("a delivered fruit lets the reader grow a new branch from the chapter they received", async ({
+test("a reader picks an open chapter fruit, holds a slot and grows a new branch from it", async ({
   page,
 }) => {
   const errors = collectErrors(page);
+  let claimed = false;
   let written = false;
   const novel = () => ({
     id: 77,
     kind: "RELAY",
     mode: "OPEN",
-    deliveryCount: 3,
+    branchLimit: 3,
     title: "토끼의 간",
     description: "용궁으로 간 토끼 이야기",
     genre: "판타지",
@@ -45,6 +47,7 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     authorNickname: "자라",
     excerpt: "용궁에 근심이 가득했다.",
     createdAt: "2026-10-12T09:00:00Z",
+    trunk: true,
   };
   const firstBranch = {
     id: 301,
@@ -54,6 +57,7 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     authorNickname: "거북",
     excerpt: "자라는 뭍으로 올라갔다.",
     createdAt: "2026-10-13T09:00:00Z",
+    trunk: false,
   };
   const myBranch = {
     id: 302,
@@ -63,28 +67,57 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     authorNickname: "나",
     excerpt: "토끼가 먼저 찾아왔다.",
     createdAt: "2026-10-14T09:00:00Z",
+    trunk: false,
   };
+  // 읽기 화면이 받는 회차(NovelChapterView)
+  const reading = (
+    node: typeof root,
+    body: string,
+    canClaim = false,
+    slotsLeft = 0,
+  ) => ({
+    ...node,
+    novelId: 77,
+    body,
+    viewCount: 1,
+    canSelfContinue: false,
+    selfContinueCost: 5,
+    canClaim,
+    slotsLeft,
+  });
+  const claim = () => ({
+    deliveryId: 5,
+    novel: novel(),
+    chapterId: 300,
+    chapterNumber: 1,
+    chapterTitle: "용왕의 병",
+    dueAt: "2099-10-15T09:00:00Z",
+    source: "CLAIM",
+  });
+  const rootFruit = () => fruitOf(novel(), { id: 300, title: "용왕의 병" });
+  const neighborFruit = fruitOf(neighbor, {
+    id: 400,
+    number: 2,
+    title: "거북의 등",
+  });
   const calls = await mockBackend(page, ({ path, method, body }) => {
     if (path.endsWith("/auth/login"))
       return { accessToken: "test-access", refreshToken: "test-refresh" };
     if (path === "/api/v1/novels") return emptyPage;
-    // 받은 열매의 소설이 홈 묶음에도 들어 있다. 묶음은 새로고침할 때까지 서버에 그대로 남는다.
+    // 이어 쓴 회차는 서버가 내 열매에서 뺀다.
     if (path.endsWith("/novels/home-feed"))
-      return homeFeedOf([novel(), neighbor]);
+      return homeFeedOf(
+        [novel(), neighbor],
+        2,
+        written ? [neighborFruit] : [rootFruit(), neighborFruit],
+      );
     if (path.endsWith("/my-turns")) return [];
     if (path === "/api/v1/novels/deliveries")
-      return written
-        ? []
-        : [
-            {
-              deliveryId: 5,
-              novel: novel(),
-              chapterId: 300,
-              chapterNumber: 1,
-              chapterTitle: "용왕의 병",
-              dueAt: "2026-10-15T09:00:00Z",
-            },
-          ];
+      return claimed && !written ? [claim()] : [];
+    if (path.endsWith("/chapters/300/claim") && method === "POST") {
+      claimed = true;
+      return claim();
+    }
     if (path.endsWith("/deliveries/5/draft"))
       return {
         turnNumber: 5,
@@ -95,24 +128,23 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     if (path.endsWith("/deliveries/5/chapters")) {
       written = true;
       return {
-        ...myBranch,
-        novelId: 77,
+        ...reading(myBranch, body.body),
         title: body.title,
-        body: body.body,
       };
     }
     if (path.endsWith("/chapter-tree"))
       return written ? [root, firstBranch, myBranch] : [root, firstBranch];
     if (path.endsWith("/chapters/nodes/301"))
-      return { ...firstBranch, novelId: 77, body: "자라는 뭍으로 올라갔다." };
+      return reading(firstBranch, "자라는 뭍으로 올라갔다.");
     if (path.endsWith("/chapters/nodes/302"))
-      return { ...myBranch, novelId: 77, body: "토끼가 먼저 용궁을 찾아왔다." };
+      return reading(myBranch, "토끼가 먼저 용궁을 찾아왔다.");
     if (path.endsWith("/chapters/nodes/300"))
-      return {
-        ...root,
-        novelId: 77,
-        body: "용궁에 근심이 가득했다. 용왕의 병을 고칠 약은 토끼의 간뿐이었다.",
-      };
+      return reading(
+        root,
+        "용궁에 근심이 가득했다. 용왕의 병을 고칠 약은 토끼의 간뿐이었다.",
+        !claimed,
+        2,
+      );
     return {
       novel: novel(),
       members: [
@@ -131,7 +163,7 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
       canStart: false,
       canComplete: false,
       turnNumber: 3,
-      myDeliveryId: written ? undefined : 5,
+      myDeliveryId: claimed && !written ? 5 : undefined,
     };
   });
   await page.goto("/");
@@ -142,27 +174,33 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
   await page
     .getByRole("button", { name: "로그인하고 이야기 이어가기" })
     .click();
-  // 나에게 배달된 열매가 홈에 떨어진다. 함께 놓인 열매가 다 내려앉은 자리를 적어 둔다.
-  const neighborFruit = page.getByRole("button", { name: /별주부전 열매/ });
+  // 이어 쓸 수 있는 회차가 열매로 떨어진다. 함께 놓인 열매가 다 내려앉은 자리를 적어 둔다.
+  const neighborButton = page.getByRole("button", {
+    name: "별주부전 2장 「거북의 등」 열매",
+  });
   const settledBox = async () => {
-    let before = await neighborFruit.boundingBox();
+    let before = await neighborButton.boundingBox();
     for (;;) {
       await page.waitForTimeout(250);
-      const now = await neighborFruit.boundingBox();
+      const now = await neighborButton.boundingBox();
       if (before && now && before.x === now.x && before.y === now.y) return now;
       before = now;
     }
   };
   const neighborBox = await settledBox();
-  await page.getByRole("button", { name: "나에게 온 토끼의 간 열매" }).click();
-  await expect(page.getByText("나에게 온 열매예요.")).toBeVisible();
-  // 가지가 갈라진 작품은 목차에 가지 이름과 끝 열매가 보인다.
+  // 열매를 누르면 그 회차를 읽고, 그 자리에서 이어 쓰기를 시작해 자리를 맡는다.
+  await page
+    .getByRole("button", { name: "토끼의 간 1장 「용왕의 병」 열매" })
+    .click();
   await expect(
-    page.getByRole("button", { name: /CHAPTER 02 가지 1_1 육지로.*끝 열매/ }),
+    page.getByText("용왕의 병을 고칠 약은", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "받은 가지 이어 쓰기" }).click();
-  // 받은 회차를 편집기 위에서 다시 볼 수 있다.
-  await expect(page.getByText("이어받은 1화")).toBeVisible();
+  await expect(
+    page.getByText(/이어 쓸 자리가 2개 남았어요/).filter({ visible: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "이 회차에서 이어 쓰기" }).click();
+  // 맡은 회차를 편집기 위에서 다시 볼 수 있다.
+  await expect(page.getByText("이어받은 1장")).toBeVisible();
   await page.getByRole("textbox", { name: "이번 장의 제목" }).fill("다른 길");
   await page
     .getByRole("textbox", { name: "이어지는 이야기" })
@@ -170,7 +208,7 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
   await page.getByRole("button", { name: "임시저장", exact: true }).click();
   await expect(page.getByText(/최근 저장/).last()).toBeVisible();
   await page.getByRole("button", { name: "회차 발행", exact: true }).click();
-  await page.getByRole("button", { name: "발행하고 열매 보내기" }).click();
+  await page.getByRole("button", { name: "발행하고 열매 맺기" }).click();
   // 발행해 가지가 갈라지면 목차는 끝 열매마다 한 줄기로 바뀌고, 새 가지는 1장에서 갈라진 열매 2가 된다.
   const myLine = page.getByRole("button", {
     name: "열매 2, 2장, 다른 길, 자라는 중, 열매 1의 1장에서 갈라졌어요",
@@ -182,7 +220,9 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
   // 그 열매를 누르면 1장부터 그 줄기를 따라 읽고, 갈라진 회차에서는 옆 가지로 넘길 수 있다.
   await myLine.click();
   await expect(
-    page.getByText("용왕의 병을 고칠 약은", { exact: false }),
+    page
+      .getByText("용왕의 병을 고칠 약은", { exact: false })
+      .filter({ visible: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "다음 장" }).click();
   await expect(page.getByText("토끼가 먼저 용궁을 찾아왔다.")).toBeVisible();
@@ -192,6 +232,12 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
   await expect(page.getByRole("button", { name: "다음 가지" })).toBeEnabled();
   await page.getByRole("button", { name: "다른 열매 보기" }).click();
   await expect(myLine).toBeVisible();
+  expect(
+    calls.filter(
+      (call) =>
+        call.path.endsWith("/chapters/300/claim") && call.method === "POST",
+    ),
+  ).toHaveLength(1);
   const published = calls.filter(
     (call) =>
       call.path.endsWith("/deliveries/5/chapters") && call.method === "POST",
@@ -201,26 +247,28 @@ test("a delivered fruit lets the reader grow a new branch from the chapter they 
     title: "다른 길",
     body: "토끼가 먼저 용궁을 찾아왔다.",
   });
-  // 이어 쓴 열매는 홈 묶음에 남아 있어도 홈에서 사라지고, 다른 열매는 그대로 놓여 있다.
-  // 발행하면 편집기 자리에 작품 화면이 들어서므로, 작품 화면을 두 번 거슬러 홈으로 간다.
+  // 이어 쓴 회차는 홈에서 사라지고, 다른 열매는 그대로 놓여 있다.
+  // 발행하면 편집기 자리에 작품 화면이 들어서므로, 작품 화면과 읽던 회차를 거슬러 홈으로 간다.
   const back = page
     .getByLabel("뒤로", { exact: true })
     .filter({ visible: true });
   await back.click();
-  await expect(page.getByText("이야기 펼치기")).toBeVisible();
-  await back.click();
-  await expect(neighborFruit).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /토끼의 간 열매/ }),
+    page
+      .getByText("용궁에 근심이 가득했다.", { exact: false })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await back.click();
+  await expect(neighborButton).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /토끼의 간 .*열매/ }),
   ).toHaveCount(0);
-  expect(await neighborFruit.boundingBox()).toEqual(neighborBox);
+  expect(await neighborButton.boundingBox()).toEqual(neighborBox);
   // 앱을 다시 열어도 다시 놓이지 않는다.
   await page.goto("/");
+  await expect(neighborButton).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /별주부전 열매/ }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /토끼의 간 열매/ }),
+    page.getByRole("button", { name: /토끼의 간 .*열매/ }),
   ).toHaveCount(0);
   expect(errors).toEqual([]);
 });

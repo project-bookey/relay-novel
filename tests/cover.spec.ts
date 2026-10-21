@@ -10,7 +10,7 @@ const summaryOf = (id: number, title: string, cover?: string) => ({
   id,
   kind: "RELAY",
   mode: "OPEN",
-  deliveryCount: 3,
+  branchLimit: 3,
   status: "ONGOING",
   title,
   description: "보름마다 문을 여는 골목 끝 가게.",

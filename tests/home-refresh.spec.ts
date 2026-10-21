@@ -10,7 +10,7 @@ const novel = (id: number, title: string) => ({
   id,
   kind: "RELAY",
   mode: "OPEN",
-  deliveryCount: 3,
+  branchLimit: 3,
   title,
   description: `${title} 이야기`,
   genre: "판타지",
@@ -47,7 +47,7 @@ test("the refresh button swaps the home fruits for a new bundle until today's fr
       return { accessToken: "test-access", refreshToken: "test-refresh" };
     if (path.endsWith("/novels/home-feed/refresh") && method === "POST") {
       refreshes += 1;
-      // 새 작품이 자리보다 적으면 남은 자리는 이전 묶음에서 채운다.
+      // 새 열매가 자리보다 적으면 남은 자리는 이전 묶음에서 채운다.
       if (refreshes === 1) {
         shelf = [letter, rabbit];
         leftToday = 1;
@@ -79,7 +79,7 @@ test("the refresh button swaps the home fruits for a new bundle until today's fr
     .getByRole("button", { name: "로그인하고 이야기 이어가기" })
     .click();
   await expect(
-    page.getByRole("button", { name: "토끼의 간 열매" }),
+    page.getByRole("button", { name: "토끼의 간 1장 「첫 장」 열매" }),
   ).toBeVisible();
 
   // 나무 연출이 끝나야 누를 수 있고, 남은 횟수를 이름으로 알려 준다.
@@ -88,12 +88,12 @@ test("the refresh button swaps the home fruits for a new bundle until today's fr
   await expect(refresh).toBeEnabled({ timeout: 15_000 });
   await refresh.click();
   await expect(
-    page.getByRole("button", { name: "용궁의 편지 열매" }),
+    page.getByRole("button", { name: "용궁의 편지 1장 「첫 장」 열매" }),
   ).toBeVisible();
   await expect(refresh).toHaveAccessibleName("새 열매 받기, 오늘 1번 남았어요");
   // 원래 열매는 굴러 나가고, 묶음에 다시 든 열매는 새 열매와 함께 나무에서 다시 떨어진다.
   await expect(
-    page.getByRole("button", { name: "토끼의 간 열매" }),
+    page.getByRole("button", { name: "토끼의 간 1장 「첫 장」 열매" }),
   ).toHaveCount(1);
 
   await expect(refresh).toBeEnabled({ timeout: 15_000 });
@@ -174,7 +174,7 @@ test("after the free refreshes, watching an ad brings new fruits and then a purc
     .getByRole("button", { name: "광고 닫고 새 열매 받기" })
     .click({ timeout: 10_000 });
   await expect(
-    page.getByRole("button", { name: "용궁의 편지 열매" }),
+    page.getByRole("button", { name: "용궁의 편지 1장 「첫 장」 열매" }),
   ).toBeVisible();
   await expect(refresh).toHaveAccessibleName(
     "새 열매 받기, 결제하면 더 받을 수 있어요",

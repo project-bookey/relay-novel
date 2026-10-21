@@ -152,7 +152,7 @@ export const novels = {
     api<Draft>(`${root}/${id}/draft`, { method: "PUT", body }),
   publish: (id: number, body: Write) =>
     api<Chapter>(`${root}/${id}/chapters`, { method: "POST", body }),
-  // 내가 받은 열매(배달). 홈 열매 밭에 떨어진다.
+  // 내가 자리를 맡은 열매. 홈 열매 밭에 먼저 떨어진다.
   deliveries: () => api<NovelDelivery[]>(`${root}/deliveries`),
   deliveryDraft: (deliveryId: number) =>
     api<Draft>(`${root}/deliveries/${deliveryId}/draft`),
@@ -161,16 +161,22 @@ export const novels = {
       method: "PUT",
       body,
     }),
-  // 받은 회차에서 가지를 뻗어 발행한다. 새 회차는 다시 무작위로 배달된다.
+  // 맡은 회차에서 가지를 뻗어 발행한다. 새 회차도 자리가 남는 동안 다른 사람의 열매가 된다.
   publishBranch: (deliveryId: number, body: BranchWrite) =>
     api<Chapter>(`${root}/deliveries/${deliveryId}/chapters`, {
       method: "POST",
       body,
     }),
-  // 넘기기 — 열매가 다른 한 사람에게 다시 배달된다.
+  // 내려놓기 — 맡은 자리가 다시 빈다. 내 글 잇기였으면 햇살을 돌려받는다.
   decline: (deliveryId: number) =>
     api<void>(`${root}/deliveries/${deliveryId}/decline`, { method: "POST" }),
-  // 내 글 잇기 — 햇살을 내고 내가 쓴 회차를 나에게 배달한다. 그 뒤로는 받은 열매처럼 쓰고 발행한다.
+  // 자리 맡기 — 홈의 열매(이어 쓸 수 있는 회차)를 골라 쓰기 시작한다. 그 뒤로는 열매 id로 초안·발행한다.
+  // 자리가 다 찼으면 409 NOVEL_BRANCH_FULL, 이 작품에서 이미 자리를 맡았으면 409 NOVEL_BRANCH_HOLDING.
+  claim: (id: number, chapterId: number) =>
+    api<NovelDelivery>(`${root}/${id}/chapters/${chapterId}/claim`, {
+      method: "POST",
+    }),
+  // 내 글 잇기 — 햇살을 내고 내가 쓴 회차를 나에게 배달한다. 그 뒤로는 맡은 열매처럼 쓰고 발행한다.
   // 햇살이 모자라면 402 NOVEL_SUNLIGHT_INSUFFICIENT.
   selfDelivery: (id: number, chapterId: number) =>
     api<NovelDelivery>(`${root}/${id}/chapters/${chapterId}/self-delivery`, {

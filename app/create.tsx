@@ -113,7 +113,7 @@ function withBaseWorkGenre(baseGenre: string, picked: string[]) {
 
 function submitLabel(mode: NovelMode, pending: boolean) {
   if (pending) return "이야기 만드는 중…";
-  if (mode === "OPEN") return "1회차 올리고 열매 보내기";
+  if (mode === "OPEN") return "1회차 올리고 열매 맺기";
   return "1회차 올리고 모여 만들기 시작하기";
 }
 

@@ -60,7 +60,7 @@ export default function Signup() {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       });
-      // 가입하면 바로 관심 장르를 고른다. 열매를 배달할 사람을 고를 때 쓴다.
+      // 가입하면 바로 관심 장르를 고른다. 홈 열매를 고를 때 쓴다.
       if (router.canDismiss()) router.dismissAll();
       router.replace({ pathname: "/genres", params: { onboarding: "1" } });
     },

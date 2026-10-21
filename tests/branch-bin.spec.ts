@@ -123,7 +123,7 @@ test("restoring without enough sunlight opens the sunlight sheet, and discarding
   expect(errors).toEqual([]);
 });
 
-test("the author of a chapter can pay sunlight to continue it, then writes it like a delivered fruit", async ({
+test("the writer of a branch chapter can pay sunlight to continue it, then writes it like a held fruit", async ({
   page,
 }) => {
   const errors = collectErrors(page);
@@ -132,18 +132,17 @@ test("the author of a chapter can pay sunlight to continue it, then writes it li
     id: 77,
     kind: "RELAY",
     mode: "OPEN",
-    deliveryCount: 10,
-    branchLimit: 12,
+    branchLimit: 3,
     title: "토끼의 간",
     description: "용궁으로 간 토끼 이야기",
     genre: "판타지",
     status: "ONGOING",
-    ownerNickname: "나",
-    memberCount: 1,
-    chapterCount: 1,
+    ownerNickname: "자라",
+    memberCount: 2,
+    chapterCount: 2,
     chapterLimit: 20,
     isPublic: true,
-    mine: true,
+    mine: false,
     myTurn: false,
     createdAt: "2026-10-12T09:00:00Z",
     likeCount: 3,
@@ -153,41 +152,54 @@ test("the author of a chapter can pay sunlight to continue it, then writes it li
     id: 300,
     chapterNumber: 1,
     title: "용왕의 병",
-    authorNickname: "나",
+    authorNickname: "자라",
     excerpt: "용궁에 근심이 가득했다.",
     createdAt: "2026-10-12T09:00:00Z",
+    trunk: true,
+  };
+  const mine = {
+    id: 301,
+    parentChapterId: 300,
+    chapterNumber: 2,
+    title: "다른 길",
+    authorNickname: "나",
+    excerpt: "토끼가 먼저 찾아왔다.",
+    createdAt: "2026-10-13T09:00:00Z",
+    trunk: false,
   };
   const calls = await mockBackend(page, ({ path, method }) => {
     if (path.endsWith("/auth/login"))
       return { accessToken: "test-access", refreshToken: "test-refresh" };
     if (path === "/api/v1/novels") return emptyPage;
-    if (path.endsWith("/novels/home-feed")) return homeFeedOf([novel]);
+    if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
     if (path.endsWith("/my-turns")) return [];
     const delivery = {
       deliveryId: 9,
       novel,
-      chapterId: 300,
-      chapterNumber: 1,
-      chapterTitle: "용왕의 병",
+      chapterId: 301,
+      chapterNumber: 2,
+      chapterTitle: "다른 길",
       dueAt: "2099-10-26T09:00:00Z",
       source: "SELF",
     };
     if (path === "/api/v1/novels/deliveries") return sent ? [delivery] : [];
-    if (path.endsWith("/chapters/300/self-delivery") && method === "POST") {
+    if (path.endsWith("/chapters/301/self-delivery") && method === "POST") {
       sent = true;
       return delivery;
     }
     if (path.endsWith("/deliveries/9/draft"))
       return { turnNumber: 9, title: "", body: "" };
-    if (path.endsWith("/chapter-tree")) return [root];
-    if (path.endsWith("/chapters/nodes/300"))
+    if (path.endsWith("/chapter-tree")) return [root, mine];
+    if (path.endsWith("/chapters/nodes/301"))
       return {
-        ...root,
+        ...mine,
         novelId: 77,
-        body: "용궁에 근심이 가득했다.",
+        body: "토끼가 먼저 용궁을 찾아왔다.",
         viewCount: 3,
         canSelfContinue: !sent,
         selfContinueCost: 5,
+        canClaim: false,
+        slotsLeft: 3,
       };
     if (path.endsWith("/me/sunlight"))
       return { balance: 8, restoreCost: 3, selfBranchCost: 5, products: [] };
@@ -205,15 +217,11 @@ test("the author of a chapter can pay sunlight to continue it, then writes it li
     };
   });
   await login(page);
-  // 내가 만든 이야기는 홈 묶음에 있어도 열매로 떨어지지 않는다.
   await expect(
     page.getByRole("button", { name: "새 이야기 심기" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /토끼의 간 열매/ }),
-  ).toHaveCount(0);
   await page.goto("/novel/77");
-  await page.getByRole("button", { name: /CHAPTER 01/ }).click();
+  await page.getByRole("button", { name: /CHAPTER 02/ }).click();
   await page.getByRole("button", { name: "햇살 5개로 다음 회차 쓰기" }).click();
   await expect(
     page.getByText(/다 쓰지 않고 그만두면 햇살을 돌려받아요/),
@@ -228,7 +236,7 @@ test("the author of a chapter can pay sunlight to continue it, then writes it li
   expect(errors).toEqual([]);
 });
 
-test("a fruit-spread story picks how many branches one chapter can grow, between 10 and 20", async ({
+test("a fruit-spread story picks how many branches one chapter can grow, between 2 and 5", async ({
   page,
 }) => {
   const errors = collectErrors(page);
@@ -241,7 +249,6 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
           id: 90,
           kind: "RELAY",
           mode: "OPEN",
-          deliveryCount: 10,
           branchLimit: body.branchLimit,
           title: body.title,
           description: body.description,
@@ -285,23 +292,31 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
   await page.getByRole("checkbox", { name: "SF" }).click();
   await expect(page.getByText(/장르는 3개까지 고를 수 있어요/)).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "SF" })).not.toBeChecked();
-  await expect(page.getByLabel("가지 10개")).toBeVisible();
+  // 기본은 3개이고 2~5개 사이에서 고른다.
+  await expect(page.getByLabel("가지 3개")).toBeVisible();
+  await page.getByRole("button", { name: "가지 하나 줄이기" }).click();
+  await expect(page.getByLabel("가지 2개")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "가지 하나 줄이기" }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "가지 하나 늘리기" }).click();
-  await page.getByRole("button", { name: "가지 하나 늘리기" }).click();
-  await expect(page.getByLabel("가지 12개")).toBeVisible();
+  for (let step = 0; step < 3; step++)
+    await page.getByRole("button", { name: "가지 하나 늘리기" }).click();
+  await expect(page.getByLabel("가지 5개")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "가지 하나 늘리기" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "가지 하나 줄이기" }).click();
+  await expect(page.getByLabel("가지 4개")).toBeVisible();
   await page.getByRole("textbox", { name: "1회차 제목" }).fill("첫 갈래");
   await page
     .getByRole("textbox", { name: "1회차 이야기" })
     .fill("길이 열 갈래로 나뉘었다.");
-  await page.getByRole("button", { name: "1회차 올리고 열매 보내기" }).click();
+  await page.getByRole("button", { name: "1회차 올리고 열매 맺기" }).click();
   const created = calls.filter(
     (call) => call.path === "/api/v1/novels" && call.method === "POST",
   );
   await expect.poll(() => created.length).toBe(1);
-  expect(created[0].body.branchLimit).toBe(12);
+  expect(created[0].body.branchLimit).toBe(4);
   expect(created[0].body.deliveryCount).toBeUndefined();
   expect(created[0].body.genres).toEqual(["판타지", "일상", "미스터리"]);
   expect(created[0].body.genre).toBe("판타지");

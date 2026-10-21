@@ -88,7 +88,7 @@ async function openEditor(page: Page, branch = false, fail = false) {
           status: "ONGOING",
           chapterCount: 1,
           chapterLimit: 20,
-          deliveryCount: 3,
+          branchLimit: 3,
         },
         members: [],
         applications: [],
@@ -102,7 +102,7 @@ async function openEditor(page: Page, branch = false, fail = false) {
   await page.goto("/novel/42");
   await page
     .getByRole("button", {
-      name: branch ? "받은 가지 이어 쓰기" : "다음 장 이어 쓰기",
+      name: branch ? "가지 이어 쓰기" : "다음 장 이어 쓰기",
       exact: true,
     })
     .click();

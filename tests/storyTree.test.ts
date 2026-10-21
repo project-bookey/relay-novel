@@ -230,3 +230,17 @@ test("forks along one branch alternate outward and inward", () => {
   assert.equal(sideOf(4), -rootSide);
   assert.equal(sideOf(5), rootSide);
 });
+
+test("the first writer's trunk is the main line even when another branch was written first", () => {
+  const nodes = [
+    { id: 1, trunk: true },
+    { id: 2, parentChapterId: 1 },
+    { id: 3, parentChapterId: 1, trunk: true },
+    { id: 4, parentChapterId: 3, trunk: true },
+  ];
+  const tree = growStoryTree({ ...baseInput, chapterCount: 4, nodes });
+  assert.deepEqual(
+    tree.branches.slice(0, 3).map((branch) => branch.id),
+    [1, 3, 4],
+  );
+});

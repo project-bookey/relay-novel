@@ -26,7 +26,7 @@ export function CompleteControl({
     <Card>
       <Text style={ui.label}>이 작품을 완결할까요?</Text>
       <Text style={ui.hint}>
-        완결하면 추가 집필이 끝나고, 아직 배달 중인 열매도 거둬들여요.
+        완결하면 추가 집필이 끝나고, 아직 자리를 맡은 열매도 거둬들여요.
       </Text>
       <Button disabled={busy} onPress={onComplete}>
         완결하기

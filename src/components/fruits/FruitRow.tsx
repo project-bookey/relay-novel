@@ -8,7 +8,7 @@ import { CoverThumb } from "../CoverThumb";
 import { LikeMark } from "./LikeMark";
 
 // 390×844 화면에 다섯 줄이 들어가도록 표지를 가로로 눕히고 글자를 줄였다(사용자 요청).
-// 표지 높이는 81이고, 제목이 두 줄이어도 글(78)이 표지보다 낮아 줄 높이는 늘 97, 사이 선까지 98이다.
+// 표지 높이는 81이고, 제목이 두 줄이어도 글(76)이 표지보다 낮아 줄 높이는 늘 97, 사이 선까지 98이다.
 const COVER_WIDTH = 108;
 const COVER_TEXT_GAP = 12;
 
@@ -60,27 +60,25 @@ const useStyles = themedStyles((colors) => ({
   },
   pressed: { opacity: 0.6 },
   text: { flex: 1, minWidth: 0 },
+  // 세 줄은 같은 크기·같은 굵기로 두고 색으로만 구분한다(사용자가 시안 fruits-colors 4번을 고름):
+  // 제목은 진한 글자, 작가는 회색, 진행은 초록.
   title: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: "600",
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: -0.4,
     color: colors.ink,
   },
-  // 제목·진행보다 살짝 들여 쓴다(사용자 요청).
   writers: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.muted,
     marginTop: 2,
-    marginLeft: 4,
   },
   progress: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "700",
-    color: colors.ink,
-    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.progressInk,
+    marginTop: 2,
   },
   // 선 색(line)을 반쯤 비쳐 바탕에 묻히게 한다(사용자 요청). 밝게·밤 모두 같은 비율로 옅어진다.
   divider: {

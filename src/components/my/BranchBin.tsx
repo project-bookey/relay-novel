@@ -12,7 +12,19 @@ import { Button, ErrorBox, Loading, useUi } from "../ui";
 import { SunlightShop } from "../sunlight/SunlightShop";
 import { isSunlightShort } from "../sunlight/useSunlight";
 
-// 마이의 나뭇가지 수거함. 한 달 동안 조회가 모자라 나무에서 내려온 내 가지를 살리거나 버린다.
+// 수거함에 든 가지. 마이의 "나뭇가지 수거함" 줄(개수)과 수거함 화면이 같은 쿼리를 쓴다.
+export function useBranchBin() {
+  const { mode } = useSession();
+  const isDemo = mode === "demo";
+  return useQuery({
+    queryKey: ["branch-bin", mode],
+    queryFn: () =>
+      isDemo ? Promise.resolve(demoBranchBin()) : novels.branchBin(),
+    enabled: isDemo || mode === "authenticated",
+  });
+}
+
+// 나뭇가지 수거함(app/branch-bin.tsx). 한 달 동안 조회가 모자라 나무에서 내려온 내 가지를 살리거나 버린다.
 // 무엇이 수거되고 언제 지워지는지는 서버가 정하고, 앱은 받은 목록과 지울 날만 보여 준다.
 export function BranchBin() {
   const ui = useUi();
@@ -20,12 +32,7 @@ export function BranchBin() {
   const client = useQueryClient();
   const isDemo = mode === "demo";
   const [shortReason, setShortReason] = useState<string>();
-  const bin = useQuery({
-    queryKey: ["branch-bin", mode],
-    queryFn: () =>
-      isDemo ? Promise.resolve(demoBranchBin()) : novels.branchBin(),
-    enabled: isDemo || mode === "authenticated",
-  });
+  const bin = useBranchBin();
   const settle = (next: BranchBinView) => {
     client.setQueryData(["branch-bin", mode], next);
     // 살린 가지는 나무와 읽기 화면에 다시 나타난다.
@@ -66,7 +73,6 @@ export function BranchBin() {
   const restoreCost = bin.data?.restoreCost ?? 0;
   return (
     <>
-      <Text style={ui.sectionTitle}>나뭇가지 수거함</Text>
       <Text style={ui.hint}>
         한 달 동안 조회가 50회를 넘지 못한 가지는 나무에서 내려와 일주일 동안
         여기에 머물러요. 살리지 않으면 사라지고, 그 자리에 새 가지가 자라요.

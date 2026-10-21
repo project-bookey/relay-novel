@@ -482,15 +482,20 @@ test("mobile demo switches to the dark screen mode on the my page and keeps it a
   // 밝은 모드 잉크색(#30362F)
   await expect(heading).toHaveCSS("color", "rgb(48, 54, 47)");
 
-  const dark = page.getByRole("radio", { name: "어둡게" });
-  await dark.click();
-  await expect(dark).toHaveAttribute("aria-checked", "true");
+  // 화면 모드 줄을 누르면 아래에서 고르는 창이 올라온다.
+  await page.getByRole("button", { name: "화면 모드, 기기 설정" }).click();
+  await page.getByRole("radio", { name: "어둡게" }).click();
+  // 고르면 창이 닫히고 줄에 고른 값이 적힌다.
+  await expect(
+    page.getByRole("button", { name: "화면 모드, 어둡게" }),
+  ).toBeVisible();
   // 어두운 모드 잉크색(#E6E8E1)
   await expect(heading).toHaveCSS("color", "rgb(230, 232, 225)");
 
   // 고른 모드는 기기에 남아 새로 열어도 그대로다.
   await page.reload();
   await openMyPage();
+  await page.getByRole("button", { name: "화면 모드, 어둡게" }).click();
   await expect(page.getByRole("radio", { name: "어둡게" })).toHaveAttribute(
     "aria-checked",
     "true",

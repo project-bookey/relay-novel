@@ -7,13 +7,13 @@ import { demoStories } from "../../src/api/demo";
 import { MyHeader } from "../../src/components/my/MyHeader";
 import { TurnRow } from "../../src/components/my/TurnRow";
 import { useMyStories } from "../../src/components/my/useMyStories";
-import { Bookshelf } from "../../src/components/my/Bookshelf";
+import { MyStoryRows } from "../../src/components/my/MyStoryRows";
 import { SettingRows } from "../../src/components/my/SettingRows";
 import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
 import { themedStyles } from "../../src/theme/themed";
 
 // 마이 페이지(사용자가 고른 시안 A "책장" reference/sian/my-page/ + 내 정보 시안 B "숫자 줄" reference/sian/my-profile/).
-// 위에서부터 닉네임과 숫자 둘(내 작품·햇살) → 내 차례(진하게 강조하는 유일한 동작) → 내 작품 책장
+// 위에서부터 닉네임과 숫자 둘(내 작품·햇살) → 내 차례(진하게 강조하는 유일한 동작) → 내 작품 작은 줄 목록
 // → 설정 줄(수거함·화면 모드·관심 장르) → 멀리 떨어진 로그아웃.
 export default function MyPage() {
   const styles = useStyles();
@@ -131,7 +131,7 @@ function MyStories() {
       {(isDemo || mine.isSuccess) && stories.length === 0 && (
         <Text style={ui.hint}>아직 함께 쓰는 이야기가 없어요.</Text>
       )}
-      <Bookshelf stories={stories} />
+      <MyStoryRows stories={stories} />
       {/* 위 숫자는 전체 편수라, 아직 못 보여 준 작품이 있으면 이어서 불러온다. */}
       {!isDemo && mine.hasNextPage && (
         <Pressable
@@ -177,10 +177,10 @@ const useStyles = themedStyles((colors) => ({
     fontSize: 17,
     fontWeight: "700",
     color: colors.ink,
-    marginTop: 34,
-    marginBottom: 14,
+    marginTop: 30,
+    marginBottom: 6,
   },
-  more: { marginTop: 16, minHeight: 44, justifyContent: "center" },
+  more: { marginTop: 4, minHeight: 44, justifyContent: "center" },
   moreText: { fontSize: 14, fontWeight: "600", color: colors.ink },
   settings: { marginTop: 36 },
   leave: {

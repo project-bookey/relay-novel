@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   filterStories,
+  growthRatio,
   likeCountLabel,
   progressLine,
+  searchableQuery,
   toggleGenre,
   writersLine,
 } from "../src/design/fruitList";
@@ -62,6 +64,46 @@ test("progress divides by the target only for one-line relays", () => {
     progressLine({ ...open, status: "COMPLETED", chapterCount: 31 }),
     "31개의 장 · 완결",
   );
+});
+
+test("the growth bar fills toward the target only for one-line relays", () => {
+  const circle = { mode: "CIRCLE" as const, chapterLimit: 20 };
+  assert.equal(
+    growthRatio({ ...circle, status: "ONGOING", chapterCount: 5 }),
+    0.25,
+  );
+  assert.equal(
+    growthRatio({ ...circle, status: "RECRUITING", chapterCount: 0 }),
+    0,
+  );
+  // 완결은 목표 회차 전에 끝나도 다 찬다.
+  assert.equal(
+    growthRatio({ ...circle, status: "COMPLETED", chapterCount: 12 }),
+    1,
+  );
+  assert.equal(
+    growthRatio({ ...circle, status: "ONGOING", chapterCount: 25 }),
+    1,
+  );
+  // 열매로 퍼뜨린 작품은 회차가 가지의 합이라 막대가 없다.
+  assert.equal(
+    growthRatio({
+      mode: "OPEN",
+      status: "ONGOING",
+      chapterCount: 31,
+      chapterLimit: 20,
+    }),
+    undefined,
+  );
+});
+
+test("search drops the half-typed hangul jamo at the end", () => {
+  assert.equal(searchableQuery("도서ㄱ"), "도서");
+  assert.equal(searchableQuery("ㄷ"), "");
+  assert.equal(searchableQuery("고양이 ㄷㅗ"), "고양이");
+  assert.equal(searchableQuery("  별빛 "), "별빛");
+  // 글자 사이의 낱자는 그대로 둔다(일부러 친 것일 수 있다).
+  assert.equal(searchableQuery("ㅋㅋ웃음"), "ㅋㅋ웃음");
 });
 
 test("demo filtering matches the server: any picked genre, status, title or maker nickname", () => {

@@ -6,9 +6,12 @@ import { useSession } from "../../src/state/session";
 import { novels } from "../../src/api/novels";
 import { demoGenres } from "../../src/api/demo";
 import type { NovelStatus } from "../../src/api/types";
-import { toggleGenre } from "../../src/design/fruitList";
+import { searchableQuery, toggleGenre } from "../../src/design/fruitList";
 import { FruitsTop } from "../../src/components/fruits/FruitsTop";
 import { GenreTabs } from "../../src/components/fruits/GenreTabs";
+import { StatusTabs } from "../../src/components/fruits/StatusTabs";
+import { FieldBackground } from "../../src/components/fruits/FieldBackground";
+import { BottomFade } from "../../src/components/fruits/BottomFade";
 import {
   DemoFruitList,
   ServerFruitList,
@@ -16,10 +19,11 @@ import {
 import { ErrorBox, Loading, Screen } from "../../src/components/ui";
 import { themedStyles } from "../../src/theme/themed";
 
-// 검색어를 칠 때마다 서버에 묻지 않도록, 입력이 이만큼 멈추면 찾는다.
-const SEARCH_DELAY_MS = 300;
+// 칠 때마다 아래 결과가 바로 바뀌게 하되, 손가락이 이만큼 멈출 때까지는 기다려 서버에 너무 자주 묻지 않는다.
+const SEARCH_DELAY_MS = 200;
 
-// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 장르(세 개까지)·상태·검색어로 골라 본다.
+// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 장르(세 개까지)·검색어로 골라 본다.
+// 상태(모집·이어가는 중·완결)는 찾을 때만 고른다(사용자 결정).
 export default function FruitsPage() {
   const styles = useStyles();
   const { mode } = useSession();
@@ -27,12 +31,14 @@ export default function FruitsPage() {
   const [status, setStatus] = useState<NovelStatus>();
   const [searching, setSearching] = useState(false);
   const [typed, setTyped] = useState("");
-  const query = useSettled(typed, SEARCH_DELAY_MS);
+  const query = useSettled(searchableQuery(typed), SEARCH_DELAY_MS);
   const isDemo = mode === "demo";
 
+  // 찾기를 닫으면 검색어와 함께 상태도 "모든 상태"로 돌아간다.
   const closeSearch = useCallback(() => {
     setSearching(false);
     setTyped("");
+    setStatus(undefined);
   }, []);
   useCloseSearchOnBack(searching, closeSearch);
 
@@ -44,30 +50,51 @@ export default function FruitsPage() {
     );
   if (mode === "guest") return <Redirect href="/login" />;
 
-  const filter = { genres, status, query };
+  const top = (
+    <FruitsTop
+      searching={searching}
+      query={typed}
+      onQueryChange={setTyped}
+      onOpenSearch={() => setSearching(true)}
+      onCloseSearch={closeSearch}
+    />
+  );
+  const tabs = (
+    <GenreTabsFromServer
+      isDemo={isDemo}
+      selected={genres}
+      onToggle={(genre) => setGenres((now) => toggleGenre(now, genre))}
+      onClear={() => setGenres([])}
+    />
+  );
+  // 평소에는 제목 줄이 목록과 함께 올라가고 장르 탭만 맨 위에 붙는다(유리 머리, 사용자가 시안 C를 고름).
+  // 찾는 중에는 입력줄·장르 탭·상태 탭이 모두 맨 위에 붙어, 칠 때마다 바로 아래 결과가 바뀐다.
+  const listProps = {
+    filter: { genres, status, query },
+    head: searching ? undefined : top,
+    stickyHead: (
+      <>
+        {searching && top}
+        {tabs}
+        {searching && <StatusTabs status={status} onChange={setStatus} />}
+      </>
+    ),
+  };
   return (
-    <Screen scroll={false}>
-      <View style={styles.frame}>
-        <FruitsTop
-          searching={searching}
-          query={typed}
-          onQueryChange={setTyped}
-          onOpenSearch={() => setSearching(true)}
-          onCloseSearch={closeSearch}
-        />
-        <GenreTabsFromServer
-          isDemo={isDemo}
-          selected={genres}
-          onToggle={(genre) => setGenres((now) => toggleGenre(now, genre))}
-          onClear={() => setGenres([])}
-        />
-        {isDemo ? (
-          <DemoFruitList filter={filter} onStatusChange={setStatus} />
-        ) : (
-          <ServerFruitList filter={filter} onStatusChange={setStatus} />
-        )}
-      </View>
-    </Screen>
+    <View style={styles.page}>
+      <FieldBackground />
+      <Screen scroll={false} transparent>
+        <View style={styles.frame}>
+          {isDemo ? (
+            <DemoFruitList {...listProps} />
+          ) : (
+            <ServerFruitList {...listProps} />
+          )}
+        </View>
+      </Screen>
+      {/* 찾는 중에는 키보드가 아래 바를 덮으므로 흐림도 둘 까닭이 없다. */}
+      {!searching && <BottomFade />}
+    </View>
   );
 }
 
@@ -139,12 +166,13 @@ function useSettled(value: string, delay: number) {
 }
 
 const useStyles = themedStyles(() => ({
+  // 바탕 그라데이션이 화면 끝(아래 여백까지)에 닿도록 화면 밖에 깐다.
+  page: { flex: 1 },
+  // 좌우·위 여백은 목록이 갖는다(붙은 머리의 유리가 화면 끝까지 닿게).
   frame: {
     flex: 1,
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 12,
   },
 }));

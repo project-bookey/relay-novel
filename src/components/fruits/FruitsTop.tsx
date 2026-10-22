@@ -95,7 +95,7 @@ const useStyles = themedStyles((colors) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  // 둥근 상자 대신 굵은 밑줄 하나
+  // 둥근 상자 대신 굵은 밑줄 하나. 웹에서 누르면 브라우저가 둘레에 둥근 테두리를 그리는데, 밑줄로 충분해 지운다.
   input: {
     flex: 1,
     height: 48,
@@ -104,6 +104,7 @@ const useStyles = themedStyles((colors) => ({
     borderBottomWidth: 2,
     borderColor: colors.ink,
     paddingVertical: 0,
+    outlineWidth: 0,
   },
   cancel: {
     height: 48,

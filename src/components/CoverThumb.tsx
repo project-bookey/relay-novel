@@ -4,29 +4,25 @@ import type { NovelSummary } from "../api/types";
 import { themedStyles } from "../theme/themed";
 import { StoryTree } from "./StoryTree";
 
-// 작품 표지(3:4, 눕히면 4:3). 표지가 없거나 불러오지 못하면 같은 자리에 그 소설의 이야기 나무를 작게 그린다.
+// 작품 표지(3:4). 표지가 없거나 불러오지 못하면 같은 자리에 그 소설의 이야기 나무를 작게 그린다.
 export function CoverThumb({
   novel,
   width,
   square = false,
   radius,
-  landscape = false,
   onError,
 }: {
   novel: NovelSummary;
   width: number;
   // 모서리를 둥글리지 않는다(책장·내 차례 줄).
   square?: boolean;
-  // 모서리 둥글기를 따로 정한다(열매 탭 목록은 아주 조금만). square보다 앞선다.
+  // 모서리 둥글기를 따로 정한다(열매 탭 서가는 아주 조금만). square보다 앞선다.
   radius?: number;
-  // 가로로 긴 4:3으로 눕힌다(열매 탭 목록). 표지는 3:4로 올리므로 가운데만 보인다.
-  landscape?: boolean;
   onError?: () => void;
 }) {
   const styles = useStyles();
   const [failed, setFailed] = useState(false);
-  const height = landscape ? (width * 3) / 4 : (width * 4) / 3;
-  const size = { width, height: Math.round(height) };
+  const size = { width, height: Math.round((width * 4) / 3) };
   const corner = cornerOf(radius, square);
   if (novel.coverUrl && !failed)
     return (

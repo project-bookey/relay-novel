@@ -2,10 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   filterStories,
-  growthRatio,
   likeCountLabel,
   progressLine,
   searchableQuery,
+  shelfCoverWidth,
+  shelfRowsOf,
   toggleGenre,
   writersLine,
 } from "../src/design/fruitList";
@@ -66,35 +67,22 @@ test("progress divides by the target only for one-line relays", () => {
   );
 });
 
-test("the growth bar fills toward the target only for one-line relays", () => {
-  const circle = { mode: "CIRCLE" as const, chapterLimit: 20 };
-  assert.equal(
-    growthRatio({ ...circle, status: "ONGOING", chapterCount: 5 }),
-    0.25,
-  );
-  assert.equal(
-    growthRatio({ ...circle, status: "RECRUITING", chapterCount: 0 }),
-    0,
-  );
-  // 완결은 목표 회차 전에 끝나도 다 찬다.
-  assert.equal(
-    growthRatio({ ...circle, status: "COMPLETED", chapterCount: 12 }),
-    1,
-  );
-  assert.equal(
-    growthRatio({ ...circle, status: "ONGOING", chapterCount: 25 }),
-    1,
-  );
-  // 열매로 퍼뜨린 작품은 회차가 가지의 합이라 막대가 없다.
-  assert.equal(
-    growthRatio({
-      mode: "OPEN",
-      status: "ONGOING",
-      chapterCount: 31,
-      chapterLimit: 20,
-    }),
-    undefined,
-  );
+test("the shelf puts three stories on a row and leaves the last row short", () => {
+  assert.deepEqual(shelfRowsOf([1, 2, 3, 4, 5, 6, 7]), [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7],
+  ]);
+  assert.deepEqual(shelfRowsOf([]), []);
+});
+
+test("shelf covers split the row width after the gaps and never overflow it", () => {
+  // 390 화면의 줄 너비 342는 칸 사이 12 둘을 빼고 셋으로 딱 나뉜다.
+  assert.equal(shelfCoverWidth(342), 106);
+  // 나누어떨어지지 않으면 버려서 세 칸과 칸 사이가 줄 너비를 넘지 않는다.
+  const width = shelfCoverWidth(353);
+  assert.equal(width, 109);
+  assert.ok(width * 3 + 12 * 2 <= 353);
 });
 
 test("search drops the half-typed hangul jamo at the end", () => {

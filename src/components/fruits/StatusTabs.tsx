@@ -13,7 +13,7 @@ const options: { status?: NovelStatus; label: string }[] = [
   { status: "COMPLETED", label: "완결" },
 ];
 
-// 장르 탭보다 작은 글자 탭. 고른 것은 굵은 글자 + 밑줄이다(색만으로 구분하지 않음).
+// 장르 탭보다 작은 글자 탭. 고른 것은 장르 탭처럼 굵은 글자 + 글자 폭만큼의 노란 밑줄이다(색만으로 구분하지 않음).
 export function StatusTabs({
   status,
   onChange,
@@ -37,11 +37,14 @@ export function StatusTabs({
             onPress={() => onChange(option.status)}
             // 칸은 40이지만 위아래로 넓혀 누르는 높이 44를 지킨다.
             hitSlop={{ top: 2, bottom: 2 }}
-            style={[styles.tab, isSelected && styles.selectedTab]}
+            style={styles.tab}
           >
-            <Text style={[styles.label, isSelected && styles.selectedLabel]}>
-              {option.label}
-            </Text>
+            <View>
+              {isSelected && <View style={styles.mark} />}
+              <Text style={[styles.label, isSelected && styles.selectedLabel]}>
+                {option.label}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
@@ -50,15 +53,10 @@ export function StatusTabs({
 }
 
 const useStyles = themedStyles((colors) => ({
-  // 장르 탭처럼 화면 오른쪽 끝까지 이어지는 가는 선 위에 둔다.
   bar: {
     flexDirection: "row",
     gap: 16,
     marginTop: 4,
-    marginRight: -24,
-    paddingRight: 24,
-    borderBottomWidth: 1,
-    borderColor: colors.line,
   },
   // "완결"처럼 짧은 것도 누르는 너비가 44가 되게 한다.
   tab: {
@@ -66,10 +64,16 @@ const useStyles = themedStyles((colors) => ({
     minWidth: 44,
     alignItems: "center",
     justifyContent: "center",
-    borderBottomWidth: 2,
-    borderColor: "transparent",
   },
-  selectedTab: { borderColor: colors.ink },
+  // 글자 바로 아래(2만큼 띄워) 글자 폭만큼 긋는 밑줄. 글자가 작아 장르 탭보다 얇다.
+  mark: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: -6,
+    height: 4,
+    backgroundColor: colors.tabMark,
+  },
   label: { fontSize: 13, color: colors.muted },
   selectedLabel: { color: colors.ink, fontWeight: "700" },
 }));

@@ -34,7 +34,7 @@ export function writersLine(
   return `${story.ownerNickname} 외 ${others}명`;
 }
 
-// 목록 줄의 진행. 모여 만들기는 한 줄기라 "몇 장 중 몇 장"이 맞지만,
+// 작품 제목 아래 진행. 모여 만들기는 한 줄기라 "몇 장 중 몇 장"이 맞지만,
 // 열매로 퍼뜨린 작품의 회차 수는 갈라진 가지를 모두 더한 값이라 목표 회차와 나누지 않는다.
 export function progressLine(
   story: Pick<
@@ -52,18 +52,25 @@ export function progressLine(
   return `${story.chapterCount}/${story.chapterLimit}장 · ${story.chapterCount + 1}장 쓰는 중`;
 }
 
-// 진행 아래 성장 막대가 찰 몫(0~1). 목표 회차가 있는 모여 만들기에만 있고,
-// 열매로 퍼뜨린 작품은 회차 수가 가지의 합이라 막대를 두지 않는다(undefined).
-export function growthRatio(
-  story: Pick<
-    NovelSummary,
-    "mode" | "status" | "chapterCount" | "chapterLimit"
-  >,
+// 서가 한 줄의 칸 수와 칸 사이(사용자가 고른 시안 reference/sian/fruits-anew A "서가").
+export const SHELF_COLUMNS = 3;
+export const SHELF_GAP = 12;
+
+// 작품을 서가 한 줄씩 묶는다. 마지막 줄은 덜 찰 수 있다.
+export function shelfRowsOf<T>(items: T[], columns = SHELF_COLUMNS) {
+  const rows: T[][] = [];
+  for (let start = 0; start < items.length; start += columns)
+    rows.push(items.slice(start, start + columns));
+  return rows;
+}
+
+// 서가 칸 하나(표지)의 너비. 줄 너비에서 칸 사이를 빼고 나누며, 줄을 넘지 않게 버린다.
+export function shelfCoverWidth(
+  rowWidth: number,
+  columns = SHELF_COLUMNS,
+  gap = SHELF_GAP,
 ) {
-  if (story.mode === "OPEN") return undefined;
-  if (story.status === "COMPLETED") return 1;
-  if (story.chapterLimit <= 0) return 0;
-  return Math.min(1, story.chapterCount / story.chapterLimit);
+  return Math.floor((rowWidth - gap * (columns - 1)) / columns);
 }
 
 // 칠 때마다 바로 찾을 검색어. 한글을 치는 도중 끝에 붙은 낱자(ㄷ·ㅅ·ㅏ처럼 아직 글자가 되지 않은 것)는 빼서,

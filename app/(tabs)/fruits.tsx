@@ -10,7 +10,6 @@ import { searchableQuery, toggleGenre } from "../../src/design/fruitList";
 import { FruitsTop } from "../../src/components/fruits/FruitsTop";
 import { GenreTabs } from "../../src/components/fruits/GenreTabs";
 import { StatusTabs } from "../../src/components/fruits/StatusTabs";
-import { FieldBackground } from "../../src/components/fruits/FieldBackground";
 import { BottomFade } from "../../src/components/fruits/BottomFade";
 import {
   DemoFruitList,
@@ -22,7 +21,7 @@ import { themedStyles } from "../../src/theme/themed";
 // 칠 때마다 아래 결과가 바로 바뀌게 하되, 손가락이 이만큼 멈출 때까지는 기다려 서버에 너무 자주 묻지 않는다.
 const SEARCH_DELAY_MS = 200;
 
-// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 장르(세 개까지)·검색어로 골라 본다.
+// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 표지 서가(세 칸)로 펼쳐 장르(세 개까지)·검색어로 골라 본다.
 // 상태(모집·이어가는 중·완결)는 찾을 때만 고른다(사용자 결정).
 export default function FruitsPage() {
   const styles = useStyles();
@@ -82,8 +81,7 @@ export default function FruitsPage() {
   };
   return (
     <View style={styles.page}>
-      <FieldBackground />
-      <Screen scroll={false} transparent>
+      <Screen scroll={false}>
         <View style={styles.frame}>
           {isDemo ? (
             <DemoFruitList {...listProps} />
@@ -166,7 +164,7 @@ function useSettled(value: string, delay: number) {
 }
 
 const useStyles = themedStyles(() => ({
-  // 바탕 그라데이션이 화면 끝(아래 여백까지)에 닿도록 화면 밖에 깐다.
+  // 아래 흐림이 화면 끝(아래 여백까지)에 닿도록 화면 밖 틀에 겹쳐 둔다.
   page: { flex: 1 },
   // 좌우·위 여백은 목록이 갖는다(붙은 머리의 유리가 화면 끝까지 닿게).
   frame: {

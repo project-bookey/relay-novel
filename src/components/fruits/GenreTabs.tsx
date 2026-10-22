@@ -10,7 +10,8 @@ import { themedStyles, useColors } from "../../theme/themed";
 const EDGE_FADE_WIDTH = 72;
 
 // 장르 글자 탭. 세 개까지 함께 고르고, 하나도 고르지 않으면 "전체"가 켜진다.
-// 고른 탭은 굵은 글자 + 밑줄(색만으로 구분하지 않음). 세 개가 차면 남은 탭은 흐려지고 눌러도 바뀌지 않는다
+// 고른 탭은 굵은 글자 + 글자 폭만큼의 노란 굵은 밑줄(색만으로 구분하지 않음, 시안 fruits-anew A "서가").
+// 탭 줄 아래에 가는 선은 긋지 않는다. 세 개가 차면 남은 탭은 흐려지고 눌러도 바뀌지 않는다
 // (안내 문구는 사용자가 빼서 두지 않는다).
 export function GenreTabs({
   genres,
@@ -43,15 +44,14 @@ export function GenreTabs({
           : undefined
       }
       onPress={onPress}
-      style={[
-        styles.tab,
-        isSelected && styles.selectedTab,
-        isDisabled && styles.disabledTab,
-      ]}
+      style={[styles.tab, isDisabled && styles.disabledTab]}
     >
-      <Text style={[styles.label, isSelected && styles.selectedLabel]}>
-        {label}
-      </Text>
+      <View>
+        {isSelected && <View style={styles.mark} />}
+        <Text style={[styles.label, isSelected && styles.selectedLabel]}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
   return (
@@ -101,17 +101,15 @@ function EdgeFade() {
 const useStyles = themedStyles((colors) => ({
   // 화면 오른쪽 끝까지 이어지도록 바깥 여백(24)만큼 넓힌다.
   bar: {
-    // 세로로 쌓인 화면에서 아래 목록에 밀려 줄어들면 밑줄이 글자를 가로지른다.
+    // 세로로 쌓인 화면에서 아래 목록에 밀려 줄어들면 노란 밑줄과 글자 아래가 잘린다.
     flexGrow: 0,
     flexShrink: 0,
     marginTop: 8,
     marginRight: -24,
-    borderBottomWidth: 1,
-    borderColor: colors.line,
   },
   scroller: { flexGrow: 0 },
   tabs: { gap: 20, paddingRight: EDGE_FADE_WIDTH },
-  // 흐림은 밑줄 위에서 끝나 줄은 끝까지 이어진다. 손가락은 아래 탭에 그대로 닿는다.
+  // 손가락은 흐림 아래 탭에 그대로 닿는다.
   edgeFade: {
     position: "absolute",
     top: 0,
@@ -122,15 +120,22 @@ const useStyles = themedStyles((colors) => ({
   },
   // "SF"처럼 짧은 장르도 누르는 너비가 44가 되게 한다.
   tab: {
-    minHeight: 44,
+    // 예전 탭 줄(44 + 밑선 1)과 같은 높이라, 맨 위에 붙는 머리와 유리 높이가 그대로다.
+    minHeight: 45,
     minWidth: 44,
     alignItems: "center",
     justifyContent: "center",
-    borderBottomWidth: 3,
-    borderColor: "transparent",
   },
-  selectedTab: { borderColor: colors.ink },
   disabledTab: { opacity: 0.4 },
+  // 글자 바로 아래(2만큼 띄워) 글자 폭만큼 긋는 굵은 밑줄
+  mark: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: -7,
+    height: 5,
+    backgroundColor: colors.tabMark,
+  },
   label: { fontSize: 16, color: colors.muted },
   selectedLabel: { color: colors.ink, fontWeight: "800" },
 }));

@@ -19,21 +19,16 @@ export function Screen({
   scroll = true,
   title,
   right,
-  transparent = false,
 }: {
   children: ReactNode;
   scroll?: boolean;
   title?: string;
   right?: ReactNode;
-  // 화면 뒤에 따로 그린 바탕(그라데이션 등)이 보이도록 바탕색을 칠하지 않는다.
-  transparent?: boolean;
 }) {
   const ui = useUi();
   const colors = useColors();
   return (
-    <SafeAreaView
-      style={[ui.screen, transparent && { backgroundColor: "transparent" }]}
-    >
+    <SafeAreaView style={ui.screen}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

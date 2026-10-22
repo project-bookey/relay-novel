@@ -23,6 +23,7 @@ import { LikeMark } from "./LikeMark";
 const LIST_MAX_WIDTH = 680;
 const LIST_SIDE_PADDING = 24;
 // 사진 모서리는 아주 조금만 둥글게(사용자 요청). 열매 탭의 다른 칸은 그대로 각지다.
+// 표지 귀퉁이에 붙는 좋아요 꼬리표도 그 모서리만 이만큼 둥글린다.
 const COVER_RADIUS = 4;
 // 서가 줄 사이. 탭 바로 아래 첫 줄은 이만큼 띄워 탭과 붙어 보이지 않게 한다.
 const ROW_GAP = 22;
@@ -61,7 +62,7 @@ export function ShelfRow({
   );
 }
 
-// 서가 칸 하나: 잘리지 않은 3:4 표지(위쪽 왼편에 좋아요) 아래 굵은 제목 두 줄까지와 진행 한 줄.
+// 서가 칸 하나: 잘리지 않은 3:4 표지(왼쪽 위 귀퉁이에 좋아요 꼬리표) 아래 굵은 제목 두 줄까지와 진행 한 줄.
 // 작가와 장르는 칸에 쓰지 않는다 — 작가는 작품 화면에서, 장르는 위쪽 탭이 알려 준다.
 function ShelfBook({
   story,
@@ -85,7 +86,7 @@ function ShelfBook({
     >
       <View>
         <CoverThumb novel={story} width={coverWidth} radius={COVER_RADIUS} />
-        <LikeMark count={story.likeCount} />
+        <LikeMark count={story.likeCount} coverRadius={COVER_RADIUS} />
       </View>
       <Text style={styles.title} numberOfLines={2}>
         {story.title}

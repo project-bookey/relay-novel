@@ -70,6 +70,11 @@ function isWholeNumberBetween(value: number, min: number, max: number) {
 function toRequest(form: Form): CreateNovel | string {
   const chapterLimit = Number(form.chapterLimit);
   const turnHours = Number(form.turnHours);
+  // 표지는 꼭 넣는다(사용자 결정). 열매 탭 서가에서 작품의 얼굴이 된다.
+  if (!form.cover)
+    return "표지 사진을 골라 주세요. 열매 탭에서 작품의 얼굴이 돼요.";
+  if (form.cover.id === undefined)
+    return "표지를 다 올린 뒤에 만들 수 있어요. 올리지 못했다면 다시 올리거나 다른 사진으로 바꿔 주세요.";
   if (!form.title.trim() || !form.description.trim())
     return "제목과 소개를 입력해 주세요.";
   if (form.genres.length === 0 || form.genres.length > GENRES_MAX)
@@ -82,8 +87,6 @@ function toRequest(form: Form): CreateNovel | string {
     return "함께 쓸 작가를 한 명 이상 골라 주세요.";
   if (!form.firstTitle.trim() || !form.firstBody.trim())
     return "1회차 제목과 이야기를 써 주세요. 첫 회차는 만드는 사람이 직접 써요.";
-  if (form.cover && form.cover.id === undefined)
-    return "표지를 다 올린 뒤에 만들 수 있어요. 올리지 못했다면 다시 올리거나 빼 주세요.";
   const common = {
     kind: "RELAY" as const,
     mode: form.mode,
@@ -94,7 +97,7 @@ function toRequest(form: Form): CreateNovel | string {
     chapterLimit,
     turnHours,
     baseWorkId: form.baseWork?.id,
-    coverId: form.cover?.id,
+    coverId: form.cover.id,
     firstChapter: {
       title: form.firstTitle.trim(),
       body: form.firstBody.trim(),
@@ -201,7 +204,7 @@ export default function Create() {
         }
       />
       <View style={styles.section}>
-        <Text style={ui.label}>표지 (선택)</Text>
+        <Text style={ui.label}>표지</Text>
         <CoverPicker
           picked={form.cover}
           onChange={(cover) => update({ cover })}

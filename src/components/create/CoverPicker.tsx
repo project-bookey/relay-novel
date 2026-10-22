@@ -37,13 +37,14 @@ function problemOf(asset: ImagePicker.ImagePickerAsset) {
   return "";
 }
 
-// 작품 표지(선택). 고르자마자 올려 두고, 만들 때 받은 id를 함께 보낸다.
+// 작품 표지. 열매 탭 서가에서 작품의 얼굴이 되므로 꼭 넣는다(사용자 결정) — 뺄 수는 없고 바꾸기만 한다.
+// 고르자마자 올려 두고, 만들 때 받은 id를 함께 보낸다.
 export function CoverPicker({
   picked,
   onChange,
 }: {
   picked?: PickedCover;
-  onChange: (cover: PickedCover | undefined) => void;
+  onChange: (cover: PickedCover) => void;
 }) {
   const ui = useUi();
   const styles = useStyles();
@@ -77,11 +78,6 @@ export function CoverPicker({
     onChange({ uri: image.uri });
     upload.mutate(image);
   };
-  const remove = () => {
-    latest.current = undefined;
-    upload.reset();
-    onChange(undefined);
-  };
   const retry = () => {
     if (latest.current) upload.mutate(latest.current);
   };
@@ -89,6 +85,7 @@ export function CoverPicker({
   if (!picked)
     return (
       <View style={styles.empty}>
+        <Text style={ui.hint}>열매 탭 서가에 작품의 얼굴로 놓여요.</Text>
         <Button outline onPress={() => void choose()}>
           표지 사진 고르기
         </Button>
@@ -117,15 +114,6 @@ export function CoverPicker({
           >
             <Text style={styles.actionText}>바꾸기</Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="표지 빼기"
-            hitSlop={8}
-            onPress={remove}
-            style={styles.action}
-          >
-            <Text style={styles.removeText}>빼기</Text>
-          </Pressable>
         </View>
       </View>
       {!!problem && <ErrorBox error={new Error(problem)} />}
@@ -149,5 +137,4 @@ const useStyles = themedStyles((colors) => ({
   side: { flex: 1, gap: 2 },
   action: { minHeight: 44, minWidth: 44, justifyContent: "center" },
   actionText: { fontSize: 13, color: colors.green, fontWeight: "600" },
-  removeText: { fontSize: 13, color: colors.muted, fontWeight: "600" },
 }));

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { pickCover, uploadedCover } from "./mockBackend";
 
 test("mobile demo lets a visitor pick a chapter fruit, read it and is sent to log in to continue it", async ({
   page,
@@ -142,8 +143,12 @@ test("backend contract supports login, circle creation with the owner's first ch
         title: "첫 번째 별",
         body: "밤하늘에서 별사탕 하나가 떨어졌다.",
       });
+      // 표지는 꼭 넣는다. 먼저 올려 둔 표지의 id를 함께 보낸다.
+      expect(body.coverId).toBe(uploadedCover.id);
       data = detail();
-    } else if (path.endsWith("/follows/following"))
+    } else if (path.endsWith("/novels/covers") && method === "POST")
+      data = uploadedCover;
+    else if (path.endsWith("/follows/following"))
       data = {
         content: [
           {
@@ -234,8 +239,9 @@ test("backend contract supports login, circle creation with the owner's first ch
   await page
     .getByRole("button", { name: "로그인하고 이야기 이어가기" })
     .click();
-  // 씨앗주머니를 눌러 새 이야기를 심는다.
+  // 씨앗주머니를 눌러 새 이야기를 심는다. 표지는 꼭 넣는다.
   await page.getByRole("button", { name: "새 이야기 심기" }).click();
+  await pickCover(page);
   await page
     .getByRole("textbox", { name: "이야기 제목" })
     .fill("별사탕 우체국");

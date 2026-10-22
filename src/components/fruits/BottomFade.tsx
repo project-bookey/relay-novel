@@ -10,8 +10,8 @@ const BAR_HEIGHT = 56;
 // 바 위로 이만큼 앞에서부터 흐려지기 시작한다.
 const FADE_ABOVE_BAR = 42;
 
-// 아래 유리 바 뒤로 목록이 바탕에 스며들듯 흐려진다(시안 3번 "빛과 깊이").
-// 바 위쪽 줄은 그대로 읽히고, 바 가운데쯤부터 바탕(fieldBottom)이 된다. 손가락은 그대로 목록에 닿는다.
+// 아래 유리 바 뒤로 서가가 바탕에 스며들듯 흐려진다(시안 fruits-detail 3번 "빛과 깊이"에서 남긴 것).
+// 바 위쪽 표지는 그대로 보이고, 바 가운데쯤부터 바탕색이 된다. 손가락은 그대로 목록에 닿는다.
 export function BottomFade() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -22,18 +22,18 @@ export function BottomFade() {
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={colors.fieldBottom} stopOpacity={0} />
+            <Stop offset="0" stopColor={colors.background} stopOpacity={0} />
             <Stop
               offset="0.26"
-              stopColor={colors.fieldBottom}
+              stopColor={colors.background}
               stopOpacity={0.35}
             />
             <Stop
               offset="0.5"
-              stopColor={colors.fieldBottom}
+              stopColor={colors.background}
               stopOpacity={0.82}
             />
-            <Stop offset="0.72" stopColor={colors.fieldBottom} />
+            <Stop offset="0.72" stopColor={colors.background} />
           </LinearGradient>
         </Defs>
         <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />

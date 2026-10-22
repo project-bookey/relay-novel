@@ -5,13 +5,13 @@ import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import { demoStories } from "../../api/demo";
 import type { NovelStatus, NovelSummary } from "../../api/types";
-import { filterStories } from "../../design/fruitList";
+import { filterStories, shelfRowsOf } from "../../design/fruitList";
 import { useSession } from "../../state/session";
 import { themedStyles, useColors } from "../../theme/themed";
 import { nativeDriverEnabled } from "../fruitMotion";
 import { GlassSurface } from "../Glass";
 import { ErrorBox, Loading, useUi } from "../ui";
-import { FruitRow, FruitRowDivider } from "./FruitRow";
+import { ShelfRow, useShelfCoverWidth } from "./FruitShelf";
 
 // 목록 위쪽 여백. 내리면 이만큼과 제목 줄이 올라간 뒤 머리가 맨 위에 붙는다.
 const LIST_TOP = 12;
@@ -127,18 +127,26 @@ function StoryList({
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
+  const { coverWidth, measureRow } = useShelfCoverWidth();
+  // 서가 한 줄(세 작품)이 목록의 한 칸이다.
   const sections = useMemo(
-    () => [{ key: "stories", data: stories }],
+    () => [{ key: "stories", data: shelfRowsOf(stories) }],
     [stories],
   );
   return (
     <Animated.SectionList
       sections={sections}
-      keyExtractor={(story: NovelSummary) => String(story.id)}
-      renderItem={({ item }: { item: NovelSummary }) => (
-        <FruitRow story={item} />
+      // 줄의 첫 작품으로 이름을 붙여, 덜 찬 마지막 줄이 다음 쪽을 받아 채워져도 다시 만들지 않는다.
+      keyExtractor={(row: NovelSummary[]) => String(row[0].id)}
+      renderItem={({
+        item,
+        index,
+      }: {
+        item: NovelSummary[];
+        index: number;
+      }) => (
+        <ShelfRow stories={item} coverWidth={coverWidth} first={index === 0} />
       )}
-      ItemSeparatorComponent={FruitRowDivider}
       ListHeaderComponent={
         head ? (
           <View
@@ -157,7 +165,8 @@ function StoryList({
               style={StyleSheet.absoluteFill}
             />
           </Animated.View>
-          {stickyHead}
+          {/* 붙는 머리의 안쪽 폭이 서가 줄 폭과 같아서 여기서 잰다. */}
+          <View onLayout={measureRow}>{stickyHead}</View>
         </View>
       )}
       renderSectionFooter={() =>

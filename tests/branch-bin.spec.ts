@@ -4,6 +4,8 @@ import {
   emptyPage,
   homeFeedOf,
   mockBackend,
+  pickCover,
+  uploadedCover,
 } from "./mockBackend";
 
 const binBranch = {
@@ -275,6 +277,8 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
         canComplete: false,
         turnNumber: 2,
       };
+    if (path.endsWith("/novels/covers") && method === "POST")
+      return uploadedCover;
     if (path === "/api/v1/novels") return emptyPage;
     if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
     if (path.endsWith("/genres")) return ["판타지", "일상", "미스터리", "SF"];
@@ -282,6 +286,8 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
   });
   await login(page);
   await page.getByRole("button", { name: "새 이야기 심기" }).click();
+  // 표지는 꼭 넣는다.
+  await pickCover(page);
   await page.getByRole("textbox", { name: "이야기 제목" }).fill("열 갈래 길");
   await page
     .getByRole("textbox", { name: "이야기 소개" })
@@ -312,15 +318,19 @@ test("a fruit-spread story picks how many branches one chapter can grow, between
     .getByRole("textbox", { name: "1회차 이야기" })
     .fill("길이 열 갈래로 나뉘었다.");
   await page.getByRole("button", { name: "1회차 올리고 열매 맺기" }).click();
-  const created = calls.filter(
-    (call) => call.path === "/api/v1/novels" && call.method === "POST",
-  );
-  await expect.poll(() => created.length).toBe(1);
-  expect(created[0].body.branchLimit).toBe(4);
-  expect(created[0].body.deliveryCount).toBeUndefined();
-  expect(created[0].body.genres).toEqual(["판타지", "일상", "미스터리"]);
-  expect(created[0].body.genre).toBe("판타지");
-  expect(created[0].body.firstChapter).toEqual({
+  // 누른 뒤에 요청이 기록되므로 기다리는 동안 매번 새로 거른다.
+  const createCalls = () =>
+    calls.filter(
+      (call) => call.path === "/api/v1/novels" && call.method === "POST",
+    );
+  await expect.poll(() => createCalls().length).toBe(1);
+  const [created] = createCalls();
+  expect(created.body.coverId).toBe(uploadedCover.id);
+  expect(created.body.branchLimit).toBe(4);
+  expect(created.body.deliveryCount).toBeUndefined();
+  expect(created.body.genres).toEqual(["판타지", "일상", "미스터리"]);
+  expect(created.body.genre).toBe("판타지");
+  expect(created.body.firstChapter).toEqual({
     title: "첫 갈래",
     body: "길이 열 갈래로 나뉘었다.",
   });

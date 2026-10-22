@@ -23,6 +23,14 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "dark": { "backgroundColor": "#2E3033" }
+        }
       ]
     ],
     "extra": { "apiBaseUrl": "http://localhost:8080" }

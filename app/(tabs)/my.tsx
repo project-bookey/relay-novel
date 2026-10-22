@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "../../src/components/text";
 import { Redirect, router } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";

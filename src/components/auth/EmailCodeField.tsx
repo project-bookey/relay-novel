@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "../text";
 import { useMutation } from "@tanstack/react-query";
 import { auth } from "../../api/auth";
 import type { EmailCode } from "../../api/types";

@@ -1,4 +1,5 @@
-import { Animated, Text, View } from "react-native";
+import { Animated, View } from "react-native";
+import { Text } from "./text";
 import type { HomeFruit } from "../design/homeFruits";
 import { genresLabel, statusLabel, storyColorOf, writersLabel } from "../theme";
 import { themedStyles } from "../theme/themed";

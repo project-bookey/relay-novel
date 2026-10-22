@@ -1,4 +1,5 @@
-import { FlatList, Text } from "react-native";
+import { FlatList } from "react-native";
+import { Text } from "../src/components/text";
 import { Redirect } from "expo-router";
 import { useSession } from "../src/state/session";
 import { useMyStories } from "../src/components/my/useMyStories";

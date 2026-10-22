@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "../text";
 import { router } from "expo-router";
 import { ArrowUpRight } from "lucide-react-native";
 import type { ChapterNode } from "../../api/types";

@@ -1,4 +1,4 @@
-import { Text } from "react-native";
+import { Text } from "../src/components/text";
 import { Redirect } from "expo-router";
 import { useSession } from "../src/state/session";
 import { BranchBin } from "../src/components/my/BranchBin";

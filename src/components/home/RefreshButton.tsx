@@ -5,9 +5,9 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { Text } from "../text";
 import { ICON_LINE_PX } from "../../theme";
 import { themedStyles, useColors } from "../../theme/themed";
 import type { Point } from "../../design/fruitShapes";

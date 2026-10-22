@@ -3,10 +3,10 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Text,
   View,
   type NativeScrollEvent,
 } from "react-native";
+import { Text } from "../text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { auth } from "../../api/auth";

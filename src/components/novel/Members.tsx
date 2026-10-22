@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "../text";
 import type { Member } from "../../api/types";
 import { themedStyles } from "../../theme/themed";
 import { Button, Card, useUi } from "../ui";

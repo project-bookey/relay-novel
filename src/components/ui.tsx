@@ -2,14 +2,13 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  Text,
-  TextInput,
   View,
   KeyboardAvoidingView,
   Platform,
   type TextInputProps,
   type ViewStyle,
 } from "react-native";
+import { Text, TextInput } from "./text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, ArrowUpRight } from "lucide-react-native";

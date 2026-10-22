@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from "react";
-import { FlatList, RefreshControl, Text } from "react-native";
+import { FlatList, RefreshControl } from "react-native";
+import { Text } from "../text";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import { demoStories } from "../../api/demo";

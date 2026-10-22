@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "react-native";
+import { Text } from "../src/components/text";
 import { router } from "expo-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { auth } from "../src/api/auth";

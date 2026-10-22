@@ -1,4 +1,4 @@
-import { Text } from "react-native";
+import { Text } from "../text";
 import { Button, Card, useUi } from "../ui";
 
 // 완결은 되돌릴 수 없어 한 번 더 묻는다.

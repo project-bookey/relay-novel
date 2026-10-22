@@ -6,6 +6,7 @@ import Svg, {
   Path,
   Text as SvgText,
 } from "react-native-svg";
+import { BASE_FONT } from "../../theme/fonts";
 import {
   LINE_BRANCH_WIDTH,
   lineBranchShape,
@@ -94,6 +95,7 @@ export function LineBranch({
               x={run.startX}
               y={run.y + run.thickness / 2 + 10}
               fontSize={9}
+              fontFamily={BASE_FONT}
               fill={colors.muted}
             >
               {runLabel(run, mergedLines)}

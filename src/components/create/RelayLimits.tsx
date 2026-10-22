@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Text } from "../text";
 import type { NovelMode } from "../../api/types";
 import { Field, useUi } from "../ui";
 

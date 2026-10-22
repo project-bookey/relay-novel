@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable } from "react-native";
+import { Text } from "../text";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import { useSession } from "../../state/session";

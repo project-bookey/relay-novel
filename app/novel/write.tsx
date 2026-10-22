@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Text } from "react-native";
+import { Text } from "../../src/components/text";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { novels } from "../../src/api/novels";

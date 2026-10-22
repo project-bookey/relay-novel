@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Text, View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
+import { Text } from "../src/components/text";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { auth } from "../src/api/auth";
 import { useSession } from "../src/state/session";

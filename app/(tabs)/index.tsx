@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Text } from "../../src/components/text";
 import { Redirect, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../src/state/session";

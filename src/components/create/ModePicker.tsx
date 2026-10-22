@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "../text";
 import { Minus, Plus } from "lucide-react-native";
 import type { NovelMode } from "../../api/types";
 import { themedStyles, useColors } from "../../theme/themed";

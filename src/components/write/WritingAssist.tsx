@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "react-native";
+import { Text } from "../text";
 import { useMutation } from "@tanstack/react-query";
 import { Button, Card, ErrorBox, useUi } from "../ui";
 import {

@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
+import { Text } from "../text";
 import Svg, { Path } from "react-native-svg";
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";

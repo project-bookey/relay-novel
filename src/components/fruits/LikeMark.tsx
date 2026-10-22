@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "../text";
 import Svg, { Path } from "react-native-svg";
 import { likeCountLabel } from "../../design/fruitList";
 import { themedStyles, useColors } from "../../theme/themed";

@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "../text";
 import { router } from "expo-router";
 import { LogOut } from "lucide-react-native";
 import type { NovelStatus } from "../../api/types";

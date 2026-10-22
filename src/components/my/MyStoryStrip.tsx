@@ -1,4 +1,5 @@
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
+import { Text } from "../text";
 import { router } from "expo-router";
 import type { NovelSummary } from "../../api/types";
 import { statusLabel } from "../../theme";

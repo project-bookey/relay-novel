@@ -1,4 +1,5 @@
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
+import { Text } from "../text";
 import { router } from "expo-router";
 import type { NovelDetail } from "../../api/types";
 import { Button, Card, Label, useUi } from "../ui";

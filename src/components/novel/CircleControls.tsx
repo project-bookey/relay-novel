@@ -1,4 +1,4 @@
-import { Text } from "react-native";
+import { Text } from "../text";
 import type { NovelDetail } from "../../api/types";
 import { Button, Card, useUi } from "../ui";
 import { ApplicationList, MemberList } from "./Members";

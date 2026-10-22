@@ -1,4 +1,5 @@
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text, TextInput } from "../text";
 import { Search } from "lucide-react-native";
 import { ICON_LINE_PX } from "../../theme";
 import { themedStyles, useColors } from "../../theme/themed";

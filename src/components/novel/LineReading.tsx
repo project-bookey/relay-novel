@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "../text";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import type { ChapterNode, NovelSummary } from "../../api/types";
 import { lineRuns, siblingsOf, type StoryLine } from "../../design/storyLines";

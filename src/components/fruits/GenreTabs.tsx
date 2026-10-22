@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, Text } from "react-native";
+import { Pressable, ScrollView } from "react-native";
+import { Text } from "../text";
 import { FILTER_GENRES_MAX } from "../../design/fruitList";
 import { themedStyles } from "../../theme/themed";
 

@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "../text";
 import { router } from "expo-router";
 import type { NovelSummary } from "../../api/types";
 import { progressLine, writersLine } from "../../design/fruitList";

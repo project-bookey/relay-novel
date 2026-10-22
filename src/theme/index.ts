@@ -28,6 +28,9 @@ const lightColors = {
   // 열매 탭 목록의 진행 글자. 앱 초록(green)은 흰 바탕에서 진한 글자(ink)와 거의 같아 보여서
   // 색으로 구분되는 맑은 초록을 따로 둔다(흰 바탕 대비 4.7:1).
   progressInk: "#557D4E",
+  // 열매 탭 바탕의 아래쪽 끝 색. 위는 바탕(background) 그대로, 아래로 갈수록 이 옅은 종이색이 된다
+  // (사용자가 고른 시안 reference/sian/fruits-detail 3번 "빛과 깊이").
+  fieldBottom: "#F7F6F1",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,
@@ -101,6 +104,8 @@ const darkColors: Palette = {
   mint: "#5F7F70",
   // 밤은 앱 초록(green)으로도 진한 글자와 잘 구분된다.
   progressInk: "#9FC39C",
+  // 밤은 바탕보다 한 톤 깊어진다.
+  fieldBottom: "#292B2E",
   errorSurface: "#3A2622",
   errorInk: "#F0B7A4",
   ground: "#3A3E37",

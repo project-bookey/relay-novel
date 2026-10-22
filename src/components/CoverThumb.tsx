@@ -9,13 +9,16 @@ export function CoverThumb({
   novel,
   width,
   square = false,
+  radius,
   landscape = false,
   onError,
 }: {
   novel: NovelSummary;
   width: number;
-  // 모서리를 둥글리지 않는다(열매 탭 목록).
+  // 모서리를 둥글리지 않는다(책장·내 차례 줄).
   square?: boolean;
+  // 모서리 둥글기를 따로 정한다(열매 탭 목록은 아주 조금만). square보다 앞선다.
+  radius?: number;
   // 가로로 긴 4:3으로 눕힌다(열매 탭 목록). 표지는 3:4로 올리므로 가운데만 보인다.
   landscape?: boolean;
   onError?: () => void;
@@ -24,7 +27,7 @@ export function CoverThumb({
   const [failed, setFailed] = useState(false);
   const height = landscape ? (width * 3) / 4 : (width * 4) / 3;
   const size = { width, height: Math.round(height) };
-  const corner = square ? styles.square : undefined;
+  const corner = cornerOf(radius, square);
   if (novel.coverUrl && !failed)
     return (
       <Image
@@ -45,9 +48,15 @@ export function CoverThumb({
   );
 }
 
+// 모서리: 따로 정한 둥글기가 있으면 그것, 각지게면 0, 아니면 기본(8).
+function cornerOf(radius: number | undefined, square: boolean) {
+  if (radius !== undefined) return { borderRadius: radius };
+  if (square) return { borderRadius: 0 };
+  return undefined;
+}
+
 const useStyles = themedStyles((colors) => ({
   cover: { borderRadius: 8, backgroundColor: colors.line },
-  square: { borderRadius: 0 },
   treeBox: {
     backgroundColor: colors.paper,
     borderWidth: 1,

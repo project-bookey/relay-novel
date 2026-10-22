@@ -52,6 +52,26 @@ export function progressLine(
   return `${story.chapterCount}/${story.chapterLimit}장 · ${story.chapterCount + 1}장 쓰는 중`;
 }
 
+// 진행 아래 성장 막대가 찰 몫(0~1). 목표 회차가 있는 모여 만들기에만 있고,
+// 열매로 퍼뜨린 작품은 회차 수가 가지의 합이라 막대를 두지 않는다(undefined).
+export function growthRatio(
+  story: Pick<
+    NovelSummary,
+    "mode" | "status" | "chapterCount" | "chapterLimit"
+  >,
+) {
+  if (story.mode === "OPEN") return undefined;
+  if (story.status === "COMPLETED") return 1;
+  if (story.chapterLimit <= 0) return 0;
+  return Math.min(1, story.chapterCount / story.chapterLimit);
+}
+
+// 칠 때마다 바로 찾을 검색어. 한글을 치는 도중 끝에 붙은 낱자(ㄷ·ㅅ·ㅏ처럼 아직 글자가 되지 않은 것)는 빼서,
+// "도서ㄱ" 같은 반쪽 글자로 찾아 결과가 비었다가 다시 차는 깜빡임을 막는다.
+export function searchableQuery(typed: string) {
+  return typed.replace(/[ㄱ-ㆎ]+$/u, "").trim();
+}
+
 export interface FruitFilter {
   genres: string[];
   query: string;

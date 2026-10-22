@@ -25,9 +25,15 @@ const webGlass = {
 export function GlassSurface({
   style,
   children,
+  bare = false,
+  interactive = true,
 }: {
   style?: StyleProp<ViewStyle>;
-  children: ReactNode;
+  children?: ReactNode;
+  // 둘레의 빛 선과 떠 있는 그림자를 빼고 유리판만 둔다(목록 머리처럼 화면 끝까지 닿는 곳).
+  bare?: boolean;
+  // 누르면 시스템 유리가 반응한다. 누를 수 없는 바탕에서는 끈다.
+  interactive?: boolean;
 }) {
   const { scheme } = useAppearance();
   const styles = useStyles();
@@ -35,7 +41,7 @@ export function GlassSurface({
     return (
       <GlassView
         glassEffectStyle="regular"
-        isInteractive
+        isInteractive={interactive}
         colorScheme={scheme}
         style={style}
       >
@@ -45,7 +51,7 @@ export function GlassSurface({
   return (
     <View
       style={[
-        styles.imitation,
+        !bare && styles.imitation,
         Platform.OS === "web" ? styles.webTint : styles.solidTint,
         style,
       ]}

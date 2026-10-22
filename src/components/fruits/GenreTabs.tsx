@@ -1,7 +1,13 @@
-import { Pressable, ScrollView } from "react-native";
+import { useId } from "react";
+import { Pressable, ScrollView, View } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { Text } from "../text";
 import { FILTER_GENRES_MAX } from "../../design/fruitList";
-import { themedStyles } from "../../theme/themed";
+import { themedStyles, useColors } from "../../theme/themed";
+
+// 오른쪽 끝에서 탭이 바탕으로 흐려지는 너비(시안 3번 "빛과 깊이": 옆으로 더 있다는 신호).
+// 마지막 탭도 흐림 밖으로 밀어 볼 수 있게 탭 줄 끝을 그만큼 띄운다.
+const EDGE_FADE_WIDTH = 72;
 
 // 장르 글자 탭. 세 개까지 함께 고르고, 하나도 고르지 않으면 "전체"가 켜진다.
 // 고른 탭은 굵은 글자 + 밑줄(색만으로 구분하지 않음). 세 개가 차면 남은 탭은 흐려지고 눌러도 바뀌지 않는다
@@ -49,24 +55,46 @@ export function GenreTabs({
     </Pressable>
   );
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.bar}
-      contentContainerStyle={styles.tabs}
-    >
-      {tab("all", "전체", selected.length === 0, onClear)}
-      {genres.map((genre) => {
-        const isSelected = selected.includes(genre);
-        return tab(
-          genre,
-          genre,
-          isSelected,
-          () => onToggle(genre),
-          full && !isSelected,
-        );
-      })}
-    </ScrollView>
+    <View style={styles.bar}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.scroller}
+        contentContainerStyle={styles.tabs}
+      >
+        {tab("all", "전체", selected.length === 0, onClear)}
+        {genres.map((genre) => {
+          const isSelected = selected.includes(genre);
+          return tab(
+            genre,
+            genre,
+            isSelected,
+            () => onToggle(genre),
+            full && !isSelected,
+          );
+        })}
+      </ScrollView>
+      <EdgeFade />
+    </View>
+  );
+}
+
+function EdgeFade() {
+  const styles = useStyles();
+  const colors = useColors();
+  const gradientId = `tab-fade-${useId().replace(/[^\w-]/g, "")}`;
+  return (
+    <View style={styles.edgeFade}>
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={colors.background} stopOpacity={0} />
+            <Stop offset="1" stopColor={colors.background} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
+      </Svg>
+    </View>
   );
 }
 
@@ -81,7 +109,17 @@ const useStyles = themedStyles((colors) => ({
     borderBottomWidth: 1,
     borderColor: colors.line,
   },
-  tabs: { gap: 20, paddingRight: 24 },
+  scroller: { flexGrow: 0 },
+  tabs: { gap: 20, paddingRight: EDGE_FADE_WIDTH },
+  // 흐림은 밑줄 위에서 끝나 줄은 끝까지 이어진다. 손가락은 아래 탭에 그대로 닿는다.
+  edgeFade: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: EDGE_FADE_WIDTH,
+    pointerEvents: "none",
+  },
   // "SF"처럼 짧은 장르도 누르는 너비가 44가 되게 한다.
   tab: {
     minHeight: 44,

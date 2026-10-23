@@ -58,6 +58,21 @@ export function forMeGenres(myGenres: string[]) {
   return myGenres.slice(0, FOR_ME_GENRES_MAX);
 }
 
+// 나를 위한 이야기에 놓을 세 편과 제목 옆 설명. 관심 장르로 고른 작품이 있으면 그것을, 관심 장르가 없거나
+// 맞는 작품이 없으면 최근에 심은 이야기를 놓는다(묶음이 통째로 빠지면 열매 탭이 예전 서가와 같아 보여서).
+export function forMeChoice(
+  genres: string[],
+  genrePicks: NovelSummary[],
+  recent: NovelSummary[],
+) {
+  if (genres.length > 0 && genrePicks.length > 0)
+    return {
+      stories: genrePicks.slice(0, FOR_ME_COUNT),
+      hint: genres.join(" · "),
+    };
+  return { stories: recent.slice(0, FOR_ME_COUNT), hint: "최근에 심은 이야기" };
+}
+
 // 둘러보기에는 관심 장르가 없어서 좋아요가 많은 예시 세 편을 보인다.
 export function demoForMe(stories: NovelSummary[]) {
   return [...stories]

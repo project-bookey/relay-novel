@@ -8,7 +8,7 @@ import type { NovelSummary } from "../../api/types";
 import { progressLine } from "../../design/fruitList";
 import {
   demoForMe,
-  FOR_ME_COUNT,
+  forMeChoice,
   forMeGenres,
 } from "../../design/fruitSections";
 import { useSession } from "../../state/session";
@@ -27,7 +27,7 @@ const COVER_RADIUS = 4;
 
 // 나를 위한 이야기: 관심 장르(앞의 세 개)의 작품 세 편을 큰 칸 하나 + 두 칸으로 보인다
 // (시안 reference/sian/fruits-redesign D "정리 + 크기" — 표지 벽에 리듬을 주는 큰 칸은 여기 하나뿐).
-// 관심 장르가 없거나 맞는 작품이 없으면 묶음째 두지 않는다. 둘러보기는 좋아요가 많은 예시 세 편.
+// 관심 장르가 없거나 맞는 작품이 없으면 최근에 심은 이야기 세 편을 놓는다. 둘러보기는 좋아요가 많은 예시 세 편.
 export function ForMeSection() {
   const styles = useStyles();
   const { mode } = useSession();
@@ -43,18 +43,30 @@ export function ForMeSection() {
     queryFn: () => novels.feed({ genres }, 0),
     enabled: mode === "authenticated" && genres.length > 0,
   });
-  const stories = isDemo
-    ? demoForMe(demoStories)
-    : (picks.data?.content ?? []).slice(0, FOR_ME_COUNT);
+  // 관심 장르로 고를 작품이 없다고 확인된 뒤에만 최근 작품을 읽는다(관심 장르 작품이 늦게 와서 바뀌지 않게).
+  const genrePicksMissing =
+    myGenres.isSuccess &&
+    (genres.length === 0 ||
+      (picks.isSuccess && picks.data.content.length === 0));
+  const recent = useQuery({
+    queryKey: ["novels", "for-me-recent", mode],
+    queryFn: () => novels.feed({}, 0),
+    enabled: mode === "authenticated" && genrePicksMissing,
+  });
+  const choice = isDemo
+    ? { stories: demoForMe(demoStories), hint: "좋아요가 많은 이야기" }
+    : forMeChoice(
+        genres,
+        picks.data?.content ?? [],
+        recent.data?.content ?? [],
+      );
+  const { stories } = choice;
   // 위쪽 덧붙임 묶음이라 불러오는 중·실패하면 자리를 비워 두고, 아래 모든 이야기 서가가 그대로 보이게 한다.
   if (stories.length === 0) return null;
   const [big, ...pair] = stories;
   return (
     <View style={styles.block}>
-      <SectionHead
-        title="나를 위한 이야기"
-        hint={isDemo ? "좋아요가 많은 이야기" : genres.join(" · ")}
-      />
+      <SectionHead title="나를 위한 이야기" hint={choice.hint} />
       <BigTile story={big} />
       {pair.length > 0 && <PairRow stories={pair} />}
     </View>

@@ -102,3 +102,64 @@ export function filterStories(stories: NovelSummary[], filter: FruitFilter) {
     return genreMatches && statusMatches && keywordMatches;
   });
 }
+
+// ---------- 첫 화면: 이번 주 많이 이어 쓴 이야기 · 최근 찾은 말 ----------
+
+// 순위는 열 편을 다섯 편씩 두 단으로 놓는다(사용자가 고른 시안 reference/sian/fruits-search B "두 단").
+export const RANKING_COLUMN_SIZE = 5;
+
+export interface RankedStory {
+  rank: number;
+  story: NovelSummary;
+}
+
+// 서버가 준 순서대로 순위를 붙여 1~5위 · 6~10위 두 단으로 나눈다. 다섯 편 이하면 한 단이다.
+export function rankingColumnsOf(
+  stories: NovelSummary[],
+  columnSize = RANKING_COLUMN_SIZE,
+): RankedStory[][] {
+  const ranked = stories.map((story, index) => ({ rank: index + 1, story }));
+  return shelfRowsOf(ranked, columnSize);
+}
+
+// 서버 순위도 열 편이다.
+export const RANKING_SIZE = 10;
+
+// 둘러보기 순위. 예시 작품에는 "이번 주"가 없어서 이어 쓴 회차가 많은 순으로 서버처럼 열 편까지 고른다.
+// 1회차뿐인 작품은 아직 아무도 이어 쓰지 않았으니 넣지 않는다.
+export function demoRankingOf(stories: NovelSummary[], genres: string[]) {
+  return filterStories(stories, { genres, query: "" })
+    .filter((story) => story.chapterCount > 1)
+    .sort(
+      (left, right) =>
+        right.chapterCount - left.chapterCount || left.id - right.id,
+    )
+    .slice(0, RANKING_SIZE);
+}
+
+// 최근 찾은 말은 기기에 이만큼 두고, 첫 화면에는 앞의 세 개만 보인다.
+export const RECENT_WORDS_MAX = 10;
+export const RECENT_WORDS_SHOWN = 3;
+
+// 찾은 말을 맨 앞에 둔다. 같은 말은 하나만 남기고(대소문자 무시), 빈 말은 넣지 않는다.
+export function rememberWord(words: string[], word: string) {
+  const trimmed = word.trim();
+  if (!trimmed) return words;
+  const others = words.filter(
+    (each) => each.toLowerCase() !== trimmed.toLowerCase(),
+  );
+  return [trimmed, ...others].slice(0, RECENT_WORDS_MAX);
+}
+
+// 검색 결과 제목에서 찾은 말을 굵게 보이려고 나눈다. 대소문자는 가리지 않고 처음 맞는 곳 하나만.
+export function splitByKeyword(title: string, keyword: string) {
+  const trimmed = keyword.trim();
+  const at = trimmed ? title.toLowerCase().indexOf(trimmed.toLowerCase()) : -1;
+  if (at < 0) return [{ text: title, matched: false }];
+  const end = at + trimmed.length;
+  return [
+    { text: title.slice(0, at), matched: false },
+    { text: title.slice(at, end), matched: true },
+    { text: title.slice(end), matched: false },
+  ].filter((part) => part.text !== "");
+}

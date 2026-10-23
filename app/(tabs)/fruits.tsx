@@ -11,6 +11,8 @@ import { FruitsTop } from "../../src/components/fruits/FruitsTop";
 import { GenreTabs } from "../../src/components/fruits/GenreTabs";
 import { StatusTabs } from "../../src/components/fruits/StatusTabs";
 import { BottomFade } from "../../src/components/fruits/BottomFade";
+import { FruitsHome } from "../../src/components/fruits/FruitsHome";
+import { useRecentSearches } from "../../src/state/recentSearches";
 import {
   DemoFruitList,
   ServerFruitList,
@@ -21,8 +23,9 @@ import { themedStyles } from "../../src/theme/themed";
 // 칠 때마다 아래 결과가 바로 바뀌게 하되, 손가락이 이만큼 멈출 때까지는 기다려 서버에 너무 자주 묻지 않는다.
 const SEARCH_DELAY_MS = 200;
 
-// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 표지 서가(세 칸)로 펼쳐 장르(세 개까지)·검색어로 골라 본다.
-// 상태(모집·이어가는 중·완결)는 찾을 때만 고른다(사용자 결정).
+// 열매 탭 = 찾기 탭(2026-10-23 사용자 결정, 시안 reference/sian/fruits-search B "두 단").
+// 첫 화면은 표지 없이 최근 찾은 말과 이번 주 많이 이어 쓴 이야기 순위(장르 탭으로 거름)이고,
+// 돋보기를 누르면 입력줄·장르·상태로 찾아 작은 표지 결과 목록을 본다. 상태는 찾을 때만 고른다.
 export default function FruitsPage() {
   const styles = useStyles();
   const { mode } = useSession();
@@ -32,6 +35,7 @@ export default function FruitsPage() {
   const [typed, setTyped] = useState("");
   const query = useSettled(searchableQuery(typed), SEARCH_DELAY_MS);
   const isDemo = mode === "demo";
+  const recent = useRecentSearches(mode);
 
   // 찾기를 닫으면 검색어와 함께 상태도 "모든 상태"로 돌아간다.
   const closeSearch = useCallback(() => {
@@ -54,6 +58,7 @@ export default function FruitsPage() {
       searching={searching}
       query={typed}
       onQueryChange={setTyped}
+      onSubmit={() => recent.remember(searchableQuery(typed))}
       onOpenSearch={() => setSearching(true)}
       onCloseSearch={closeSearch}
     />
@@ -66,27 +71,46 @@ export default function FruitsPage() {
       onClear={() => setGenres([])}
     />
   );
-  // 평소에는 제목 줄이 목록과 함께 올라가고 장르 탭만 맨 위에 붙는다(유리 머리, 사용자가 시안 C를 고름).
   // 찾는 중에는 입력줄·장르 탭·상태 탭이 모두 맨 위에 붙어, 칠 때마다 바로 아래 결과가 바뀐다.
   const listProps = {
     filter: { genres, status, query },
-    head: searching ? undefined : top,
     stickyHead: (
       <>
-        {searching && top}
+        {top}
         {tabs}
-        {searching && <StatusTabs status={status} onChange={setStatus} />}
+        <StatusTabs status={status} onChange={setStatus} />
       </>
     ),
+    onOpenResult: () => recent.remember(query),
   };
+  const searchList = isDemo ? (
+    <DemoFruitList {...listProps} />
+  ) : (
+    <ServerFruitList {...listProps} />
+  );
   return (
     <View style={styles.page}>
       <Screen scroll={false}>
         <View style={styles.frame}>
-          {isDemo ? (
-            <DemoFruitList {...listProps} />
+          {searching ? (
+            searchList
           ) : (
-            <ServerFruitList {...listProps} />
+            <FruitsHome
+              top={top}
+              tabs={tabs}
+              genres={genres}
+              recent={{
+                words: recent.words,
+                // 최근 찾은 말을 누르면 그 말로 찾기를 연다.
+                onPick: (word) => {
+                  setTyped(word);
+                  setSearching(true);
+                  recent.remember(word);
+                },
+                onForget: recent.forget,
+                onClear: recent.clear,
+              }}
+            />
           )}
         </View>
       </Screen>

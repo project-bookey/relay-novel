@@ -81,6 +81,11 @@ export const novels = {
         page,
       },
     }),
+  // 열매 탭 순위: 이번 주(지난 7일) 많이 이어 쓴 이야기 열 편. 장르는 목록처럼 세 개까지, 하나라도 맞으면 든다.
+  ranking: (genres: string[] = []) =>
+    api<NovelSummary[]>(`${root}/ranking`, {
+      query: { kind: "RELAY", genres: genres.length ? genres : undefined },
+    }),
   mine: (page = 0) =>
     api<Page<NovelSummary>>(`${root}/mine`, { query: { kind: "RELAY", page } }),
   turns: () => api<NovelSummary[]>(`${root}/my-turns`),

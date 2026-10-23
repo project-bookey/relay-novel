@@ -4,8 +4,10 @@ import {
   Animated,
   BackHandler,
   Easing,
+  Platform,
   StyleSheet,
   View,
+  type ViewStyle,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,7 +15,7 @@ import type { NovelStatus } from "../../api/types";
 import { searchableQuery, toggleGenre } from "../../design/fruitList";
 import { useRecentSearches } from "../../state/recentSearches";
 import { useSession } from "../../state/session";
-import { themedStyles } from "../../theme/themed";
+import { themedStyles, useColors } from "../../theme/themed";
 import { GlassSurface } from "../Glass";
 import { GenreTabsFromServer } from "../fruits/GenreTabsFromServer";
 import { StatusTabs } from "../fruits/StatusTabs";
@@ -25,6 +27,8 @@ import { SearchStart } from "./SearchStart";
 const SEARCH_DELAY_MS = 200;
 const OPEN_MS = 300;
 const CLOSE_MS = 220;
+// 막 위의 순위·결과는 유리가 어느 정도 깔린 뒤에 떠오른다.
+const CONTENT_FROM = 0.35;
 
 // 열매 서가 위로 덮이는 검색 유리막(2026-10-23 사용자 결정, 시안 reference/sian/search-veil A "옅은 막").
 // 뒤의 서가가 흐릿하게 비치고, 그 위에 검색칸·최근 찾은 말·이번 주 순위가 뜬다. 말을 치면 순위 자리가
@@ -95,12 +99,23 @@ export function SearchVeil({ onClose }: { onClose: () => void }) {
   else if (isDemo) body = <DemoSearchResults {...resultsProps} />;
   else body = <ServerSearchResults {...resultsProps} />;
 
+  const contentStyle = {
+    opacity: openness.interpolate({
+      inputRange: [0, CONTENT_FROM, 1],
+      outputRange: [0, 0, 1],
+    }),
+    transform: [
+      {
+        translateY: openness.interpolate({
+          inputRange: [0, 1],
+          outputRange: [8, 0],
+        }),
+      },
+    ],
+  };
   return (
-    <Animated.View
-      accessibilityViewIsModal
-      style={[styles.veil, { opacity: openness }]}
-    >
-      <GlassSurface bare interactive={false} style={StyleSheet.absoluteFill} />
+    <View accessibilityViewIsModal style={styles.veil}>
+      <VeilGlass openness={openness} />
       <View style={[styles.frame, { paddingTop: insets.top }]}>
         <View style={styles.fieldRow}>
           <SearchField
@@ -111,9 +126,46 @@ export function SearchVeil({ onClose }: { onClose: () => void }) {
             onCancel={close}
           />
         </View>
-        <View style={styles.body}>{body}</View>
+        <Animated.View style={[styles.body, contentStyle]}>
+          {body}
+        </Animated.View>
       </View>
-    </Animated.View>
+    </View>
+  );
+}
+
+// 유리막 바탕. 웹은 흐림(0 → 16px)과 채도(100% → 180%)를 직접 키우고 옅은 바탕색을 따로 짙게 해서
+// 유리가 서서히 깔린다. 흐림을 감싼 상자의 투명도를 움직이면 브라우저가 그동안 흐림을 그리지 않다가
+// 마지막에 툭 켜기 때문이다. 앱은 시스템 유리(iOS 26)나 불투명한 바탕(GlassSurface)이 서서히 나타난다.
+function VeilGlass({ openness }: { openness: Animated.Value }) {
+  const colors = useColors();
+  if (Platform.OS !== "web")
+    return (
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: openness }]}>
+        <GlassSurface
+          bare
+          interactive={false}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+    );
+  // React Native 스타일 타입에는 없는 웹 전용 속성이라 타입을 맞춘다(Glass.tsx의 webGlass와 같은 값까지).
+  const blur = {
+    backdropFilter: openness.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["blur(0px) saturate(100%)", "blur(16px) saturate(180%)"],
+    }),
+  } as unknown as ViewStyle;
+  return (
+    <>
+      <Animated.View style={[StyleSheet.absoluteFill, blur]} />
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: colors.glassTint, opacity: openness },
+        ]}
+      />
+    </>
   );
 }
 

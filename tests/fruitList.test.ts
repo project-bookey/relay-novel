@@ -1,8 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  demoRankingOf,
   filterStories,
   likeCountLabel,
+  rankingColumnsOf,
+  rememberWord,
+  splitByKeyword,
   progressLine,
   searchableQuery,
   shelfCoverWidth,
@@ -120,4 +124,68 @@ test("demo filtering matches the server: any picked genre, status, title or make
       status: "COMPLETED",
     }).every((story) => story.status === "COMPLETED"),
   );
+});
+
+test("the weekly ranking splits into two columns of five with rank numbers", () => {
+  const stories = demoStories.slice(0, 7);
+  const columns = rankingColumnsOf(stories);
+  assert.equal(columns.length, 2);
+  assert.deepEqual(
+    columns[0].map((each) => each.rank),
+    [1, 2, 3, 4, 5],
+  );
+  assert.deepEqual(
+    columns[1].map((each) => [each.rank, each.story.id]),
+    [
+      [6, stories[5].id],
+      [7, stories[6].id],
+    ],
+  );
+  assert.equal(rankingColumnsOf(stories.slice(0, 3)).length, 1);
+  assert.deepEqual(rankingColumnsOf([]), []);
+});
+
+test("the demo ranking keeps continued stories, most chapters first, within the picked genres", () => {
+  const ranked = demoRankingOf(demoStories, []);
+  assert.ok(ranked.length > 0 && ranked.length <= 10);
+  assert.ok(ranked.every((story) => story.chapterCount > 1));
+  for (let index = 1; index < ranked.length; index++)
+    assert.ok(ranked[index - 1].chapterCount >= ranked[index].chapterCount);
+  const fantasy = demoRankingOf(demoStories, ["판타지"]);
+  assert.ok(fantasy.every((story) => story.genres.includes("판타지")));
+});
+
+test("recent search words keep the latest first without repeats or blanks", () => {
+  assert.deepEqual(rememberWord([], "  고양이 "), ["고양이"]);
+  assert.deepEqual(rememberWord(["회귀", "고양이"], "고양이"), [
+    "고양이",
+    "회귀",
+  ]);
+  assert.deepEqual(rememberWord(["SF"], "sf"), ["sf"]);
+  const words = ["회귀"];
+  assert.equal(rememberWord(words, "   "), words);
+  const full = Array.from({ length: 10 }, (_, index) => `말${index}`);
+  assert.deepEqual(rememberWord(full, "새 말"), ["새 말", ...full.slice(0, 9)]);
+});
+
+test("a search result title is split around the first match, ignoring case", () => {
+  assert.deepEqual(splitByKeyword("고양이 도서관", "고양"), [
+    { text: "고양", matched: true },
+    { text: "이 도서관", matched: false },
+  ]);
+  assert.deepEqual(splitByKeyword("달빛 고양이의 가게", "고양"), [
+    { text: "달빛 ", matched: false },
+    { text: "고양", matched: true },
+    { text: "이의 가게", matched: false },
+  ]);
+  assert.deepEqual(splitByKeyword("Last Train", "train"), [
+    { text: "Last ", matched: false },
+    { text: "Train", matched: true },
+  ]);
+  assert.deepEqual(splitByKeyword("고양이 도서관", "별빛"), [
+    { text: "고양이 도서관", matched: false },
+  ]);
+  assert.deepEqual(splitByKeyword("고양이 도서관", " "), [
+    { text: "고양이 도서관", matched: false },
+  ]);
 });

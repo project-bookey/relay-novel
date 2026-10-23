@@ -17,12 +17,15 @@ export function FruitsTop({
   searching,
   query,
   onQueryChange,
+  onSubmit,
   onOpenSearch,
   onCloseSearch,
 }: {
   searching: boolean;
   query: string;
   onQueryChange: (query: string) => void;
+  // 키보드의 찾기를 눌렀을 때(찾은 말을 최근 찾은 말에 남긴다).
+  onSubmit: () => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
 }) {
@@ -34,6 +37,7 @@ export function FruitsTop({
         <TextInput
           value={query}
           onChangeText={onQueryChange}
+          onSubmitEditing={onSubmit}
           placeholder="제목이나 작가로 찾기"
           placeholderTextColor={colors.muted}
           accessibilityLabel="열매 찾기"

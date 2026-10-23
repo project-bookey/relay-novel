@@ -5,50 +5,40 @@ import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { novels } from "../../api/novels";
 import { demoStories } from "../../api/demo";
 import type { NovelStatus, NovelSummary } from "../../api/types";
-import { filterStories } from "../../design/fruitList";
+import { filterStories, shelfRowsOf } from "../../design/fruitList";
 import { useSession } from "../../state/session";
 import { themedStyles, useColors } from "../../theme/themed";
 import { nativeDriverEnabled } from "../fruitMotion";
 import { GlassSurface } from "../Glass";
 import { ErrorBox, Loading, useUi } from "../ui";
-import { SearchResultRow } from "./SearchResultRow";
+import { ShelfRow, useShelfCoverWidth } from "./FruitShelf";
 
-// 목록 위쪽 여백. 내리면 이만큼 올라간 뒤 머리가 맨 위에 붙는다.
+// 목록 위쪽 여백. 내리면 이만큼과 제목 줄이 올라간 뒤 머리가 맨 위에 붙는다.
 const LIST_TOP = 12;
 // 머리가 붙은 뒤 이만큼 더 내리는 동안 유리가 서서히 깔린다.
 const GLASS_FADE = 12;
 
-// 찾는 중의 결과 목록. 첫 화면(최근 찾은 말·순위)은 FruitsHome이 맡는다.
 export interface FruitListProps {
   filter: { genres: string[]; status?: NovelStatus; query: string };
-  // 내려도 맨 위에 붙어 있는 머리(입력줄·장르 탭·상태 탭). 붙으면 유리가 깔린다.
+  // 목록과 함께 위로 올라가는 머리(평소의 열매 아이콘 제목 줄). 찾는 중에는 없다.
+  head?: ReactElement;
+  // 내려도 맨 위에 붙어 있는 머리(장르 탭, 찾는 중에는 입력줄·상태 탭까지). 붙으면 유리가 깔린다.
   stickyHead: ReactElement;
-  // 결과를 눌러 작품으로 갈 때(찾은 말을 최근 찾은 말에 남긴다).
-  onOpenResult: () => void;
 }
 
 // 둘러보기에서는 서버에 묻지 않고 예시 작품을 서버와 같은 기준으로 거른다.
-export function DemoFruitList({
-  filter,
-  stickyHead,
-  onOpenResult,
-}: FruitListProps) {
+export function DemoFruitList({ filter, head, stickyHead }: FruitListProps) {
   return (
     <StoryList
+      head={head}
       stickyHead={stickyHead}
-      keyword={filter.query}
-      onOpenResult={onOpenResult}
       stories={filterStories(demoStories, filter)}
       emptyMessage={emptyMessageOf(filter)}
     />
   );
 }
 
-export function ServerFruitList({
-  filter,
-  stickyHead,
-  onOpenResult,
-}: FruitListProps) {
+export function ServerFruitList({ filter, head, stickyHead }: FruitListProps) {
   const { mode } = useSession();
   // 당겨서 새로고침할 때만 위쪽 동그라미를 돌린다(다른 화면이 목록을 새로 읽게 할 때는 조용히).
   const [pulling, setPulling] = useState(false);
@@ -79,9 +69,8 @@ export function ServerFruitList({
   else if (feed.error) footer = <ErrorBox error={feed.error} retry={retry} />;
   return (
     <StoryList
+      head={head}
       stickyHead={stickyHead}
-      keyword={query}
-      onOpenResult={onOpenResult}
       stories={feed.data?.pages.flatMap((page) => page.content) ?? []}
       // 아직 한 번도 받지 못했으면 "없어요" 대신 아래 표시(불러오는 중·오류)만 둔다.
       emptyMessage={feed.data ? emptyMessageOf(filter) : undefined}
@@ -99,11 +88,10 @@ export function ServerFruitList({
   );
 }
 
-// 한 묶음짜리 SectionList: 묶음 머리(stickyHead)가 맨 위에 붙는다.
+// 한 묶음짜리 SectionList: 묶음 머리(stickyHead)가 맨 위에 붙고, 목록 머리(head)는 함께 올라간다.
 function StoryList({
+  head,
   stickyHead,
-  keyword,
-  onOpenResult,
   stories,
   emptyMessage,
   footer,
@@ -111,9 +99,8 @@ function StoryList({
   onRefresh,
   onEndReached,
 }: {
+  head?: ReactElement;
   stickyHead: ReactElement;
-  keyword: string;
-  onOpenResult: () => void;
   stories: NovelSummary[];
   emptyMessage?: string;
   footer?: ReactElement;
@@ -125,6 +112,7 @@ function StoryList({
   const styles = useStyles();
   const colors = useColors();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [headHeight, setHeadHeight] = useState(0);
   const onScroll = useMemo(
     () =>
       Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
@@ -132,23 +120,42 @@ function StoryList({
       }),
     [scrollY],
   );
-  // 위 여백이 다 올라가 머리가 맨 위에 붙는 순간부터 유리가 깔린다.
+  // 제목 줄이 다 올라가 머리가 맨 위에 붙는 순간부터 유리가 깔린다(찾는 중에는 위 여백만 올라가면 붙는다).
+  const stuckAt = LIST_TOP + (head ? headHeight : 0);
   const glassOpacity = scrollY.interpolate({
-    inputRange: [LIST_TOP, LIST_TOP + GLASS_FADE],
+    inputRange: [stuckAt, stuckAt + GLASS_FADE],
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
+  const { coverWidth, measureRow } = useShelfCoverWidth();
+  // 서가 한 줄(세 작품)이 목록의 한 칸이다.
   const sections = useMemo(
-    () => [{ key: "stories", data: stories }],
+    () => [{ key: "stories", data: shelfRowsOf(stories) }],
     [stories],
   );
   return (
     <Animated.SectionList
       sections={sections}
-      keyExtractor={(story: NovelSummary) => String(story.id)}
-      renderItem={({ item }: { item: NovelSummary }) => (
-        <SearchResultRow story={item} keyword={keyword} onOpen={onOpenResult} />
+      // 줄의 첫 작품으로 이름을 붙여, 덜 찬 마지막 줄이 다음 쪽을 받아 채워져도 다시 만들지 않는다.
+      keyExtractor={(row: NovelSummary[]) => String(row[0].id)}
+      renderItem={({
+        item,
+        index,
+      }: {
+        item: NovelSummary[];
+        index: number;
+      }) => (
+        <ShelfRow stories={item} coverWidth={coverWidth} first={index === 0} />
       )}
+      ListHeaderComponent={
+        head ? (
+          <View
+            onLayout={(event) => setHeadHeight(event.nativeEvent.layout.height)}
+          >
+            {head}
+          </View>
+        ) : null
+      }
       renderSectionHeader={() => (
         <View style={styles.sticky}>
           <Animated.View style={[styles.glass, { opacity: glassOpacity }]}>
@@ -158,7 +165,8 @@ function StoryList({
               style={StyleSheet.absoluteFill}
             />
           </Animated.View>
-          {stickyHead}
+          {/* 붙는 머리의 안쪽 폭이 서가 줄 폭과 같아서 여기서 잰다. */}
+          <View onLayout={measureRow}>{stickyHead}</View>
         </View>
       )}
       renderSectionFooter={() =>

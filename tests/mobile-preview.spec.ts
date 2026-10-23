@@ -314,57 +314,59 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
     page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "열매", exact: true }).click();
-  // 첫 화면은 표지 없이 이번 주 많이 이어 쓴 이야기 순위다. 아무도 이어 쓰지 않은 작품은 순위에 없다.
-  await expect(
-    page.getByRole("heading", { name: "이번 주 많이 이어 쓴 이야기" }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: /^1위 / })).toBeVisible();
+  // 열매 탭은 모든 이야기를 표지 서가로 보인다. 상태는 서가에서 고를 수 없다.
   const recruiting = page.getByRole("button", {
     name: "우리의 여름은 아직, 작가 모집 중",
   });
-  await expect(recruiting).toHaveCount(0);
-  // 상태는 평소에는 고를 수 없고, 찾기를 열면 장르 탭 아래에 나온다.
+  await expect(recruiting).toBeVisible();
   const completedTab = page.getByRole("button", {
     name: "완결된 이야기",
     exact: true,
   });
   await expect(completedTab).toHaveCount(0);
+  // 돋보기를 누르면 서가 위로 검색 유리막이 덮인다. 치기 전에는 이번 주 많이 이어 쓴 이야기 순위가 보이고,
+  // 뒤의 서가는 화면 읽기에서 숨는다. 아무도 이어 쓰지 않은 작품은 순위에 없다.
   await page.getByRole("button", { name: "열매 찾기" }).click();
-  // 찾기를 열면 모든 이야기가 작은 표지 결과로 나온다.
-  await expect(recruiting).toBeVisible();
-  // 검색어 없이 완결만 골라도 다른 상태의 이야기는 목록에서 빠진다.
-  await completedTab.click();
+  await expect(
+    page.getByRole("heading", { name: "이번 주 많이 이어 쓴 이야기" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /^1위 / })).toBeVisible();
+  await expect(recruiting).toHaveCount(0);
+  // 치면 순위 자리가 결과로 바뀌고, 칠 때마다 바로 바뀐다.
+  const searchBox = page.getByRole("textbox", { name: "열매 찾기" });
   const completed = page.getByRole("button", {
     name: "받는 사람: 내일의 너, 완결된 이야기",
   });
-  await expect(completed).toBeVisible();
-  await expect(recruiting).toHaveCount(0);
-  // 장르를 고르면 그 장르의 이야기만 남고(완결된 SF는 없다), 다시 누르면 풀린다.
-  await page.getByRole("button", { name: "SF", exact: true }).click();
-  await expect(completed).toHaveCount(0);
-  await page.getByRole("button", { name: "SF", exact: true }).click();
-  await expect(completed).toBeVisible();
-  // 칠 때마다 바로 아래 결과가 바뀐다.
-  const searchBox = page.getByRole("textbox", { name: "열매 찾기" });
   await searchBox.fill("별빛");
   await expect(completed).toHaveCount(0);
   await searchBox.fill("받는");
   await expect(completed).toBeVisible();
+  // 결과는 상태·장르로 거른다(완결된 SF는 없다).
+  await completedTab.click();
+  await expect(completed).toBeVisible();
+  await page.getByRole("button", { name: "SF", exact: true }).click();
+  await expect(completed).toHaveCount(0);
+  await page.getByRole("button", { name: "SF", exact: true }).click();
+  await expect(completed).toBeVisible();
   // 키보드의 찾기를 누르면 그 말이 최근 찾은 말에 남는다.
   await searchBox.press("Enter");
-  // 취소하면 첫 화면으로 돌아가고 상태 고르기는 사라진다.
+  // 취소하면 유리막이 걷히고 서가로 돌아온다.
   await page.getByRole("button", { name: "찾기 닫기" }).click();
+  await expect(recruiting).toBeVisible();
   await expect(completedTab).toHaveCount(0);
+  // 다시 열면 최근 찾은 말이 있고, 누르면 그 말로 다시 찾는다.
+  await page.getByRole("button", { name: "열매 찾기" }).click();
   const recentWord = page.getByRole("button", { name: "받는 다시 찾기" });
   await expect(recentWord).toBeVisible();
-  // 최근 찾은 말을 누르면 그 말로 다시 찾고, 상태는 "모든 상태"로 돌아와 있다.
   await recentWord.click();
   await expect(searchBox).toHaveValue("받는");
   await expect(completed).toBeVisible();
-  await page.getByRole("button", { name: "찾기 닫기" }).click();
-  // ×로 지우면 최근 찾은 말 묶음이 사라진다.
+  // 지우개로 비우면 다시 순위가 보이고, ×로 지우면 최근 찾은 말 묶음이 사라진다.
+  await searchBox.fill("");
   await page.getByRole("button", { name: "받는 지우기" }).click();
   await expect(recentWord).toHaveCount(0);
+  await page.getByRole("button", { name: "찾기 닫기" }).click();
+  await expect(recruiting).toBeVisible();
   await page.getByRole("button", { name: "홈", exact: true }).click();
   await expect(
     page.getByRole("button", {
@@ -507,7 +509,9 @@ test("mobile demo shows a popular story's likes and sends a visitor to log in to
     .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: "열매", exact: true }).click();
-  await page.getByRole("button", { name: /위 마지막 별빛 정거장$/ }).click();
+  await page
+    .getByRole("button", { name: "마지막 별빛 정거장, 이야기 이어가는 중" })
+    .click();
   const like = page.getByRole("button", { name: "좋아요 311개" });
   await expect(like).toBeVisible();
   await like.click();

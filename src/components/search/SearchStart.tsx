@@ -9,15 +9,13 @@ import { themedStyles, useColors } from "../../theme/themed";
 import { RecentSearches } from "./RecentSearches";
 import { WeeklyRanking } from "./WeeklyRanking";
 
-// 열매 탭 첫 화면(찾기를 열기 전): 제목 줄 → 최근 찾은 말 → 이번 주 많이 이어 쓴 이야기.
+// 검색 유리막에서 아직 아무것도 치지 않았을 때: 최근 찾은 말 → 이번 주 많이 이어 쓴 이야기.
 // 표지 없이 글자만 둔다(사용자가 고른 시안 reference/sian/fruits-search B "두 단").
-export function FruitsHome({
-  top,
+export function SearchStart({
   tabs,
   genres,
   recent,
 }: {
-  top: ReactElement;
   tabs: ReactElement;
   genres: string[];
   recent: {
@@ -60,7 +58,6 @@ export function FruitsHome({
         )
       }
     >
-      {top}
       <RecentSearches {...recent} />
       <WeeklyRanking
         tabs={tabs}
@@ -75,5 +72,5 @@ export function FruitsHome({
 
 const useStyles = themedStyles(() => ({
   // 아래쪽 바에 마지막 줄이 가리지 않도록 여유를 둔다(찾기 결과 목록과 같은 여백).
-  page: { paddingTop: 12, paddingHorizontal: 24, paddingBottom: 120 },
+  page: { paddingHorizontal: 24, paddingBottom: 120 },
 }));

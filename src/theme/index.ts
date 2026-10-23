@@ -32,6 +32,8 @@ const lightColors = {
   // 열매 탭에서 고른 장르·상태 글자 밑의 굵은 밑줄. 홈의 반짝이 노랑과 같고, 밤에도 그대로 둔다
   // (사용자가 고른 시안 reference/sian/fruits-anew A "서가").
   tabMark: "#F5C542",
+  // 열매 탭 검색창 바탕. 선 없이 바탕만 살짝 다른 칸(사용자가 고른 시안 reference/sian/search-bar B "옅은 칸").
+  searchField: "#F2F2EE",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,
@@ -124,6 +126,8 @@ const darkColors: Palette = {
   iconInk: "#ECEDE7",
   // 짙은 바탕에서 가지가 묻히지 않게 한 톤 밝힌다.
   bough: "#7A4E3E",
+  // 검색창 바탕은 밤 바탕보다 한 단계 밝게
+  searchField: "#3B3E42",
   // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
   castLeg: "#D9D4C7",
   castLegFar: "#A29D91",

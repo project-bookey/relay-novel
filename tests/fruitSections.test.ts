@@ -1,0 +1,78 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  demoForMe,
+  dueLabel,
+  forMeGenres,
+  mostUrgentNews,
+  newsLine,
+} from "../src/design/fruitSections";
+import { demoStories } from "../src/api/demo";
+import type { NovelDelivery } from "../src/api/types";
+
+const now = Date.parse("2026-10-23T12:00:00Z");
+const hoursLater = (hours: number) =>
+  new Date(now + hours * 3600000).toISOString();
+const delivery = (dueAt: string): NovelDelivery => ({
+  deliveryId: 9,
+  novel: demoStories[5],
+  chapterId: 70,
+  chapterNumber: 7,
+  chapterTitle: "서가 맨 위 칸",
+  dueAt,
+  source: "CLAIM",
+});
+
+test("my news picks the closest deadline, turns without a deadline last", () => {
+  const turn = { ...demoStories[0], turnDueAt: hoursLater(11) };
+  const openTurn = { ...demoStories[1], turnDueAt: undefined };
+  assert.equal(mostUrgentNews([], []), undefined);
+  assert.equal(
+    mostUrgentNews([openTurn, turn], [delivery(hoursLater(48))])?.kind,
+    "turn",
+  );
+  const soonClaim = mostUrgentNews([turn], [delivery(hoursLater(2))]);
+  assert.equal(soonClaim?.kind, "claim");
+  const onlyOpen = mostUrgentNews([openTurn], []);
+  assert.equal(onlyOpen?.kind === "turn" && onlyOpen.story.id, openTurn.id);
+});
+
+test("deadline labels count down in minutes, hours and days", () => {
+  assert.equal(dueLabel(hoursLater(11.5), now), "마감 11시간");
+  assert.equal(dueLabel(hoursLater(49), now), "마감 2일");
+  assert.equal(dueLabel(hoursLater(0.5), now), "마감 30분");
+  assert.equal(dueLabel(hoursLater(-1), now), "곧 마감");
+});
+
+test("the news line names the chapter and what the reader has to do", () => {
+  const story = {
+    ...demoStories[0],
+    chapterCount: 3,
+    turnDueAt: hoursLater(11),
+  };
+  assert.equal(
+    newsLine({ kind: "turn", story, dueAt: story.turnDueAt }, now),
+    "4장 · 내 차례예요 · 마감 11시간",
+  );
+  assert.equal(
+    newsLine({ kind: "turn", story: { ...story, turnDueAt: undefined } }, now),
+    "4장 · 내 차례예요",
+  );
+  const claim = delivery(hoursLater(49));
+  assert.equal(
+    newsLine({ kind: "claim", delivery: claim, dueAt: claim.dueAt }, now),
+    "7장에서 맡은 자리 · 마감 2일",
+  );
+});
+
+test("stories for me use up to three of my genres and the demo shows the most liked", () => {
+  assert.deepEqual(forMeGenres(["판타지", "SF", "공포", "일상"]), [
+    "판타지",
+    "SF",
+    "공포",
+  ]);
+  const picks = demoForMe(demoStories);
+  assert.equal(picks.length, 3);
+  assert.ok(picks[0].likeCount >= picks[1].likeCount);
+  assert.ok(picks[1].likeCount >= picks[2].likeCount);
+});

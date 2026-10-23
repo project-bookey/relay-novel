@@ -10,11 +10,15 @@ import {
   DemoFruitList,
   ServerFruitList,
 } from "../../src/components/fruits/FruitLists";
+import { MyNewsSection } from "../../src/components/fruits/MyNews";
+import { ForMeSection } from "../../src/components/fruits/ForMe";
+import { SectionHead } from "../../src/components/search/SectionHead";
 import { SearchVeil } from "../../src/components/search/SearchVeil";
 import { Loading, Screen } from "../../src/components/ui";
 import { themedStyles } from "../../src/theme/themed";
 
-// 열매 탭. 홈에는 열매가 몇 개만 떨어지므로, 여기서 모든 이야기를 표지 서가(세 칸)로 펼쳐 장르(세 개까지)로 골라 본다.
+// 열매 탭. 위에서부터 내 이야기 소식(마감이 가장 가까운 한 줄) → 나를 위한 이야기(관심 장르, 큰 칸 하나 + 두 칸)
+// → 모든 이야기(표지 서가, 장르 세 개까지)로 나눈다(2026-10-23 사용자가 시안 reference/sian/fruits-redesign D를 고름).
 // 돋보기를 누르면 서가 위로 검색 유리막이 덮인다(2026-10-23 사용자 결정 — 찾기는 서가와 따로 유리막에서).
 export default function FruitsPage() {
   const styles = useStyles();
@@ -31,10 +35,19 @@ export default function FruitsPage() {
     );
   if (mode === "guest") return <Redirect href="/login" />;
 
-  // 제목 줄은 서가와 함께 올라가고 장르 탭만 맨 위에 붙는다(유리 머리, 사용자가 시안 C를 고름).
+  // 제목 줄과 위쪽 묶음은 서가와 함께 올라가고, 모든 이야기의 장르 탭만 맨 위에 붙는다(유리 머리, 사용자가 시안 C를 고름).
   const listProps = {
     filter: { genres, query: "" },
-    head: <FruitsTop onOpenSearch={() => setSearchOpen(true)} />,
+    head: (
+      <>
+        <FruitsTop onOpenSearch={() => setSearchOpen(true)} />
+        <MyNewsSection />
+        <ForMeSection />
+        <View style={styles.allHead}>
+          <SectionHead title="모든 이야기" />
+        </View>
+      </>
+    ),
     stickyHead: (
       <GenreTabsFromServer
         isDemo={isDemo}
@@ -72,6 +85,7 @@ export default function FruitsPage() {
 const useStyles = themedStyles(() => ({
   // 아래 흐림과 검색 유리막이 화면 끝(아래 여백까지)에 닿도록 화면 밖 틀에 겹쳐 둔다.
   page: { flex: 1 },
+  allHead: { marginTop: 26 },
   // 좌우·위 여백은 목록이 갖는다(붙은 머리의 유리가 화면 끝까지 닿게).
   frame: {
     flex: 1,

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   demoForMe,
   dueLabel,
+  forMeChoice,
   forMeGenres,
   mostUrgentNews,
   newsLine,
@@ -75,4 +76,22 @@ test("stories for me use up to three of my genres and the demo shows the most li
   assert.equal(picks.length, 3);
   assert.ok(picks[0].likeCount >= picks[1].likeCount);
   assert.ok(picks[1].likeCount >= picks[2].likeCount);
+});
+
+test("stories for me fall back to the latest stories when my genres give nothing", () => {
+  const picks = demoStories.slice(0, 4);
+  const recent = demoStories.slice(3);
+  assert.deepEqual(forMeChoice(["판타지", "SF"], picks, recent), {
+    stories: picks.slice(0, 3),
+    hint: "판타지 · SF",
+  });
+  assert.deepEqual(forMeChoice([], picks, recent), {
+    stories: recent.slice(0, 3),
+    hint: "최근에 심은 이야기",
+  });
+  assert.deepEqual(
+    forMeChoice(["공포"], [], recent).hint,
+    "최근에 심은 이야기",
+  );
+  assert.deepEqual(forMeChoice([], [], []).stories, []);
 });

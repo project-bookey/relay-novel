@@ -314,7 +314,14 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
     page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "열매", exact: true }).click();
-  // 열매 탭은 모든 이야기를 표지 서가로 보인다. 상태는 서가에서 고를 수 없다.
+  // 열매 탭은 위쪽에 나를 위한 이야기(둘러보기는 좋아요가 많은 예시)를 두고, 그 아래 모든 이야기를 표지 서가로 보인다.
+  await expect(
+    page.getByRole("heading", { name: "나를 위한 이야기" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "모든 이야기" }),
+  ).toBeVisible();
+  // 상태는 서가에서 고를 수 없다.
   const recruiting = page.getByRole("button", {
     name: "우리의 여름은 아직, 작가 모집 중",
   });
@@ -509,8 +516,10 @@ test("mobile demo shows a popular story's likes and sends a visitor to log in to
     .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: "열매", exact: true }).click();
+  // 좋아요가 많아 위의 '나를 위한 이야기'에도, 아래 서가에도 있다. 어느 쪽이든 같은 작품으로 간다.
   await page
     .getByRole("button", { name: "마지막 별빛 정거장, 이야기 이어가는 중" })
+    .first()
     .click();
   const like = page.getByRole("button", { name: "좋아요 311개" });
   await expect(like).toBeVisible();

@@ -18,11 +18,14 @@ export function GenreTabs({
   selected,
   onToggle,
   onClear,
+  onGlass = false,
 }: {
   genres: string[];
   selected: string[];
   onToggle: (genre: string) => void;
   onClear: () => void;
+  // 검색 유리막 위에서는 바탕색으로 칠하는 끝 흐림이 네모 띠로 드러나서 두지 않는다(탭은 화면 끝에서 잘린다).
+  onGlass?: boolean;
 }) {
   const styles = useStyles();
   const full = selected.length >= FILTER_GENRES_MAX;
@@ -74,7 +77,7 @@ export function GenreTabs({
           );
         })}
       </ScrollView>
-      <EdgeFade />
+      {!onGlass && <EdgeFade />}
     </View>
   );
 }

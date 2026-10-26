@@ -34,9 +34,15 @@ const lightColors = {
   tabMark: "#F5C542",
   // 열매 탭 검색창 바탕. 선 없이 바탕만 살짝 다른 칸(사용자가 고른 시안 reference/sian/search-bar B "옅은 칸").
   searchField: "#F2F2EE",
+  // 마이 책장·설정 묶음의 상자 바탕. 검색창 색보다 녹색기를 뺀 거의 흰 회색(사용자 요청 "더 밝고 흰색에 가깝게",
+  // 시안 reference/sian/my-redesign A′).
+  shelfBox: "#F7F7F6",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,
+  // 마이 맨 위에 까는 작품 색 빛의 진하기. 작품 색은 모드와 상관없이 같은 파스텔이라 밤에는 옅게 깔아
+  // 그 위의 밝은 글자가 묻히지 않게 한다.
+  backdropGlowOpacity: 0.75,
   // 열매 말풍선 카드의 그림자. 잉크색(ink)을 옅게 깐다.
   cardShadow: "rgba(48, 54, 47, 0.16)",
   // 아래에서 올라오는 창 뒤를 덮는 막
@@ -118,6 +124,7 @@ const darkColors: Palette = {
   fruitShadow: "#000000",
   // 바탕이 어두운 편이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
   fruitShadowOpacity: 0.7,
+  backdropGlowOpacity: 0.32,
   cardShadow: "rgba(0, 0, 0, 0.5)",
   scrim: "rgba(0, 0, 0, 0.55)",
   // 어두운 바탕 위의 풀과 꽃은 한 톤 가라앉힌다.
@@ -133,6 +140,7 @@ const darkColors: Palette = {
   bough: "#7A4E3E",
   // 검색창 바탕은 밤 바탕보다 한 단계 밝게
   searchField: "#3B3E42",
+  shelfBox: "#3B3E42",
   // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
   castLeg: "#D9D4C7",
   castLegFar: "#A29D91",

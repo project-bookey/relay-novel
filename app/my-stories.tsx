@@ -1,8 +1,12 @@
 import { FlatList, View } from "react-native";
 import { Text } from "../src/components/text";
-import { Redirect } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { useSession } from "../src/state/session";
-import { useMyStories } from "../src/components/my/useMyStories";
+import {
+  shelfCopy,
+  useMyStories,
+  type MyShelf,
+} from "../src/components/my/useMyStories";
 import {
   ShelfRow,
   useShelfCoverWidth,
@@ -11,10 +15,13 @@ import { shelfRowsOf } from "../src/design/fruitList";
 import { ErrorBox, Loading, Screen, useUi } from "../src/components/ui";
 import { themedStyles } from "../src/theme/themed";
 
-// 내 작품 화면(마이의 "내 작품 더 보기"에서 들어온다). 열매 탭과 같은 서가(표지 세 칸 + 제목·진행)로 모두 보여 주고,
-// 끝까지 내리면 다음 쪽을 이어서 불러온다. 둘러보기에서는 예시 작품 가운데 내 작품을 보여 준다.
+// 책장 하나를 모두 보는 화면(마이의 "모두 보기"나 유리 명함의 숫자에서 들어온다): 내 작품(기본) · 내가 이어 쓴 이야기 ·
+// 즐겨찾기. 열매 탭과 같은 서가(표지 세 칸 + 제목·진행)로 보여 주고, 끝까지 내리면 다음 쪽을 이어서 불러온다.
+// 둘러보기에서는 예시 작품으로 보여 준다.
 export default function MyStoriesScreen() {
   const { mode } = useSession();
+  const params = useLocalSearchParams<{ shelf?: string }>();
+  const shelf = shelfOf(params.shelf);
   if (mode === "loading")
     return (
       <Screen>
@@ -23,25 +30,31 @@ export default function MyStoriesScreen() {
     );
   if (mode === "guest") return <Redirect href="/login" />;
   return (
-    <Screen title="내 작품" scroll={false}>
-      <StoryList />
+    <Screen title={shelfCopy[shelf].title} scroll={false}>
+      <StoryList shelf={shelf} />
     </Screen>
   );
 }
 
-function StoryList() {
+// 주소의 책장 이름. 모르는 값이면 내 작품을 보인다.
+function shelfOf(value: string | undefined): MyShelf {
+  if (value === "continued" || value === "favorites") return value;
+  return "mine";
+}
+
+function StoryList({ shelf }: { shelf: MyShelf }) {
   const ui = useUi();
   const styles = useStyles();
   const { coverWidth, measureRow } = useShelfCoverWidth();
-  const { query: mine, isDemo, stories } = useMyStories();
-  if (!isDemo && mine.isPending) return <Loading />;
+  const { query: shelfQuery, isDemo, stories } = useMyStories(shelf);
+  if (!isDemo && shelfQuery.isPending) return <Loading />;
   // 처음 불러오다 실패했을 때만 목록 자리를 오류로 바꾼다.
-  if (!isDemo && mine.error && !mine.data)
+  if (!isDemo && shelfQuery.error && !shelfQuery.data)
     return (
       <ErrorBox
-        error={mine.error}
+        error={shelfQuery.error}
         retry={() => {
-          void mine.refetch();
+          void shelfQuery.refetch();
         }}
       />
     );
@@ -55,26 +68,24 @@ function StoryList() {
       )}
       // 목록 안쪽 폭(서가 줄 폭)을 재는 높이 없는 머리
       ListHeaderComponent={<View onLayout={measureRow} />}
-      ListEmptyComponent={
-        <Text style={ui.hint}>아직 함께 쓰는 이야기가 없어요.</Text>
-      }
+      ListEmptyComponent={<Text style={ui.hint}>{shelfCopy[shelf].empty}</Text>}
       ListFooterComponent={
         <ListFooter
-          loadingMore={mine.isFetchingNextPage}
-          error={isDemo ? null : mine.error}
+          loadingMore={shelfQuery.isFetchingNextPage}
+          error={isDemo ? null : shelfQuery.error}
           retry={() => {
-            void mine.fetchNextPage();
+            void shelfQuery.fetchNextPage();
           }}
         />
       }
       onEndReached={() => {
         if (
           !isDemo &&
-          mine.hasNextPage &&
-          !mine.isFetchingNextPage &&
-          !mine.error
+          shelfQuery.hasNextPage &&
+          !shelfQuery.isFetchingNextPage &&
+          !shelfQuery.error
         )
-          void mine.fetchNextPage();
+          void shelfQuery.fetchNextPage();
       }}
       onEndReachedThreshold={0.5}
       contentContainerStyle={styles.list}

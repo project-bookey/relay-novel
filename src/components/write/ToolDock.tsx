@@ -11,7 +11,8 @@ import { Text } from "../text";
 import { themedStyles, useColors } from "../../theme/themed";
 import { useReducedMotion } from "../fruitMotion";
 import { useOpenness, usePanelHeight, useShownPane } from "./dockMotion";
-import { PANE_RADIUS, PaneGlass } from "./pane";
+import { PaneGlass } from "../Glass";
+import { PANE_RADIUS } from "./pane";
 
 export interface DockTool<Key extends string> {
   key: Key;
@@ -111,7 +112,7 @@ export function ToolDock<Key extends string>({
           accessibilityViewIsModal={active !== null}
           style={[styles.panel, { width, height }]}
         >
-          <PaneGlass tintOpacity={openness} />
+          <PaneGlass radius={PANE_RADIUS} tintOpacity={openness} />
           <View style={[StyleSheet.absoluteFill, styles.clip]}>
             <View
               pointerEvents={active === null ? "none" : "auto"}

@@ -94,6 +94,11 @@ export const novels = {
     api<Page<NovelSummary>>(`${root}/me/continued`, {
       query: { kind: "RELAY", page },
     }),
+  // 내가 즐겨찾기에 담은 작품, 최근에 담은 순.
+  favorites: (page = 0) =>
+    api<Page<NovelSummary>>(`${root}/me/favorites`, {
+      query: { kind: "RELAY", page },
+    }),
   turns: () => api<NovelSummary[]>(`${root}/my-turns`),
   // 홈 열매 밭에 놓인 묶음과 오늘 남은 무료 새로고침 수. 불러오기만 해서는 횟수가 줄지 않는다.
   homeFeed: () => api<NovelHomeFeed>(`${root}/home-feed`),

@@ -308,7 +308,7 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
     page.getByRole("button", { name: "새 이야기 심기" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "마이", exact: true }).click();
-  // 마이 맨 위 숫자 줄에 내 작품 수가 있다.
+  // 마이 맨 위 유리 명함에 내 작품 수가 있다.
   await expect(page.getByLabel("내 작품 1편")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "달빛을 파는 가게, 이야기 이어가는 중" }),

@@ -1,4 +1,4 @@
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { keepWords, Text } from "../text";
 import { router } from "expo-router";
 import type { NovelSummary } from "../../api/types";
@@ -8,25 +8,24 @@ import { themedStyles } from "../../theme/themed";
 import { CoverThumb } from "../CoverThumb";
 import { LikeMark } from "../fruits/LikeMark";
 
-// 마이에서 한 줄에 보이는 작품 수. 나머지는 "더 보기"로 책장 화면(app/my-stories.tsx)에서 본다.
-export const STRIP_COUNT = 4;
+// 마이 책장 상자에서 옆으로 넘겨 보는 작품 수. 나머지는 "모두 보기"로 책장 화면(app/my-stories.tsx)에서 본다.
+const STRIP_COUNT = 10;
+const COVER_WIDTH = 92;
 const GAP = 12;
-// 마이 화면의 바깥 여백(24 × 2)과 가장 넓은 폭(680)
-const PAGE_PADDING = 48;
-const PAGE_MAX_WIDTH = 680;
+// 상자 안쪽 여백. 표지 줄은 상자 오른쪽 끝에서 잘려 옆에 더 있다는 걸 보인다.
+const BOX_PADDING = 16;
 // 열매 탭 서가와 같은 말투: 사진 모서리만 아주 조금 둥글고, 왼쪽 위 귀퉁이에 좋아요 꼬리표.
 const COVER_RADIUS = 4;
 
-// 마이의 책장 한 줄: 표지 네 권을 가로로 세우고, 제목과 진행(열매 탭 서가와 같은 문구)을 아래에.
+// 마이의 책장 한 줄(시안 reference/sian/my-redesign A′): 표지를 옆으로 넘겨 보고, 제목과 진행(열매 탭 서가와 같은 문구)을 아래에.
 export function MyStoryStrip({ stories }: { stories: NovelSummary[] }) {
   const styles = useStyles();
-  const { width } = useWindowDimensions();
-  const stripWidth = Math.min(width, PAGE_MAX_WIDTH) - PAGE_PADDING;
-  const coverWidth = Math.floor(
-    (stripWidth - GAP * (STRIP_COUNT - 1)) / STRIP_COUNT,
-  );
   return (
-    <View style={styles.strip}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.strip}
+    >
       {stories.slice(0, STRIP_COUNT).map((story) => (
         <Pressable
           key={story.id}
@@ -35,14 +34,14 @@ export function MyStoryStrip({ stories }: { stories: NovelSummary[] }) {
           accessibilityHint={progressLine(story)}
           onPress={() => router.push(`/novel/${story.id}`)}
           style={({ pressed }) => [
-            { width: coverWidth },
+            { width: COVER_WIDTH },
             pressed && styles.pressed,
           ]}
         >
           <View>
             <CoverThumb
               novel={story}
-              width={coverWidth}
+              width={COVER_WIDTH}
               radius={COVER_RADIUS}
             />
             <LikeMark count={story.likeCount} coverRadius={COVER_RADIUS} />
@@ -59,12 +58,12 @@ export function MyStoryStrip({ stories }: { stories: NovelSummary[] }) {
           </Text>
         </Pressable>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 const useStyles = themedStyles((colors) => ({
-  strip: { flexDirection: "row", gap: GAP },
+  strip: { gap: GAP, padding: BOX_PADDING },
   pressed: { opacity: 0.6 },
   title: {
     fontSize: 13,

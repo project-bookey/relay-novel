@@ -4,6 +4,7 @@ import type {
   Page,
   NovelSummary,
   NovelDetail,
+  NovelFavoriteView,
   NovelLikeView,
   NovelStatus,
   NovelDelivery,
@@ -114,6 +115,9 @@ export const novels = {
   // 누를 때마다 좋아요가 켜지고 꺼진다. 결과는 서버의 실제 상태다.
   toggleLike: (id: number) =>
     api<NovelLikeView>(`${root}/${id}/like`, { method: "POST" }),
+  // 즐겨찾기 — 좋아요와 따로, 누를 때마다 담고 뺀다.
+  toggleFavorite: (id: number) =>
+    api<NovelFavoriteView>(`${root}/${id}/favorite`, { method: "POST" }),
   create: (body: CreateNovel) =>
     api<NovelDetail>(root, { method: "POST", body }),
   apply: (id: number) =>

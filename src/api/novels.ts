@@ -89,6 +89,11 @@ export const novels = {
     }),
   mine: (page = 0) =>
     api<Page<NovelSummary>>(`${root}/mine`, { query: { kind: "RELAY", page } }),
+  // 내가 이어 쓴 이야기: 남의 작품에 내가 쓴 회차가 있는 작품, 내가 가장 최근에 쓴 순(내 작품은 mine).
+  continued: (page = 0) =>
+    api<Page<NovelSummary>>(`${root}/me/continued`, {
+      query: { kind: "RELAY", page },
+    }),
   turns: () => api<NovelSummary[]>(`${root}/my-turns`),
   // 홈 열매 밭에 놓인 묶음과 오늘 남은 무료 새로고침 수. 불러오기만 해서는 횟수가 줄지 않는다.
   homeFeed: () => api<NovelHomeFeed>(`${root}/home-feed`),

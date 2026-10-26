@@ -33,6 +33,7 @@ const places: {
   Icon: ComponentType<BarIconProps>;
   href: Href;
 }[] = [
+  // 마이는 왼쪽 바의 가장 오른쪽(2026-10-23 사용자 요청)
   { place: "home", label: "홈", Icon: HomeIcon, href: "/" },
   { place: "fruits", label: "열매", Icon: FruitsIcon, href: "/fruits" },
   { place: "my", label: "마이", Icon: UserIcon, href: "/my" },

@@ -61,7 +61,8 @@ export function MyNewsSection() {
   );
 }
 
-function NewsRow({ news }: { news: MyNews }) {
+// 소식 한 줄. 마이의 내 할 일도 같은 줄을 쓴다.
+export function NewsRow({ news }: { news: MyNews }) {
   const styles = useStyles();
   const { mode } = useSession();
   const story: NovelSummary =

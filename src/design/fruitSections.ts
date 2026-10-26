@@ -8,11 +8,12 @@ export type MyNews =
   | { kind: "turn"; story: NovelSummary; dueAt?: string }
   | { kind: "claim"; delivery: NovelDelivery; dueAt: string };
 
+// 내 할 일(마이): 내 차례와 맡은 자리를 마감이 가까운 순으로 모두.
 // 마감이 없는 내 차례는 마감이 있는 것들 뒤에 둔다. 마감이 같으면 내 차례를 먼저.
-export function mostUrgentNews(
+export function newsByUrgency(
   turns: NovelSummary[],
   deliveries: NovelDelivery[],
-): MyNews | undefined {
+): MyNews[] {
   const news: MyNews[] = [
     ...turns.map((story) => ({
       kind: "turn" as const,
@@ -27,7 +28,15 @@ export function mostUrgentNews(
   ];
   const dueTime = (item: MyNews) =>
     item.dueAt ? Date.parse(item.dueAt) : Number.POSITIVE_INFINITY;
-  return [...news].sort((left, right) => dueTime(left) - dueTime(right))[0];
+  return [...news].sort((left, right) => dueTime(left) - dueTime(right));
+}
+
+// 열매 탭의 내 이야기 소식은 가장 급한 한 줄만.
+export function mostUrgentNews(
+  turns: NovelSummary[],
+  deliveries: NovelDelivery[],
+): MyNews | undefined {
+  return newsByUrgency(turns, deliveries)[0];
 }
 
 // "마감 11시간", "마감 2일", "마감 40분". 서버가 지난 것은 보내지 않지만, 시계가 어긋나면 "곧 마감".

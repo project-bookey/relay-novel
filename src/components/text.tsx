@@ -41,6 +41,13 @@ export const Text = forwardRef<NativeText, TextProps>(function Text(
   );
 });
 
+// 한글 제목을 글자 중간이 아니라 낱말 사이에서 줄바꿈한다("달빛을 파는 가/게"처럼 끊기지 않게).
+// iOS는 텍스트 속성, 웹은 CSS word-break(스타일 타입에 없어 맞춘다). 안드로이드는 고를 방법이 없다.
+export const keepWords = {
+  lineBreakStrategyIOS: "hangul-word" as const,
+  style: (Platform.OS === "web" ? { wordBreak: "keep-all" } : {}) as TextStyle,
+};
+
 // 웹 브라우저는 누른 입력칸에 포커스 테두리를 그린다. 크롬은 outline-style이 auto면 굵기 0을 무시하므로
 // 테두리 모양을 none으로 바꾼다. React Native 스타일 타입에는 none이 없어 웹에서만 넣는다.
 export const WEB_NO_FOCUS_RING = (

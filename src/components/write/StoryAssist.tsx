@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { Text } from "../text";
+import { Text, TextInput, WEB_NO_FOCUS_RING } from "../text";
 import { useMutation } from "@tanstack/react-query";
 import type {
   StoryMode,
   StoryRequest,
   StorySuggestions,
 } from "../../api/types";
-import { Button, Card, ErrorBox, Field, useUi } from "../ui";
+import { themedStyles, useColors } from "../../theme/themed";
+import { ErrorBox } from "../ui";
 import { applyStory, plotPrompt } from "./storySuggestions";
+import { PaneButton, PaneHead, PaneNote, usePaneStyles } from "./pane";
+import { StorySuggestionList } from "./StorySuggestionList";
 
 const modes: {
   mode: StoryMode;
@@ -36,12 +39,14 @@ const modes: {
   },
 ];
 
+// 이야기 제안 팝업: 이어쓰기·전개 추천·첫 문단 가운데 하나를 골라 제안받고, 읽어 본 뒤 원고에 넣는다.
 export function StoryAssist({
   body,
   hasPrevious,
   disabled,
   generate,
   onApply,
+  onClose,
 }: {
   body: string;
   hasPrevious: boolean;
@@ -50,14 +55,16 @@ export function StoryAssist({
     request: Omit<StoryRequest, "turnNumber">,
   ) => Promise<StorySuggestions>;
   onApply: (body: string) => void;
+  onClose: () => void;
 }) {
-  const ui = useUi();
+  const pane = usePaneStyles();
+  const styles = useStyles();
+  const colors = useColors();
   const [mode, setMode] = useState<StoryMode>(
     body.trim() || hasPrevious ? "CONTINUE" : "OPENING",
   );
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<Error | null>(null);
-  const [applied, setApplied] = useState(false);
   const mutation = useMutation({
     mutationFn: async (request: {
       mode: StoryMode;
@@ -84,138 +91,148 @@ export function StoryAssist({
       : !!(body.trim() || prompt.trim() || hasPrevious);
   const start = (next: StoryMode, hint = prompt) => {
     setError(null);
-    setApplied(false);
     setMode(next);
     mutation.mutate({ mode: next, body, seed: prompt, hint });
   };
+  const insert = (text: string) => {
+    if (!result) return;
+    try {
+      onApply(applyStory(body, result.body, result.mode, text));
+      mutation.reset();
+      setError(null);
+    } catch (cause) {
+      setError(cause as Error);
+    }
+  };
+
   return (
-    <Card>
-      <Text style={ui.label}>다음 이야기가 막힐 때</Text>
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          gap: 8,
-          marginTop: 14,
-        }}
-      >
-        {modes.map((item) => (
-          <Pressable
-            key={item.mode}
-            accessibilityRole="tab"
-            accessibilityLabel={item.label}
-            accessibilityState={{
-              selected: mode === item.mode,
-              disabled: mutation.isPending,
-            }}
-            disabled={mutation.isPending}
-            style={[ui.pill, mode === item.mode && ui.pillSelected]}
-            onPress={() => {
-              setMode(item.mode);
-              mutation.reset();
-              setError(null);
-              setApplied(false);
-            }}
-          >
-            <Text
-              style={[ui.pillText, mode === item.mode && ui.pillTextSelected]}
+    <>
+      <PaneHead title="이야기 제안" onClose={onClose} />
+      <View style={styles.modes}>
+        {modes.map((item) => {
+          const selected = mode === item.mode;
+          return (
+            <Pressable
+              key={item.mode}
+              accessibilityRole="tab"
+              accessibilityLabel={item.label}
+              accessibilityState={{
+                selected,
+                disabled: mutation.isPending,
+              }}
+              disabled={mutation.isPending}
+              style={[styles.mode, selected && styles.modeSelected]}
+              onPress={() => {
+                setMode(item.mode);
+                mutation.reset();
+                setError(null);
+              }}
             >
-              {item.label}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[styles.modeText, selected && styles.modeTextSelected]}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
-      <Text style={ui.hint}>{choice.hint}</Text>
-      <Field
-        label="소재·분위기·원하는 방향"
-        value={prompt}
-        onChangeText={setPrompt}
-        maxLength={300}
-        multiline
-        style={{ minHeight: 90 }}
-        placeholder={
-          mode === "OPENING"
-            ? "예: 비 오는 밤, 낯선 편지를 받은 소녀. 잔잔하고 신비롭게."
-            : "선택 사항 · 예: 긴장감을 높이고, 인물의 대사를 넣어 주세요."
-        }
-      />
-      <Text style={ui.hint}>
-        앞 회차와 원고의 끝부분, 입력한 소재만 AI 서비스로 전송해요. 제안은 직접
-        확인하고 넣어 주세요.
-      </Text>
-      <Button
-        outline
-        disabled={!allowed || !hasMaterial}
-        onPress={() => start(mode)}
-      >
-        {mutation.isPending ? "이야기를 생각하고 있어요…" : choice.action}
-      </Button>
+      <Text style={[pane.hint, styles.modeHint]}>{choice.hint}</Text>
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>
+          {mode === "OPENING" ? "소재·분위기" : "소재·분위기 (선택)"}
+        </Text>
+        <TextInput
+          accessibilityLabel="소재·분위기·원하는 방향"
+          value={prompt}
+          onChangeText={setPrompt}
+          maxLength={300}
+          multiline
+          placeholderTextColor={colors.muted}
+          underlineColorAndroid="transparent"
+          style={[styles.fieldInput, WEB_NO_FOCUS_RING]}
+          placeholder={
+            mode === "OPENING"
+              ? "예: 비 오는 밤, 낯선 편지를 받은 소녀. 잔잔하고 신비롭게."
+              : "예: 긴장감을 높이고, 인물의 대사를 넣어 주세요."
+          }
+        />
+      </View>
+      <View style={pane.stack}>
+        <PaneButton
+          disabled={!allowed || !hasMaterial}
+          onPress={() => start(mode)}
+        >
+          {mutation.isPending ? "이야기를 생각하고 있어요…" : choice.action}
+        </PaneButton>
+      </View>
       {!!(error || mutation.error) && (
         <ErrorBox error={error || mutation.error} />
       )}
-      {result && (
-        <>
-          <Text style={ui.hint}>
-            {result.mode === "PLOT"
-              ? "어떤 방향으로 이어갈까요?"
-              : "원고에 넣기 전에 읽어 보세요."}
-          </Text>
-          {stale && (
-            <Text style={ui.hint}>
-              요청한 뒤 원고나 소재가 바뀌었어요. 현재 내용으로 다시 제안받아
-              주세요.
-            </Text>
-          )}
-          {result.suggestions.map((option, index) => (
-            <View key={index} style={{ gap: 8, marginBottom: 16 }}>
-              <Text style={ui.label}>{option.title}</Text>
-              <Text selectable style={ui.body}>
-                {option.text}
-              </Text>
-              {result.mode === "PLOT" ? (
-                <Button
-                  disabled={!allowed || stale}
-                  onPress={() => start("CONTINUE", plotPrompt(prompt, option))}
-                >
-                  {`${index + 1}번 전개로 이어쓰기`}
-                </Button>
-              ) : (
-                <Button
-                  disabled={!allowed || stale}
-                  onPress={() => {
-                    try {
-                      onApply(
-                        applyStory(body, result.body, result.mode, option.text),
-                      );
-                      mutation.reset();
-                      setApplied(true);
-                      setError(null);
-                    } catch (cause) {
-                      setError(cause as Error);
-                    }
-                  }}
-                >
-                  {result.mode === "OPENING"
-                    ? "원고 맨 앞에 넣기"
-                    : "원고 끝에 넣기"}
-                </Button>
-              )}
-            </View>
-          ))}
-          <Button
-            outline
-            disabled={mutation.isPending}
-            onPress={() => mutation.reset()}
-          >
-            이야기 제안 닫기
-          </Button>
-        </>
+      {!!result && (
+        <StorySuggestionList
+          mode={result.mode}
+          suggestions={result.suggestions}
+          stale={stale}
+          allowed={allowed}
+          onPickPlot={(option) => start("CONTINUE", plotPrompt(prompt, option))}
+          onInsert={insert}
+        />
       )}
-      {applied && (
-        <Text style={ui.hint}>
-          원고에 넣었어요. 마음에 맞게 고친 뒤 임시저장하거나 발행해 주세요.
-        </Text>
-      )}
-    </Card>
+      <PaneNote>
+        앞 회차와 원고의 끝부분, 적은 소재만 AI 서비스로 전송해요. 전개를 고르면
+        그 방향으로 이어 쓸 문단을 먼저 보여 드려요.
+      </PaneNote>
+    </>
   );
 }
+
+const useStyles = themedStyles((colors) => ({
+  // 방식마다 안내가 한 줄·두 줄이라, 탭을 바꿀 때 팝업 높이가 흔들리지 않게 늘 두 줄 자리를 잡아 둔다
+  // (줄 높이 22 × 2, 사용자 요청).
+  modeHint: { minHeight: 44 },
+  // 세 가지 제안 방식. 옅은 바탕 칸 안에서 고른 것만 유리 방울로 띄운다.
+  modes: {
+    flexDirection: "row",
+    gap: 4,
+    padding: 4,
+    marginTop: 6,
+    borderRadius: 26,
+    backgroundColor: colors.searchField,
+  },
+  mode: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeSelected: {
+    backgroundColor: colors.lensFill,
+    boxShadow: colors.lensShadow,
+  },
+  modeText: { fontSize: 14, color: colors.muted },
+  modeTextSelected: { color: colors.ink, fontWeight: "800" },
+  field: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingTop: 9,
+    paddingBottom: 6,
+    borderRadius: 14,
+    backgroundColor: colors.lensFill,
+    borderWidth: 1,
+    borderColor: colors.lensEdge,
+    boxShadow: colors.lensShadow,
+  },
+  fieldLabel: { fontSize: 11.5, color: colors.muted },
+  fieldInput: {
+    minHeight: 48,
+    paddingTop: 2,
+    paddingBottom: 4,
+    paddingHorizontal: 0,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.ink,
+    textAlignVertical: "top",
+  },
+}));

@@ -112,6 +112,11 @@ async function openEditor(page: Page, branch = false, fail = false) {
   return calls;
 }
 
+// 쓰는 동안의 기능은 키보드 위 유리 도구 줄에서 팝업으로 연다.
+async function openTool(page: Page, name: "다듬기" | "이야기 제안") {
+  await page.getByRole("button", { name, exact: true }).click();
+}
+
 for (const branch of [false, true]) {
   test(`${branch ? "branch" : "turn"} previews a rewrite and saves only after applying it`, async ({
     page,
@@ -119,8 +124,11 @@ for (const branch of [false, true]) {
     const errors = collectErrors(page);
     const calls = await openEditor(page, branch);
     const input = page.getByRole("textbox", { name: "이어지는 이야기" });
+    await openTool(page, "다듬기");
     await page.getByRole("button", { name: "AI로 문장 다듬기" }).click();
-    await expect(page.getByText("다듬기 제안", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("이렇게 다듬어 봤어요", { exact: true }),
+    ).toBeVisible();
     await expect(input).toHaveValue("그가 숲으로 달려갓다.");
     expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
     const request = calls.find((call) => call.path.endsWith("/writing-assist"));
@@ -133,9 +141,10 @@ for (const branch of [false, true]) {
       turnNumber: branch ? 5 : 1,
       text: "그가 숲으로 달려갓다.",
     });
-    await page.getByRole("button", { name: "제안 적용" }).click();
+    await page.getByRole("button", { name: "바꾸기", exact: true }).click();
     await expect(input).toHaveValue("그가 숲으로 달려갔다.");
-    await page.getByRole("button", { name: "임시저장", exact: true }).click();
+    // 바꾼 원고는 손을 멈추면 저절로 임시저장된다.
+    await expect(page.getByText(/저장됨/)).toBeVisible();
     await expect
       .poll(() => calls.filter((call) => call.method === "PUT").length)
       .toBe(1);
@@ -150,19 +159,68 @@ test("editing the draft makes the previous suggestion inapplicable", async ({
   page,
 }) => {
   await openEditor(page);
+  await openTool(page, "다듬기");
   await page.getByRole("button", { name: "AI로 문장 다듬기" }).click();
-  await expect(page.getByRole("button", { name: "제안 적용" })).toBeEnabled();
+  const apply = page.getByRole("button", { name: "바꾸기", exact: true });
+  await expect(apply).toBeEnabled();
+  // 팝업을 닫고 원고를 고친 뒤 다시 열면, 받아 둔 제안은 남아 있지만 바꿀 수 없다.
+  await page.getByRole("button", { name: "닫기", exact: true }).click();
   await page
     .getByRole("textbox", { name: "이어지는 이야기" })
     .fill("내가 계속 써 내려간 원고.");
-  await expect(page.getByRole("button", { name: "제안 적용" })).toBeDisabled();
+  await openTool(page, "다듬기");
+  await expect(apply).toBeDisabled();
   await expect(page.getByText(/요청한 뒤 원고가 바뀌었어요/)).toBeVisible();
+});
+
+test("leaving right after typing saves the draft before going back", async ({
+  page,
+}) => {
+  const calls = await openEditor(page);
+  await page
+    .getByRole("textbox", { name: "이어지는 이야기" })
+    .fill("나가기 전에 쓴 원고.");
+  await page.getByRole("button", { name: "뒤로", exact: true }).click();
+  await expect(page).toHaveURL(/\/novel\/42$/);
+  expect(calls.find((call) => call.method === "PUT")?.body.body).toBe(
+    "나가기 전에 쓴 원고.",
+  );
+});
+
+test("a failed auto save can be saved again from the top line", async ({
+  page,
+}) => {
+  const calls = await openEditor(page);
+  // 처음 한 번만 저장을 실패시키고, 그 뒤로는 모의 서버에 넘긴다.
+  let failed = false;
+  await page.route("**/api/v1/novels/42/draft", async (route) => {
+    if (route.request().method() !== "PUT" || failed) return route.fallback();
+    failed = true;
+    await route.fulfill({
+      status: 500,
+      json: { code: "SERVER_ERROR", message: "잠시 뒤 다시 시도해 주세요." },
+      headers: { "Access-Control-Allow-Origin": "*" },
+    });
+  });
+  await page
+    .getByRole("textbox", { name: "이어지는 이야기" })
+    .fill("고쳐 쓴 원고.");
+  const retry = page.getByRole("button", {
+    name: "저장하지 못했어요. 다시 저장",
+  });
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect(page.getByText(/저장됨/)).toBeVisible();
+  expect(
+    calls.filter((call) => call.method === "PUT").map((call) => call.body.body),
+  ).toEqual(["고쳐 쓴 원고."]);
 });
 
 test("quota errors preserve the original draft and are not retried", async ({
   page,
 }) => {
   const calls = await openEditor(page, false, true);
+  await openTool(page, "다듬기");
   await page.getByRole("button", { name: "AI로 문장 다듬기" }).click();
   await expect(page.getByRole("alert")).toContainText("24시간에 10번");
   await expect(
@@ -187,22 +245,25 @@ test("only the selected passage of a long manuscript is sent and replaced", asyn
     await input.press("ArrowLeft");
   for (let index = 0; index < passage.length; index++)
     await input.press("Shift+ArrowLeft");
+  await openTool(page, "다듬기");
+  await expect(page.getByText(passage, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "AI로 문장 다듬기" }).click();
-  await expect(page.getByRole("button", { name: "제안 적용" })).toBeEnabled();
+  const apply = page.getByRole("button", { name: "바꾸기", exact: true });
+  await expect(apply).toBeEnabled();
   expect(
     calls.find((call) => call.path.endsWith("/writing-assist"))?.body.text,
   ).toBe(passage);
-  await page.getByText("다듬기 제안", { exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: test.info().outputPath("writing-assist.png") });
-  await page.getByRole("button", { name: "제안 적용" }).click();
+  await apply.click();
   await expect(input).toHaveValue(prefix + "그가 숲으로 달려갔다." + suffix);
 });
 
-test("continuation previews a paragraph before appending and never saves automatically", async ({
+test("continuation previews a paragraph before appending it", async ({
   page,
 }) => {
   const calls = await openEditor(page);
   const input = page.getByRole("textbox", { name: "이어지는 이야기" });
+  await openTool(page, "이야기 제안");
   await page.getByRole("button", { name: "다음 문단 제안받기" }).click();
   await expect(
     page.getByText("나뭇잎 사이로 작은 문이 모습을 드러냈다.", { exact: true }),
@@ -216,17 +277,18 @@ test("continuation previews a paragraph before appending and never saves automat
     body: "그가 숲으로 달려갓다.",
     prompt: "",
   });
+  expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
   await page.getByRole("button", { name: "원고 끝에 넣기" }).click();
   await expect(input).toHaveValue(
     "그가 숲으로 달려갓다.\n\n나뭇잎 사이로 작은 문이 모습을 드러냈다.",
   );
-  expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
 });
 
 test("a branch can choose one of three plots and then generate a paragraph in that direction", async ({
   page,
 }) => {
   const calls = await openEditor(page, true);
+  await openTool(page, "이야기 제안");
   await page.getByRole("tab", { name: "전개 추천" }).click();
   await page.getByRole("button", { name: "전개 3가지 추천받기" }).click();
   await expect(page.getByText("낯선 편지", { exact: true })).toBeVisible();
@@ -250,6 +312,7 @@ test("opening requires a seed and is inserted before the existing draft", async 
   page,
 }) => {
   await openEditor(page);
+  await openTool(page, "이야기 제안");
   await page.getByRole("tab", { name: "첫 문단" }).click();
   await expect(
     page.getByRole("button", { name: "첫 문단 만들기" }),
@@ -273,6 +336,7 @@ test("story suggestions cannot be applied after the manuscript or seed changes",
   page,
 }) => {
   await openEditor(page);
+  await openTool(page, "이야기 제안");
   await page.getByRole("button", { name: "다음 문단 제안받기" }).click();
   await expect(
     page.getByRole("button", { name: "원고 끝에 넣기" }),
@@ -294,6 +358,7 @@ test("story quota errors preserve the draft and are not retried", async ({
   page,
 }) => {
   const calls = await openEditor(page, false, true);
+  await openTool(page, "이야기 제안");
   await page.getByRole("button", { name: "다음 문단 제안받기" }).click();
   await expect(page.getByRole("alert")).toContainText("24시간에 10번");
   await expect(

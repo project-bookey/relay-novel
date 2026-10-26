@@ -1,13 +1,11 @@
 import { useState } from "react";
 import {
   Animated,
-  Platform,
   Pressable,
   View,
   type LayoutChangeEvent,
-  type TextStyle,
 } from "react-native";
-import { Text, TextInput } from "../text";
+import { Text, TextInput, WEB_NO_FOCUS_RING } from "../text";
 import { Search } from "lucide-react-native";
 import { themedStyles, useColors } from "../../theme/themed";
 
@@ -23,11 +21,6 @@ const OPEN_GLASS_WIDTH = 40;
 const OPEN_GLASS_SCALE = 18 / 24;
 // 조금 둥근 칸(사용자 요청 "검색창을 조금 둥글게", 시안 reference/sian/search-veil)
 const FIELD_RADIUS = 14;
-// 웹 브라우저는 누른 입력칸에 포커스 테두리를 그린다. 크롬은 outline-style이 auto면 굵기 0을 무시하므로
-// 테두리 모양을 none으로 바꾼다. React Native 스타일 타입에는 none이 없어 웹에서만 넣는다.
-const WEB_NO_FOCUS_RING = (
-  Platform.OS === "web" ? { outlineStyle: "none" } : {}
-) as TextStyle;
 
 // 검색 유리막 맨 위의 검색칸. openness(0 = 닫힌 돋보기, 1 = 펼친 칸)는 유리막이 움직이고,
 // 칸은 돋보기 자리에서 왼쪽으로 늘어나며 아래 바의 '지금 있는 곳' 방울처럼 밝게 떠오른다.

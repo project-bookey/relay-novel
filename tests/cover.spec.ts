@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { collectErrors, homeFeedOf, mockBackend } from "./mockBackend";
+import {
+  collectErrors,
+  emptyPage,
+  homeFeedOf,
+  mockBackend,
+} from "./mockBackend";
 
 // 서버가 내려 주는 표지 주소. 아래에서 작은 그림으로 응답한다.
 const coverUrl = "https://cdn.example.test/covers/41.svg";
@@ -42,6 +47,9 @@ test("my stories show their covers on the shelf and on the story page", async ({
       return { accessToken: "test-access", refreshToken: "test-refresh" };
     if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
     if (path.endsWith("/my-turns") || path.endsWith("/deliveries")) return [];
+    // 마이의 다른 책장(내가 이어 쓴 이야기·즐겨찾기)은 비어 있다.
+    if (path.endsWith("/me/continued") || path.endsWith("/me/favorites"))
+      return emptyPage;
     if (path.endsWith("/novels/mine"))
       return {
         content: [covered, plain],

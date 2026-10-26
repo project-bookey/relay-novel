@@ -58,7 +58,12 @@ test("restoring without enough sunlight opens the sunlight sheet, and discarding
   const calls = await mockBackend(page, async ({ path, method }, route) => {
     if (path.endsWith("/auth/login"))
       return { accessToken: "test-access", refreshToken: "test-refresh" };
-    if (path === "/api/v1/novels" || path.endsWith("/novels/mine"))
+    if (
+      path === "/api/v1/novels" ||
+      path.endsWith("/novels/mine") ||
+      path.endsWith("/me/continued") ||
+      path.endsWith("/me/favorites")
+    )
       return emptyPage;
     if (path.endsWith("/novels/home-feed")) return homeFeedOf([]);
     if (path.endsWith("/my-turns") || path.endsWith("/deliveries")) return [];

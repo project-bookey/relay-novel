@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { Platform, View, type StyleProp, type ViewStyle } from "react-native";
+import {
+  Animated,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import {
   GlassView,
   isGlassEffectAPIAvailable,
@@ -61,6 +68,37 @@ export function GlassSurface({
   );
 }
 
+// 글자 위에 뜨는 짙은 유리(이어 쓰기 팝업, 마이 유리 명함). 유리 위에 바탕색(paneTint)을 한 겹 더 깔아
+// 뒤 글자와 겹쳐 읽히지 않게 한다. 감싸는 칸을 꽉 채우고, 모서리는 radius로 맞춘다.
+// tintOpacity(0~1)로 그 한 겹을 서서히 깔 수 있다(도구 줄이 팝업으로 펼쳐질 때).
+export function PaneGlass({
+  radius,
+  tintOpacity = 1,
+}: {
+  radius: number;
+  tintOpacity?: number | Animated.AnimatedInterpolation<number>;
+}) {
+  const styles = useStyles();
+  const corner = { borderRadius: radius };
+  return (
+    <>
+      <GlassSurface
+        interactive={false}
+        style={[StyleSheet.absoluteFill, corner]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          corner,
+          styles.paneTint,
+          { opacity: tintOpacity },
+        ]}
+      />
+    </>
+  );
+}
+
 const useStyles = themedStyles((colors) => ({
   // 시스템 유리가 없는 곳(웹·안드로이드·iOS 26 이전)에서 흉내 낸 유리.
   // 가장자리에 맺힌 빛은 안쪽 그림자로, 화면 위에 떠 있는 느낌은 바깥 그림자로 낸다.
@@ -72,4 +110,5 @@ const useStyles = themedStyles((colors) => ({
   webTint: { backgroundColor: colors.glassTint, ...webGlass },
   // 뒤를 흐리게 할 수 없는 곳에서는 뒤쪽 글자가 겹쳐 읽히지 않도록 더 불투명하게 둔다.
   solidTint: { backgroundColor: colors.glassSolid },
+  paneTint: { backgroundColor: colors.paneTint },
 }));

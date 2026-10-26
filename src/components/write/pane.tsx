@@ -1,38 +1,10 @@
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { X } from "lucide-react-native";
 import { Text } from "../text";
-import { GlassSurface } from "../Glass";
 import { themedStyles, useColors } from "../../theme/themed";
 
 // 이어 쓰기 화면의 유리 팝업(도구 판·발행 확인)에 함께 쓰는 조각들.
 export const PANE_RADIUS = 26;
-
-// 팝업 바탕 유리. 원고 글자 위에 뜨므로 버튼 유리 위에 바탕색을 한 겹 더 깐다.
-// 버튼 줄이 팝업으로 펼쳐질 때는 tintOpacity(0~1)로 그 한 겹을 서서히 깐다.
-export function PaneGlass({
-  tintOpacity = 1,
-}: {
-  tintOpacity?: number | Animated.AnimatedInterpolation<number>;
-}) {
-  const styles = usePaneStyles();
-  return (
-    <>
-      <GlassSurface
-        interactive={false}
-        style={[StyleSheet.absoluteFill, styles.round]}
-      />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          styles.round,
-          styles.tint,
-          { opacity: tintOpacity },
-        ]}
-      />
-    </>
-  );
-}
 
 export function PaneHead({
   kicker,
@@ -108,8 +80,6 @@ export function PaneNote({ children }: { children: string }) {
 }
 
 export const usePaneStyles = themedStyles((colors) => ({
-  round: { borderRadius: PANE_RADIUS },
-  tint: { backgroundColor: colors.paneTint },
   head: {
     flexDirection: "row",
     alignItems: "flex-start",

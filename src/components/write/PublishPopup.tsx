@@ -10,13 +10,8 @@ import {
 import { Text } from "../text";
 import { ErrorBox } from "../ui";
 import { useReducedMotion } from "../fruitMotion";
-import {
-  PANE_RADIUS,
-  PaneButton,
-  PaneGlass,
-  PaneHead,
-  usePaneStyles,
-} from "./pane";
+import { PaneGlass } from "../Glass";
+import { PANE_RADIUS, PaneButton, PaneHead, usePaneStyles } from "./pane";
 import { TOP_BAR_HEIGHT } from "./WriteTopBar";
 
 const OPEN_MS = 340;
@@ -97,7 +92,7 @@ export function PublishPopup({
           unfold,
         ]}
       >
-        <PaneGlass />
+        <PaneGlass radius={PANE_RADIUS} />
         <Animated.View style={[styles.body, content]}>
           <PaneHead title="이 장을 발행할까요?" onClose={close} />
           <Text style={pane.hint}>{copy.hint}</Text>

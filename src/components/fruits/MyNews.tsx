@@ -61,8 +61,17 @@ export function MyNewsSection() {
   );
 }
 
-// 소식 한 줄. 마이의 내 할 일도 같은 줄을 쓴다.
-export function NewsRow({ news }: { news: MyNews }) {
+// 소식 한 줄. 마이의 내 할 일도 같은 줄을 쓴다 — 마이는 유리 말투라 버튼을 알약 모양(rounded)으로 두고,
+// 할 일이 여럿이면 가장 급한 줄만 진하게, 나머지는 테두리만(quiet) 둔다(강조는 하나).
+export function NewsRow({
+  news,
+  rounded = false,
+  quiet = false,
+}: {
+  news: MyNews;
+  rounded?: boolean;
+  quiet?: boolean;
+}) {
   const styles = useStyles();
   const { mode } = useSession();
   const story: NovelSummary =
@@ -103,9 +112,16 @@ export function NewsRow({ news }: { news: MyNews }) {
         accessibilityRole="button"
         accessibilityLabel={`${story.title} 이어 쓰기`}
         onPress={write}
-        style={({ pressed }) => [styles.write, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.write,
+          rounded && styles.rounded,
+          quiet && styles.quiet,
+          pressed && styles.pressed,
+        ]}
       >
-        <Text style={styles.writeText}>이어 쓰기</Text>
+        <Text style={[styles.writeText, quiet && styles.quietText]}>
+          이어 쓰기
+        </Text>
       </Pressable>
     </View>
   );
@@ -133,4 +149,11 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.ink,
   },
   writeText: { fontSize: 13, fontWeight: "800", color: colors.onInk },
+  rounded: { borderRadius: 22, paddingHorizontal: 18 },
+  quiet: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  quietText: { color: colors.ink },
 }));

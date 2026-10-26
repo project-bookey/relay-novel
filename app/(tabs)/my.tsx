@@ -1,28 +1,40 @@
-import { Pressable, ScrollView, View } from "react-native";
+import { useMemo, useRef } from "react";
+import { Animated, Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/text";
 import { Redirect, router } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
-import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../src/state/session";
-import { novels } from "../../src/api/novels";
-import { demoStories } from "../../src/api/demo";
-import { MyHeader } from "../../src/components/my/MyHeader";
-import { TurnRow } from "../../src/components/my/TurnRow";
+import { MyBackdrop } from "../../src/components/my/MyBackdrop";
+import { MyCard } from "../../src/components/my/MyCard";
+import { MyTodo } from "../../src/components/my/MyTodo";
+import { MyShelfSection } from "../../src/components/my/MyShelfSection";
 import { useMyStories } from "../../src/components/my/useMyStories";
-import {
-  MyStoryStrip,
-  STRIP_COUNT,
-} from "../../src/components/my/MyStoryStrip";
 import { SettingRows } from "../../src/components/my/SettingRows";
-import { ErrorBox, Loading, Screen, useUi } from "../../src/components/ui";
-import { themedStyles, useColors } from "../../src/theme/themed";
+import { nativeDriverEnabled } from "../../src/components/fruitMotion";
+import { Loading, Screen, useUi } from "../../src/components/ui";
+import { themedStyles } from "../../src/theme/themed";
 
-// 마이 페이지(사용자가 고른 시안 A "책장" reference/sian/my-page/ + 내 정보 시안 B "숫자 줄" reference/sian/my-profile/).
-// 위에서부터 닉네임과 숫자 둘(내 작품·햇살) → 내 차례(진하게 강조하는 유일한 동작) → 내 작품 네 권 한 줄(더 보기 → 내 작품 화면)
-// → 설정 줄(수거함·화면 모드·관심 장르) → 멀리 떨어진 로그아웃.
+// 맨 위를 물들이는 내 이야기 색의 높이(상태 표시줄 아래부터)
+const BACKDROP_HEIGHT = 340;
+// 아래 바와 그 위 여유. 기기 아래 여백은 따로 더한다.
+const BOTTOM_SPACE = 120;
+
+// 마이 페이지(사용자가 고른 시안 reference/sian/my-redesign A′ "유리 명함").
+// 내 이야기 색 위의 유리 명함(이름 · 햇살 칩 · 숫자 셋) → 내 할 일(상자 없이, 강조는 가장 급한 "이어 쓰기" 하나)
+// → 내 작품 · 내가 이어 쓴 이야기 책장(큰 이름 + 조금 각진 상자) → 설정 상자 → 멀리 떨어진 로그아웃.
+// 맨 위 색이 상태 표시줄 뒤까지 닿도록 안전 영역을 직접 비우고, 내리면 상태 표시줄 뒤에만 바탕색을 깐다.
 export default function MyPage() {
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const { mode, logout } = useSession();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const onScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: nativeDriverEnabled,
+      }),
+    [scrollY],
+  );
 
   if (mode === "loading")
     return (
@@ -36,30 +48,66 @@ export default function MyPage() {
   const leave = () => {
     void logout().then(() => router.replace("/login"));
   };
+  // 내리면 상태 표시줄 뒤에 바탕색이 깔려 시계·배터리가 글자와 겹치지 않는다(유리 줄은 두지 않는다 — 사용자 요청).
+  const statusVeil = scrollY.interpolate({
+    inputRange: [0, insets.top + 24],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   return (
-    <Screen scroll={false}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <MyHeader />
-        {isDemo && <DemoNotice />}
-        <MyTurns />
-        <MyStories />
-        <View style={styles.settings}>
-          <SettingRows />
+    <View style={styles.screen}>
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        // 안전 영역을 직접 비운다. 아래는 아래 바(높이 + 기기 아래 여백)에 마지막 줄이 가리지 않을 만큼.
+        contentContainerStyle={{
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + BOTTOM_SPACE,
+        }}
+      >
+        <ShelfBackdrop height={insets.top + BACKDROP_HEIGHT} />
+        <View style={styles.column}>
+          <MyCard />
+          {isDemo && <DemoNotice />}
+          <View style={styles.todo}>
+            <MyTodo />
+          </View>
+          <MyShelfSection shelf="mine" />
+          <MyShelfSection shelf="continued" />
+          <View style={styles.settings}>
+            <SettingRows />
+          </View>
+          {/* 되돌리기 어려운 동작이라 다른 버튼들과 멀리 떨어뜨린다. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={isDemo ? "둘러보기 끝내기" : "로그아웃"}
+            onPress={leave}
+            style={styles.leave}
+          >
+            <Text style={styles.leaveText}>
+              {isDemo ? "둘러보기 끝내기" : "로그아웃"}
+            </Text>
+          </Pressable>
         </View>
-        {/* 되돌리기 어려운 동작이라 다른 버튼들과 멀리 떨어뜨린다. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={isDemo ? "둘러보기 끝내기" : "로그아웃"}
-          onPress={leave}
-          style={styles.leave}
-        >
-          <Text style={styles.leaveText}>
-            {isDemo ? "둘러보기 끝내기" : "로그아웃"}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </Screen>
+      </Animated.ScrollView>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.statusVeil, { height: insets.top, opacity: statusVeil }]}
+      />
+    </View>
+  );
+}
+
+// 내 작품과 이어 쓴 이야기의 색을 맨 위에 깐다. 두 책장과 같은 쿼리라 따로 불러오지 않는다.
+function ShelfBackdrop({ height }: { height: number }) {
+  const mine = useMyStories("mine");
+  const continued = useMyStories("continued");
+  return (
+    <MyBackdrop
+      stories={[...mine.stories, ...continued.stories]}
+      height={height}
+    />
   );
 }
 
@@ -83,90 +131,15 @@ function DemoNotice() {
   );
 }
 
-// 내 차례가 없으면 자리를 비운다(고를 것을 줄인다). 불러오는 중·오류는 보여 준다.
-function MyTurns() {
-  const styles = useStyles();
-  const { mode } = useSession();
-  const isDemo = mode === "demo";
-  const turns = useQuery({
-    queryKey: ["my-turns", mode],
-    queryFn: novels.turns,
-    enabled: mode === "authenticated",
-  });
-  if (!isDemo && turns.isPending) return <Loading />;
-  if (!isDemo && turns.error)
-    return (
-      <ErrorBox
-        error={turns.error}
-        retry={() => {
-          void turns.refetch();
-        }}
-      />
-    );
-  const myTurns = isDemo
-    ? demoStories.filter((story) => story.myTurn)
-    : (turns.data ?? []);
-  if (myTurns.length === 0) return null;
-  return (
-    <View style={styles.turns}>
-      {myTurns.map((story) => (
-        <TurnRow key={story.id} story={story} />
-      ))}
-    </View>
-  );
-}
-
-function MyStories() {
-  const ui = useUi();
-  const styles = useStyles();
-  const colors = useColors();
-  const { query: mine, isDemo, stories, total } = useMyStories();
-  // 한 줄(네 권)보다 많으면 "더 보기"로 내 작품 화면에서 모두 본다.
-  const hasMore = (total ?? 0) > STRIP_COUNT;
-  return (
-    <>
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>내 작품</Text>
-        {hasMore && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="내 작품 더 보기"
-            onPress={() => router.push("/my-stories")}
-            style={styles.more}
-          >
-            <Text style={styles.moreText}>더 보기</Text>
-            <ChevronRight size={16} color={colors.muted} />
-          </Pressable>
-        )}
-      </View>
-      {!isDemo && mine.isPending && <Loading />}
-      {!isDemo && !!mine.error && (
-        <ErrorBox
-          error={mine.error}
-          retry={() => {
-            void mine.refetch();
-          }}
-        />
-      )}
-      {(isDemo || mine.isSuccess) && stories.length === 0 && (
-        <Text style={ui.hint}>아직 함께 쓰는 이야기가 없어요.</Text>
-      )}
-      <MyStoryStrip stories={stories} />
-    </>
-  );
-}
-
 const useStyles = themedStyles((colors) => ({
-  // 아래쪽 버튼에 마지막 내용이 가리지 않도록 여유를 둔다.
-  content: {
+  screen: { flex: 1, backgroundColor: colors.background },
+  column: {
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
     paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 120,
   },
-  notice: { marginTop: 24, gap: 8 },
+  notice: { marginTop: 20, gap: 8 },
   noticeButton: {
     minHeight: 48,
     justifyContent: "center",
@@ -176,24 +149,8 @@ const useStyles = themedStyles((colors) => ({
     alignSelf: "flex-start",
   },
   noticeButtonText: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  turns: { marginTop: 20, gap: 10 },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 30,
-    marginBottom: 12,
-    minHeight: 44,
-  },
-  sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.ink },
-  more: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  moreText: { fontSize: 14, color: colors.muted },
-  settings: { marginTop: 36 },
+  todo: { marginTop: 12 },
+  settings: { marginTop: 28 },
   leave: {
     marginTop: 32,
     minHeight: 44,
@@ -204,5 +161,12 @@ const useStyles = themedStyles((colors) => ({
     fontSize: 14,
     color: colors.muted,
     textDecorationLine: "underline",
+  },
+  statusVeil: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.background,
   },
 }));

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Pressable, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "../text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -12,13 +12,16 @@ import { themedStyles, useColors } from "../../theme/themed";
 import { AppearancePicker, appearanceLabel } from "./AppearancePicker";
 import { useBranchBin } from "./BranchBin";
 
-// 마이 아래쪽 설정 묶음. 자주 쓰지 않으므로 "이름 … 지금 값 ›" 줄 목록으로 차분하게 두고,
-// 누르면 그 기능의 화면이나 아래에서 올라오는 창으로 간다. 햇살은 맨 위 숫자 줄(MyHeader)에 있다.
+// 마이 아래쪽 설정 묶음. 자주 쓰지 않으므로 "이름 … 지금 값 ›" 줄 목록을 책장과 같은 상자에 차분하게 두고,
+// 누르면 그 기능의 화면이나 아래에서 올라오는 창으로 간다. 햇살은 맨 위 유리 명함(MyCard)에 있다.
 export function SettingRows() {
+  const styles = useStyles();
   return (
-    <View>
+    <View style={styles.box}>
       <BinRow />
+      <View style={styles.divider} />
       <AppearanceRow />
+      <View style={styles.divider} />
       <GenresRow />
     </View>
   );
@@ -134,6 +137,13 @@ function genresText(genres: string[] | undefined, failed: boolean) {
 }
 
 const useStyles = themedStyles((colors) => ({
+  // 책장 상자와 같은 바탕·모서리(시안 my-redesign A′, 사용자 요청 "조금 각지게")
+  box: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.shelfBox,
+  },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
   row: {
     minHeight: 52,
     flexDirection: "row",
@@ -151,7 +161,7 @@ const useStyles = themedStyles((colors) => ({
   },
   value: { flexShrink: 1, fontSize: 14, color: colors.muted },
   scrim: { flex: 1, backgroundColor: colors.scrim },
-  // 마이·열매 탭은 둥근 모서리를 쓰지 않는다(사용자 결정).
+  // 화면 모드 아래 창은 모서리를 둥글리지 않는다(예전 사용자 결정, 마이 개편 뒤에도 그대로).
   sheet: {
     backgroundColor: colors.background,
     paddingHorizontal: 24,

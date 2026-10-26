@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react-native";
 import { Text } from "../text";
 import { themedStyles, useColors } from "../../theme/themed";
 import { ErrorBox, Loading } from "../ui";
-import { MyStoryStrip } from "./MyStoryStrip";
+import { StoryStrip } from "../StoryStrip";
 import {
   shelfCopy,
   shelfHref,
@@ -60,7 +60,7 @@ export function MyShelfSection({ shelf }: { shelf: MyShelf }) {
         {!loading && !failed && stories.length === 0 && (
           <Text style={styles.empty}>{empty}</Text>
         )}
-        {stories.length > 0 && <MyStoryStrip stories={stories} />}
+        {stories.length > 0 && <StoryStrip stories={stories} />}
       </View>
     </View>
   );

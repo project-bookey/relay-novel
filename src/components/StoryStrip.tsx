@@ -1,14 +1,14 @@
 import { Pressable, ScrollView, View } from "react-native";
-import { keepWords, Text } from "../text";
+import { keepWords, Text } from "./text";
 import { router } from "expo-router";
-import type { NovelSummary } from "../../api/types";
-import { progressLine } from "../../design/fruitList";
-import { statusLabel } from "../../theme";
-import { themedStyles } from "../../theme/themed";
-import { CoverThumb } from "../CoverThumb";
-import { LikeMark } from "../fruits/LikeMark";
+import type { NovelSummary } from "../api/types";
+import { progressLine } from "../design/fruitList";
+import { statusLabel } from "../theme";
+import { themedStyles } from "../theme/themed";
+import { CoverThumb } from "./CoverThumb";
+import { LikeMark } from "./fruits/LikeMark";
 
-// 마이 책장 상자에서 옆으로 넘겨 보는 작품 수. 나머지는 "모두 보기"로 책장 화면(app/my-stories.tsx)에서 본다.
+// 상자에서 옆으로 넘겨 보는 작품 수. 마이 책장은 나머지를 "모두 보기"로 책장 화면(app/my-stories.tsx)에서 본다.
 const STRIP_COUNT = 10;
 const COVER_WIDTH = 92;
 const GAP = 12;
@@ -17,8 +17,9 @@ const BOX_PADDING = 16;
 // 열매 탭 서가와 같은 말투: 사진 모서리만 아주 조금 둥글고, 왼쪽 위 귀퉁이에 좋아요 꼬리표.
 const COVER_RADIUS = 4;
 
-// 마이의 책장 한 줄(시안 reference/sian/my-redesign A′): 표지를 옆으로 넘겨 보고, 제목과 진행(열매 탭 서가와 같은 문구)을 아래에.
-export function MyStoryStrip({ stories }: { stories: NovelSummary[] }) {
+// 상자 안에서 옆으로 넘겨 보는 표지 한 줄(마이 책장 — 시안 reference/sian/my-redesign A′, 열매 탭의 나를 위한 이야기).
+// 제목과 진행(열매 탭 서가와 같은 문구)을 표지 아래에 둔다.
+export function StoryStrip({ stories }: { stories: NovelSummary[] }) {
   const styles = useStyles();
   return (
     <ScrollView

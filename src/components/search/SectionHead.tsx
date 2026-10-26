@@ -3,24 +3,33 @@ import { Text } from "../text";
 import { themedStyles } from "../../theme/themed";
 
 // 열매 탭·검색 유리막의 묶음 제목. 제목 옆에 작은 설명(hint), 오른쪽에 작은 글자 버튼 하나를 둘 수 있다.
+// large는 열매 탭의 큰 이름(21, 마이 책장 이름과 같은 크기 — 시안 reference/sian/fruits-glass-b2)이다.
 export function SectionHead({
   title,
   hint,
   action,
+  large = false,
 }: {
   title: string;
   hint?: string;
   action?: { label: string; onPress: () => void };
+  large?: boolean;
 }) {
   const styles = useStyles();
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, large && styles.largeRow]}>
       <View style={styles.titleLine}>
-        <Text accessibilityRole="header" style={styles.title}>
+        <Text
+          accessibilityRole="header"
+          style={[styles.title, large && styles.largeTitle]}
+        >
           {title}
         </Text>
         {hint ? (
-          <Text style={styles.hint} numberOfLines={1}>
+          <Text
+            style={[styles.hint, large && styles.largeHint]}
+            numberOfLines={1}
+          >
             {hint}
           </Text>
         ) : null}
@@ -61,6 +70,9 @@ const useStyles = themedStyles((colors) => ({
     letterSpacing: -0.4,
     color: colors.ink,
   },
+  largeRow: { minHeight: 48 },
+  largeTitle: { fontSize: 21, letterSpacing: -0.6 },
+  largeHint: { fontSize: 13 },
   action: { minHeight: 44, justifyContent: "center" },
   actionText: { fontSize: 13, color: colors.muted },
 }));

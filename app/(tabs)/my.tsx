@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/text";
 import { Redirect, router } from "expo-router";
 import { useSession } from "../../src/state/session";
-import { MyBackdrop } from "../../src/components/my/MyBackdrop";
+import { StoryBackdrop } from "../../src/components/StoryBackdrop";
 import { MyCard } from "../../src/components/my/MyCard";
 import { MyTodo } from "../../src/components/my/MyTodo";
 import { MyShelfSection } from "../../src/components/my/MyShelfSection";
@@ -104,7 +104,7 @@ function ShelfBackdrop({ height }: { height: number }) {
   const mine = useMyStories("mine");
   const continued = useMyStories("continued");
   return (
-    <MyBackdrop
+    <StoryBackdrop
       stories={[...mine.stories, ...continued.stories]}
       height={height}
     />

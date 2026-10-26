@@ -8,11 +8,11 @@ import {
 import { Text, TextInput, WEB_NO_FOCUS_RING } from "../text";
 import { Search } from "lucide-react-native";
 import { themedStyles, useColors } from "../../theme/themed";
+import { SEARCH_SIZE } from "../fruits/fruitsLayout";
 
-// 닫힌 검색칸은 열매 서가 위 돋보기 버튼(48칸, FruitsTop)과 같은 자리·크기다.
-// 아이콘 오른쪽 끝을 목록 글자의 오른쪽 여백에 맞추려고 바깥으로 12 내민다.
-const CLOSED_WIDTH = 48;
-const CLOSED_RIGHT = -12;
+// 닫힌 검색칸은 열매 탭 오른쪽 위에 떠 있는 검색 동그라미(FloatingSearch)와 같은 자리·크기다.
+const CLOSED_WIDTH = SEARCH_SIZE;
+const CLOSED_RIGHT = 0;
 // 펼친 검색칸 오른쪽에 "취소"가 들어설 자리
 const OPEN_RIGHT = 52;
 // 펼친 칸 안에서 돋보기가 차지하는 너비(글자는 그 뒤에서 시작한다)

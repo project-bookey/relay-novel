@@ -199,14 +199,15 @@ test("a reader picks an open chapter fruit, holds a slot and grows a new branch 
     page.getByText(/이어 쓸 자리가 2개 남았어요/).filter({ visible: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "이 회차에서 이어 쓰기" }).click();
-  // 맡은 회차를 편집기 위에서 다시 볼 수 있다.
+  // 맡은 회차는 쓰는 동안 도구 줄의 앞 이야기에서 다시 볼 수 있다.
+  await page.getByRole("button", { name: "앞 이야기", exact: true }).click();
   await expect(page.getByText("이어받은 1장")).toBeVisible();
+  await page.getByRole("button", { name: "닫기", exact: true }).click();
   await page.getByRole("textbox", { name: "이번 장의 제목" }).fill("다른 길");
   await page
     .getByRole("textbox", { name: "이어지는 이야기" })
     .fill("토끼가 먼저 용궁을 찾아왔다.");
-  await page.getByRole("button", { name: "임시저장", exact: true }).click();
-  await expect(page.getByText(/최근 저장/).last()).toBeVisible();
+  await expect(page.getByText(/저장됨/).last()).toBeVisible();
   await page.getByRole("button", { name: "회차 발행", exact: true }).click();
   await page.getByRole("button", { name: "발행하고 열매 맺기" }).click();
   // 발행해 가지가 갈라지면 목차는 끝 열매마다 한 줄기로 바뀌고, 새 가지는 1장에서 갈라진 열매 2가 된다.

@@ -1,5 +1,6 @@
 import { createContext, forwardRef, useContext } from "react";
 import {
+  Platform,
   StyleSheet,
   Text as NativeText,
   TextInput as NativeTextInput,
@@ -39,6 +40,12 @@ export const Text = forwardRef<NativeText, TextProps>(function Text(
     </InsideText.Provider>
   );
 });
+
+// 웹 브라우저는 누른 입력칸에 포커스 테두리를 그린다. 크롬은 outline-style이 auto면 굵기 0을 무시하므로
+// 테두리 모양을 none으로 바꾼다. React Native 스타일 타입에는 none이 없어 웹에서만 넣는다.
+export const WEB_NO_FOCUS_RING = (
+  Platform.OS === "web" ? { outlineStyle: "none" } : {}
+) as TextStyle;
 
 export const TextInput = forwardRef<NativeTextInput, TextInputProps>(
   function TextInput({ style, ...props }, ref) {

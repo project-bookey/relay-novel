@@ -48,3 +48,10 @@ export function applyRewrite(
     );
   return updated;
 }
+
+// 다듬기 팝업에 미리 보여 줄 글. 고른 부분이 없으면 원고 전체다.
+export function passageOf(body: string, selection: TextSelection) {
+  const selected = selection.end > selection.start;
+  const raw = selected ? body.slice(selection.start, selection.end) : body;
+  return { selected, text: raw.trim() };
+}

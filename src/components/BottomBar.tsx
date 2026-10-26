@@ -34,8 +34,8 @@ const places: {
   href: Href;
 }[] = [
   { place: "home", label: "홈", Icon: HomeIcon, href: "/" },
-  { place: "my", label: "마이", Icon: UserIcon, href: "/my" },
   { place: "fruits", label: "열매", Icon: FruitsIcon, href: "/fruits" },
+  { place: "my", label: "마이", Icon: UserIcon, href: "/my" },
 ];
 
 // 지금 있는 곳 아래에 깔리는 유리 방울. 다른 곳으로 옮기면 가는 쪽 가장자리가 먼저 뻗어 나가고
@@ -108,7 +108,7 @@ function useLiquidLens(index: number) {
   );
 }
 
-// 화면 아래에 떠 있는 유리 두 조각. 왼쪽 알약 모양 바에는 홈·마이·열매가,
+// 화면 아래에 떠 있는 유리 두 조각. 왼쪽 알약 모양 바에는 홈·열매·마이가,
 // 오른쪽에 따로 떨어진 같은 높이의 동그란 유리에는 새 이야기를 심는 씨앗주머니가 있다.
 // 아이콘만 보이고, 이름은 화면 읽기 프로그램과 테스트를 위해 accessibilityLabel로만 둔다.
 // 탭 레이아웃이 화면 위에 겹쳐 띄우며, 화면을 옮겨 다녀도 바는 그대로 남는다.

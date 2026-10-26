@@ -4,7 +4,7 @@ import { novels } from "../../api/novels";
 import { demoStories } from "../../api/demo";
 import { newsByUrgency, type MyNews } from "../../design/fruitSections";
 import { useSession } from "../../state/session";
-import { NewsRow } from "../fruits/MyNews";
+import { NewsRow } from "./NewsRow";
 import { ErrorBox, Loading } from "../ui";
 
 // 마이의 내 할 일: 내 차례(GET /my-turns)와 내가 맡은 자리(GET /deliveries)를 마감이 가까운 순으로 모두.
@@ -45,7 +45,7 @@ export function MyTodo() {
   return (
     <View>
       {todo.map((news, index) => (
-        <NewsRow key={keyOf(news)} news={news} rounded quiet={index > 0} />
+        <NewsRow key={keyOf(news)} news={news} quiet={index > 0} />
       ))}
     </View>
   );

@@ -18,6 +18,7 @@ import { useSession } from "../../state/session";
 import { themedStyles, useColors } from "../../theme/themed";
 import { GlassSurface } from "../Glass";
 import { GenreTabsFromServer } from "../fruits/GenreTabsFromServer";
+import { LIST_SIDE, LIST_TOP } from "../fruits/fruitsLayout";
 import { StatusTabs } from "../fruits/StatusTabs";
 import { SearchField } from "./SearchField";
 import { DemoSearchResults, ServerSearchResults } from "./SearchResults";
@@ -65,7 +66,6 @@ export function SearchVeil({ onClose }: { onClose: () => void }) {
       selected={genres}
       onToggle={(genre) => setGenres((now) => toggleGenre(now, genre))}
       onClear={() => setGenres([])}
-      onGlass
     />
   );
   const resultsProps = {
@@ -222,7 +222,7 @@ const useStyles = themedStyles(() => ({
   // 열매 서가 화면 전체(상태 표시줄 자리까지)를 덮는다. 아래 바는 그 위에 그대로 있다.
   veil: { ...StyleSheet.absoluteFill },
   frame: { flex: 1, width: "100%", maxWidth: 680, alignSelf: "center" },
-  // 서가의 제목 줄과 같은 높이에 검색칸이 와서 돋보기 자리에서 펼쳐진다.
-  fieldRow: { paddingTop: 12, paddingHorizontal: 24 },
+  // 열매 탭 맨 위 줄과 같은 높이·여백에 검색칸이 와서 떠 있는 검색 동그라미 자리에서 펼쳐진다.
+  fieldRow: { paddingTop: LIST_TOP, paddingHorizontal: LIST_SIDE },
   body: { flex: 1 },
 }));

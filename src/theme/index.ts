@@ -29,7 +29,7 @@ const lightColors = {
   // 열매 탭 목록의 진행 글자. 앱 초록(green)은 흰 바탕에서 진한 글자(ink)와 거의 같아 보여서
   // 색으로 구분되는 맑은 초록을 따로 둔다(흰 바탕 대비 4.7:1).
   progressInk: "#557D4E",
-  // 열매 탭에서 고른 장르·상태 글자 밑의 굵은 밑줄. 홈의 반짝이 노랑과 같고, 밤에도 그대로 둔다
+  // 검색 유리막에서 고른 장르·상태 글자 밑의 굵은 밑줄. 홈의 반짝이 노랑과 같고, 밤에도 그대로 둔다
   // (사용자가 고른 시안 reference/sian/fruits-anew A "서가").
   tabMark: "#F5C542",
   // 열매 탭 검색창 바탕. 선 없이 바탕만 살짝 다른 칸(사용자가 고른 시안 reference/sian/search-bar B "옅은 칸").
@@ -37,6 +37,18 @@ const lightColors = {
   // 마이 책장·설정 묶음의 상자 바탕. 검색창 색보다 녹색기를 뺀 거의 흰 회색(사용자 요청 "더 밝고 흰색에 가깝게",
   // 시안 reference/sian/my-redesign A′).
   shelfBox: "#F7F7F6",
+  // 열매 탭 나를 위한 이야기 상자. 책장 상자와 같은 색을 반투명하게 깔아 맨 위 작품 색 빛이 비친다
+  // (시안 reference/sian/fruits-glass-b2).
+  forMeBox: "rgba(247, 247, 246, 0.62)",
+  forMeBoxEdge: "rgba(255, 255, 255, 0.85)",
+  // 그 안의 큰 추천 유리 카드. 사용자 요청 "흰색으로 하되 너무 하얗지 않게" — 순백 대신 상자보다 한 톤
+  // 가라앉은 흰 유리이고, 빛 테두리와 안쪽 윗면의 빛으로 유리처럼 보인다.
+  featureCard: "rgba(242, 242, 239, 0.6)",
+  featureCardEdge: "rgba(255, 255, 255, 0.7)",
+  featureCardShadow: [
+    "0 8px 24px rgba(0, 0, 0, 0.06)",
+    "inset 0 1px 1px rgba(255, 255, 255, 0.7)",
+  ].join(", "),
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,
@@ -141,6 +153,14 @@ const darkColors: Palette = {
   // 검색창 바탕은 밤 바탕보다 한 단계 밝게
   searchField: "#3B3E42",
   shelfBox: "#3B3E42",
+  forMeBox: "rgba(59, 62, 66, 0.55)",
+  forMeBoxEdge: "rgba(255, 255, 255, 0.08)",
+  featureCard: "rgba(70, 73, 78, 0.32)",
+  featureCardEdge: "rgba(255, 255, 255, 0.1)",
+  featureCardShadow: [
+    "0 8px 24px rgba(0, 0, 0, 0.3)",
+    "inset 0 1px 1px rgba(255, 255, 255, 0.08)",
+  ].join(", "),
   // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
   castLeg: "#D9D4C7",
   castLegFar: "#A29D91",

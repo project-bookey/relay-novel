@@ -321,10 +321,12 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   await expect(
     page.getByRole("heading", { name: "모든 이야기" }),
   ).toBeVisible();
-  // 상태는 서가에서 고를 수 없다.
-  const recruiting = page.getByRole("button", {
-    name: "우리의 여름은 아직, 작가 모집 중",
-  });
+  // 상태는 서가에서 고를 수 없다. 둘러보기 예시는 모두 나를 위한 이야기의 표지 줄에도 있어서 아래 서가 쪽(마지막)을 본다.
+  const recruiting = page
+    .getByRole("button", {
+      name: "우리의 여름은 아직, 작가 모집 중",
+    })
+    .last();
   await expect(recruiting).toBeVisible();
   const completedTab = page.getByRole("button", {
     name: "완결된 이야기",

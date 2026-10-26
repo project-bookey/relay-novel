@@ -5,9 +5,10 @@ import {
   dueLabel,
   forMeChoice,
   forMeGenres,
-  mostUrgentNews,
   newsByUrgency,
   newsLine,
+  nextFeatured,
+  splitForMe,
 } from "../src/design/fruitSections";
 import { demoStories } from "../src/api/demo";
 import type { NovelDelivery } from "../src/api/types";
@@ -23,20 +24,6 @@ const delivery = (dueAt: string): NovelDelivery => ({
   chapterTitle: "서가 맨 위 칸",
   dueAt,
   source: "CLAIM",
-});
-
-test("my news picks the closest deadline, turns without a deadline last", () => {
-  const turn = { ...demoStories[0], turnDueAt: hoursLater(11) };
-  const openTurn = { ...demoStories[1], turnDueAt: undefined };
-  assert.equal(mostUrgentNews([], []), undefined);
-  assert.equal(
-    mostUrgentNews([openTurn, turn], [delivery(hoursLater(48))])?.kind,
-    "turn",
-  );
-  const soonClaim = mostUrgentNews([turn], [delivery(hoursLater(2))]);
-  assert.equal(soonClaim?.kind, "claim");
-  const onlyOpen = mostUrgentNews([openTurn], []);
-  assert.equal(onlyOpen?.kind === "turn" && onlyOpen.story.id, openTurn.id);
 });
 
 test("deadline labels count down in minutes, hours and days", () => {
@@ -74,20 +61,23 @@ test("stories for me use up to three of my genres and the demo shows the most li
     "공포",
   ]);
   const picks = demoForMe(demoStories);
-  assert.equal(picks.length, 3);
-  assert.ok(picks[0].likeCount >= picks[1].likeCount);
-  assert.ok(picks[1].likeCount >= picks[2].likeCount);
+  assert.equal(picks.length, demoStories.length);
+  picks
+    .slice(1)
+    .forEach((story, index) =>
+      assert.ok(picks[index].likeCount >= story.likeCount),
+    );
 });
 
 test("stories for me fall back to the latest stories when my genres give nothing", () => {
   const picks = demoStories.slice(0, 4);
   const recent = demoStories.slice(3);
   assert.deepEqual(forMeChoice(["판타지", "SF"], picks, recent), {
-    stories: picks.slice(0, 3),
+    stories: picks,
     hint: "판타지 · SF",
   });
   assert.deepEqual(forMeChoice([], picks, recent), {
-    stories: recent.slice(0, 3),
+    stories: recent,
     hint: "최근에 심은 이야기",
   });
   assert.deepEqual(
@@ -95,6 +85,25 @@ test("stories for me fall back to the latest stories when my genres give nothing
     "최근에 심은 이야기",
   );
   assert.deepEqual(forMeChoice([], [], []).stories, []);
+});
+
+test("stories for me rotate the first three in the big card and line up the rest below", () => {
+  const { featured, rest } = splitForMe(demoStories);
+  assert.deepEqual(featured, demoStories.slice(0, 3));
+  assert.deepEqual(rest, demoStories.slice(3));
+  assert.deepEqual(splitForMe(demoStories.slice(0, 2)), {
+    featured: demoStories.slice(0, 2),
+    rest: [],
+  });
+});
+
+test("the big card steps to the next story and wraps around", () => {
+  assert.equal(nextFeatured(0, 3), 1);
+  assert.equal(nextFeatured(2, 3), 0);
+  assert.equal(nextFeatured(0, 1), 0);
+  assert.equal(nextFeatured(0, 0), 0);
+  // 작품이 줄어 차례가 넘쳤으면 처음부터
+  assert.equal(nextFeatured(4, 2), 0);
 });
 
 test("my to-do lists every turn and claim, closest deadline first", () => {

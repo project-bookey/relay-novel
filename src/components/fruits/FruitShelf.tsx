@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   Pressable,
   View,
@@ -43,7 +43,8 @@ export function useShelfCoverWidth() {
 }
 
 // 서가 한 줄: 표지 세 칸(사용자가 고른 시안 reference/sian/fruits-anew A "서가"). 마지막 줄이 덜 차도 칸 너비는 같다.
-export function ShelfRow({
+// 열매 탭은 큰 추천 카드가 넘어갈 때마다 다시 그려지므로, 줄이 같으면 다시 그리지 않는다.
+export const ShelfRow = memo(function ShelfRow({
   stories,
   coverWidth,
   first = false,
@@ -60,7 +61,7 @@ export function ShelfRow({
       ))}
     </View>
   );
-}
+});
 
 // 서가 칸 하나: 잘리지 않은 3:4 표지(왼쪽 위 귀퉁이에 좋아요 꼬리표) 아래 굵은 제목 두 줄까지와 진행 한 줄.
 // 작가와 장르는 칸에 쓰지 않는다 — 작가는 작품 화면에서, 장르는 위쪽 탭이 알려 준다.

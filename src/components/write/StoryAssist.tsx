@@ -137,7 +137,7 @@ export function StoryAssist({
           );
         })}
       </View>
-      <Text style={pane.hint}>{choice.hint}</Text>
+      <Text style={[pane.hint, styles.modeHint]}>{choice.hint}</Text>
       <View style={styles.field}>
         <Text style={styles.fieldLabel}>
           {mode === "OPENING" ? "소재·분위기" : "소재·분위기 (선택)"}
@@ -188,6 +188,9 @@ export function StoryAssist({
 }
 
 const useStyles = themedStyles((colors) => ({
+  // 방식마다 안내가 한 줄·두 줄이라, 탭을 바꿀 때 팝업 높이가 흔들리지 않게 늘 두 줄 자리를 잡아 둔다
+  // (줄 높이 22 × 2, 사용자 요청).
+  modeHint: { minHeight: 44 },
   // 세 가지 제안 방식. 옅은 바탕 칸 안에서 고른 것만 유리 방울로 띄운다.
   modes: {
     flexDirection: "row",

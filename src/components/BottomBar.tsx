@@ -33,9 +33,10 @@ const places: {
   Icon: ComponentType<BarIconProps>;
   href: Href;
 }[] = [
+  // 마이는 왼쪽 바의 가장 오른쪽(2026-10-23 사용자 요청)
   { place: "home", label: "홈", Icon: HomeIcon, href: "/" },
-  { place: "my", label: "마이", Icon: UserIcon, href: "/my" },
   { place: "fruits", label: "열매", Icon: FruitsIcon, href: "/fruits" },
+  { place: "my", label: "마이", Icon: UserIcon, href: "/my" },
 ];
 
 // 지금 있는 곳 아래에 깔리는 유리 방울. 다른 곳으로 옮기면 가는 쪽 가장자리가 먼저 뻗어 나가고

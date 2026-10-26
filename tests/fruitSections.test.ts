@@ -6,6 +6,7 @@ import {
   forMeChoice,
   forMeGenres,
   mostUrgentNews,
+  newsByUrgency,
   newsLine,
 } from "../src/design/fruitSections";
 import { demoStories } from "../src/api/demo";
@@ -94,4 +95,14 @@ test("stories for me fall back to the latest stories when my genres give nothing
     "최근에 심은 이야기",
   );
   assert.deepEqual(forMeChoice([], [], []).stories, []);
+});
+
+test("my to-do lists every turn and claim, closest deadline first", () => {
+  const turn = { ...demoStories[0], turnDueAt: hoursLater(11) };
+  const openTurn = { ...demoStories[1], turnDueAt: undefined };
+  const kinds = newsByUrgency([openTurn, turn], [delivery(hoursLater(2))]).map(
+    (news) => news.kind,
+  );
+  assert.deepEqual(kinds, ["claim", "turn", "turn"]);
+  assert.deepEqual(newsByUrgency([], []), []);
 });

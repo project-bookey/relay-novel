@@ -1,5 +1,6 @@
 import { createContext, forwardRef, useContext } from "react";
 import {
+  Platform,
   StyleSheet,
   Text as NativeText,
   TextInput as NativeTextInput,
@@ -39,6 +40,13 @@ export const Text = forwardRef<NativeText, TextProps>(function Text(
     </InsideText.Provider>
   );
 });
+
+// 한글 제목을 글자 중간이 아니라 낱말 사이에서 줄바꿈한다("달빛을 파는 가/게"처럼 끊기지 않게).
+// iOS는 텍스트 속성, 웹은 CSS word-break(스타일 타입에 없어 맞춘다). 안드로이드는 고를 방법이 없다.
+export const keepWords = {
+  lineBreakStrategyIOS: "hangul-word" as const,
+  style: (Platform.OS === "web" ? { wordBreak: "keep-all" } : {}) as TextStyle,
+};
 
 export const TextInput = forwardRef<NativeTextInput, TextInputProps>(
   function TextInput({ style, ...props }, ref) {

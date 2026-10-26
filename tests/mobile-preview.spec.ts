@@ -279,8 +279,8 @@ test("backend contract supports login, circle creation with the owner's first ch
     .fill(
       "밤하늘에서 별사탕 하나가 떨어졌다. 그 안에는 누군가의 첫 문장이 담겨 있었다.",
     );
-  await page.getByRole("button", { name: "임시저장", exact: true }).click();
-  await expect(page.getByText(/최근 저장/).last()).toBeVisible();
+  // 손을 멈추면 저절로 임시저장한다.
+  await expect(page.getByText(/저장됨/).last()).toBeVisible();
   await page.getByRole("button", { name: "회차 발행", exact: true }).click();
   await page
     .getByRole("button", { name: "발행하고 다음 작가에게 넘기기" })

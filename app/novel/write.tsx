@@ -71,19 +71,23 @@ export default function WriteScreen() {
     !detail.error;
   const title = titleOf(target.kind, detail.data?.novel.mode);
 
+  // 편집기는 쓰기에 집중하도록 맨 위 줄(뒤로·저장 상태·발행)을 따로 그린다.
   if (initial.current)
     return (
-      <Screen title={title}>
-        <Editor
-          novelId={id}
-          detail={initial.current.detail}
-          draft={initial.current.draft}
-          target={target}
-          writable={writable}
-          sessionExpired={!signedIn}
-          parentChapterId={myDelivery?.chapterId}
-        />
-      </Screen>
+      <Editor
+        novelId={id}
+        detail={initial.current.detail}
+        draft={initial.current.draft}
+        target={target}
+        writable={writable}
+        sessionExpired={!signedIn}
+        parentChapter={
+          myDelivery && {
+            id: myDelivery.chapterId,
+            number: myDelivery.chapterNumber,
+          }
+        }
+      />
     );
   return (
     <Screen title={title}>

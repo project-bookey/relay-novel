@@ -88,6 +88,11 @@ const lightColors = {
     "inset 0 1px 2px rgba(255, 255, 255, 1)",
     "inset 0 -2px 4px rgba(0, 0, 0, 0.05)",
   ].join(", "),
+  // 이어 쓰기 화면의 유리 팝업에 한 겹 더 까는 색. 팝업은 원고 글자 위에 뜨므로 버튼 유리보다 짙게 해서
+  // 뒤 글자와 겹쳐 읽히지 않게 한다(사용자가 고른 시안 reference/sian/write-focus A).
+  paneTint: "rgba(248, 248, 249, 0.55)",
+  // 원고에서 고른 글자 밑에 깔리는 색. 커서와 손잡이는 같은 노랑(tabMark)이다.
+  selectionMark: "rgba(245, 197, 66, 0.4)",
 };
 
 export type Palette = typeof lightColors;
@@ -147,6 +152,8 @@ const darkColors: Palette = {
     "0 3px 10px rgba(0, 0, 0, 0.35)",
     "inset 0 1px 2px rgba(255, 255, 255, 0.18)",
   ].join(", "),
+  paneTint: "rgba(54, 57, 61, 0.6)",
+  selectionMark: "rgba(245, 197, 66, 0.32)",
 };
 
 export const palettes: Record<Scheme, Palette> = {

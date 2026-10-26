@@ -154,6 +154,8 @@ export const demoStories: NovelSummary[] = seeds.map((seed, index) => ({
   createdAt: "2026-10-12T09:00:00Z",
   likeCount: seed.likeCount,
   liked: false,
+  // 둘러보기에서도 책갈피를 보이고, 누르면 로그인으로 보낸다.
+  favorited: false,
 }));
 
 function demoStory(id: number) {

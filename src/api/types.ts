@@ -43,11 +43,17 @@ export interface NovelSummary {
   deliveryCount?: number;
   // OPEN: 회차 하나에 붙을 수 있는 가지 수(2~5). 첫 작가의 줄기는 따로 센다.
   branchLimit?: number;
+  // 내가 즐겨찾기에 담았는지(좋아요와 따로). 즐겨찾기를 모르는 예전 서버는 보내지 않는다.
+  favorited?: boolean;
 }
 // 좋아요 토글 결과. 누른 뒤 서버의 실제 상태다.
 export interface NovelLikeView {
   liked: boolean;
   likeCount: number;
+}
+// 즐겨찾기 토글 결과. 누른 뒤 서버의 실제 상태다.
+export interface NovelFavoriteView {
+  favorited: boolean;
 }
 export interface Member {
   userId: number;

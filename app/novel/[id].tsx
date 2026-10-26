@@ -17,6 +17,7 @@ import { ChapterList } from "../../src/components/novel/ChapterList";
 import { StoryLineList } from "../../src/components/novel/StoryLineList";
 import { storyLines } from "../../src/design/storyLines";
 import { themedStyles } from "../../src/theme/themed";
+import { useToast } from "../../src/components/Toast";
 import {
   useChapterTree,
   useMyDelivery,
@@ -61,6 +62,7 @@ export default function Detail() {
   const { mode } = useSession();
   const client = useQueryClient();
   const [confirmingComplete, setConfirmingComplete] = useState(false);
+  const toast = useToast();
 
   const query = useQuery({
     queryKey: ["novel", id, mode],
@@ -125,73 +127,85 @@ export default function Detail() {
   const lines = isOpen ? storyLines(nodes) : [];
   const showLines = lines.length > 1;
 
+  // 즐겨찾기 알림은 스크롤에 밀려 올라가지 않도록 화면 틀 위(스크롤 밖)에 띄운다.
   return (
-    <Screen title="이야기 펼치기">
-      <NovelOverview novel={novel} nodes={tree.data} />
-      {mode === "demo" && <DemoNotice />}
-      {isOpen && novel.status === "ONGOING" && (
-        <OpenRelayCard
-          detail={detail}
-          delivery={myDelivery}
-          busy={decline.isPending}
-          onDecline={() => {
-            if (detail.myDeliveryId) decline.mutate(detail.myDeliveryId);
-          }}
-        />
-      )}
-      {!isOpen && novel.status === "ONGOING" && <TurnCard detail={detail} />}
-      {isOpen ? (
-        <AuthorList names={authorsOf(nodes)} />
-      ) : (
-        <CircleControls
-          detail={detail}
-          signedIn={mode === "authenticated"}
-          busy={busy}
-          onApply={() => mutation.mutate({ type: "apply" })}
-          onDecide={(userId, approved) =>
-            mutation.mutate({ type: "decide", userId, approved })
-          }
-          onStart={() => mutation.mutate({ type: "start" })}
-        />
-      )}
-      {detail.canComplete && (
-        <CompleteControl
-          confirming={confirmingComplete}
-          busy={busy}
-          onAsk={() => setConfirmingComplete(true)}
-          onCancel={() => setConfirmingComplete(false)}
-          onComplete={() => mutation.mutate({ type: "complete" })}
-        />
-      )}
-      {!!mutation.error && <ErrorBox error={mutation.error} />}
-      {!!decline.error && <ErrorBox error={decline.error} />}
-      <ChaptersTitle
-        branching={isOpen}
-        lineCount={showLines ? lines.length : 0}
-        chapterLimit={novel.chapterLimit}
-      />
-      {tree.isLoading && <Loading />}
-      {!!tree.error && (
-        <ErrorBox
-          error={tree.error}
-          retry={() => {
-            void tree.refetch();
-          }}
-        />
-      )}
-      {showLines ? (
-        <StoryLineList
+    <View style={{ flex: 1 }}>
+      <Screen title="이야기 펼치기">
+        <NovelOverview
           novel={novel}
-          lines={lines}
-          myDeliveryChapterId={
-            detail.myDeliveryId ? myDelivery?.chapterId : undefined
+          nodes={tree.data}
+          onFavoriteChange={(favorited) =>
+            toast.show(
+              favorited ? "즐겨찾기에 담았어요" : "즐겨찾기에서 뺐어요",
+            )
           }
         />
-      ) : (
-        <ChapterList novelId={id} chapters={nodes} branching={isOpen} />
-      )}
-      {novel.chapterCount === 0 && <EmptyChapters detail={detail} />}
-    </Screen>
+        {mode === "demo" && <DemoNotice />}
+        {isOpen && novel.status === "ONGOING" && (
+          <OpenRelayCard
+            detail={detail}
+            delivery={myDelivery}
+            busy={decline.isPending}
+            onDecline={() => {
+              if (detail.myDeliveryId) decline.mutate(detail.myDeliveryId);
+            }}
+          />
+        )}
+        {!isOpen && novel.status === "ONGOING" && <TurnCard detail={detail} />}
+        {isOpen ? (
+          <AuthorList names={authorsOf(nodes)} />
+        ) : (
+          <CircleControls
+            detail={detail}
+            signedIn={mode === "authenticated"}
+            busy={busy}
+            onApply={() => mutation.mutate({ type: "apply" })}
+            onDecide={(userId, approved) =>
+              mutation.mutate({ type: "decide", userId, approved })
+            }
+            onStart={() => mutation.mutate({ type: "start" })}
+          />
+        )}
+        {detail.canComplete && (
+          <CompleteControl
+            confirming={confirmingComplete}
+            busy={busy}
+            onAsk={() => setConfirmingComplete(true)}
+            onCancel={() => setConfirmingComplete(false)}
+            onComplete={() => mutation.mutate({ type: "complete" })}
+          />
+        )}
+        {!!mutation.error && <ErrorBox error={mutation.error} />}
+        {!!decline.error && <ErrorBox error={decline.error} />}
+        <ChaptersTitle
+          branching={isOpen}
+          lineCount={showLines ? lines.length : 0}
+          chapterLimit={novel.chapterLimit}
+        />
+        {tree.isLoading && <Loading />}
+        {!!tree.error && (
+          <ErrorBox
+            error={tree.error}
+            retry={() => {
+              void tree.refetch();
+            }}
+          />
+        )}
+        {showLines ? (
+          <StoryLineList
+            novel={novel}
+            lines={lines}
+            myDeliveryChapterId={
+              detail.myDeliveryId ? myDelivery?.chapterId : undefined
+            }
+          />
+        ) : (
+          <ChapterList novelId={id} chapters={nodes} branching={isOpen} />
+        )}
+        {novel.chapterCount === 0 && <EmptyChapters detail={detail} />}
+      </Screen>
+      {toast.element}
+    </View>
   );
 }
 

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, type ComponentType } from "react";
-import { Animated, Easing, Pressable, View } from "react-native";
+import type { ComponentType } from "react";
+import { Animated, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, type Href } from "expo-router";
 import { useSession } from "../state/session";
@@ -13,7 +13,7 @@ import {
   type BarIconProps,
 } from "./BarIcons";
 import { GlassSurface } from "./Glass";
-import { useReducedMotion } from "./fruitMotion";
+import { useLiquidLens } from "./liquidLens";
 
 export type Place = "home" | "my" | "fruits";
 
@@ -39,76 +39,6 @@ const places: {
   { place: "my", label: "마이", Icon: UserIcon, href: "/my" },
 ];
 
-// 지금 있는 곳 아래에 깔리는 유리 방울. 다른 곳으로 옮기면 가는 쪽 가장자리가 먼저 뻗어 나가고
-// 뒤쪽 가장자리가 늦게 따라와, 물방울처럼 늘어났다가 모이며 살짝 부풀었다 가라앉는다.
-// 위치와 너비를 바꾸므로 네이티브 드라이버 없이 움직인다.
-function useLiquidLens(index: number) {
-  const reduced = useReducedMotion();
-  const left = useRef(new Animated.Value(index * SLOT)).current;
-  const right = useRef(new Animated.Value((index + 1) * SLOT)).current;
-  const swell = useRef(new Animated.Value(0)).current;
-  const shownIndex = useRef(index);
-
-  useEffect(() => {
-    const from = shownIndex.current;
-    shownIndex.current = index;
-    if (from === index) return;
-    const toLeft = index * SLOT;
-    const toRight = toLeft + SLOT;
-    if (reduced) {
-      left.setValue(toLeft);
-      right.setValue(toRight);
-      return;
-    }
-    const lead = { stiffness: 380, damping: 26, useNativeDriver: false };
-    const trail = { stiffness: 160, damping: 20, useNativeDriver: false };
-    const goingRight = index > from;
-    const motion = Animated.parallel([
-      Animated.spring(left, {
-        toValue: toLeft,
-        ...(goingRight ? trail : lead),
-      }),
-      Animated.spring(right, {
-        toValue: toRight,
-        ...(goingRight ? lead : trail),
-      }),
-      Animated.sequence([
-        Animated.timing(swell, {
-          toValue: 1,
-          duration: 120,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: false,
-        }),
-        Animated.spring(swell, {
-          toValue: 0,
-          stiffness: 200,
-          damping: 14,
-          useNativeDriver: false,
-        }),
-      ]),
-    ]);
-    motion.start();
-    // 움직이는 중에 또 옮기면 지금 자리에서 새 자리로 이어서 간다.
-    return () => motion.stop();
-  }, [index, reduced, left, right, swell]);
-
-  return useMemo(
-    () => ({
-      left,
-      width: Animated.subtract(right, left),
-      transform: [
-        {
-          scale: swell.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 1.12],
-          }),
-        },
-      ],
-    }),
-    [left, right, swell],
-  );
-}
-
 // 화면 아래에 떠 있는 유리 두 조각. 왼쪽 알약 모양 바에는 홈·열매·마이가,
 // 오른쪽에 따로 떨어진 같은 높이의 동그란 유리에는 새 이야기를 심는 씨앗주머니가 있다.
 // 아이콘만 보이고, 이름은 화면 읽기 프로그램과 테스트를 위해 accessibilityLabel로만 둔다.
@@ -117,9 +47,13 @@ export function BottomBar({ current }: { current: Place }) {
   const { mode } = useSession();
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const lens = useLiquidLens(
-    places.findIndex(({ place }) => place === current),
-  );
+  // 지금 있는 곳 아래에 유리 방울이 깔리고, 다른 곳으로 옮기면 물방울처럼 늘어나며 따라간다.
+  const index = places.findIndex(({ place }) => place === current);
+  const lens = useLiquidLens({
+    key: index,
+    left: index * SLOT,
+    right: (index + 1) * SLOT,
+  });
   // 둘러보기에서는 이야기를 만들 수 없으므로 로그인으로 보낸다.
   const plantSeed = () => router.push(mode === "demo" ? "/login" : "/create");
 

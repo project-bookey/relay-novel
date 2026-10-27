@@ -1,12 +1,10 @@
 import { Pressable, ScrollView, View } from "react-native";
 import { Text } from "../text";
-import { FILTER_GENRES_MAX } from "../../design/fruitList";
 import { themedStyles } from "../../theme/themed";
 
-// 검색 유리막의 장르 글자 탭(열매 서가는 유리 장르 바 GenreBar). 세 개까지 함께 고르고, 하나도 고르지 않으면 "전체"가 켜진다.
-// 고른 탭은 굵은 글자 + 글자 폭만큼의 노란 굵은 밑줄(색만으로 구분하지 않음, 시안 fruits-anew A "서가").
-// 탭 줄 아래에 가는 선은 긋지 않는다. 세 개가 차면 남은 탭은 흐려지고 눌러도 바뀌지 않는다
-// (안내 문구는 사용자가 빼서 두지 않는다).
+// 검색 유리막의 장르 글자 탭(열매 서가는 유리 장르 바 GenreBar). 장르는 하나만 고르고(toggleGenre),
+// 고르지 않으면 "전체"가 켜진다. 고른 탭은 굵은 글자 + 글자 폭만큼의 노란 굵은 밑줄
+// (색만으로 구분하지 않음, 시안 fruits-anew A "서가"). 탭 줄 아래에 가는 선은 긋지 않는다.
 export function GenreTabs({
   genres,
   selected,
@@ -19,26 +17,19 @@ export function GenreTabs({
   onClear: () => void;
 }) {
   const styles = useStyles();
-  const full = selected.length >= FILTER_GENRES_MAX;
   const tab = (
     key: string,
     label: string,
     isSelected: boolean,
     onPress: () => void,
-    isDisabled = false,
   ) => (
     <Pressable
       key={key}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected: isSelected, disabled: isDisabled }}
-      accessibilityHint={
-        isDisabled
-          ? `장르는 ${FILTER_GENRES_MAX}개까지 고를 수 있어요`
-          : undefined
-      }
+      accessibilityState={{ selected: isSelected }}
       onPress={onPress}
-      style={[styles.tab, isDisabled && styles.disabledTab]}
+      style={styles.tab}
     >
       <View>
         {isSelected && <View style={styles.mark} />}
@@ -57,16 +48,9 @@ export function GenreTabs({
         contentContainerStyle={styles.tabs}
       >
         {tab("all", "전체", selected.length === 0, onClear)}
-        {genres.map((genre) => {
-          const isSelected = selected.includes(genre);
-          return tab(
-            genre,
-            genre,
-            isSelected,
-            () => onToggle(genre),
-            full && !isSelected,
-          );
-        })}
+        {genres.map((genre) =>
+          tab(genre, genre, selected.includes(genre), () => onToggle(genre)),
+        )}
       </ScrollView>
     </View>
   );
@@ -92,7 +76,6 @@ const useStyles = themedStyles((colors) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  disabledTab: { opacity: 0.4 },
   // 글자 바로 아래(2만큼 띄워) 글자 폭만큼 긋는 굵은 밑줄
   mark: {
     position: "absolute",

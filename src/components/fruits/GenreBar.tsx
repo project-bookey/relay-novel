@@ -1,6 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "../text";
-import { FILTER_GENRES_MAX } from "../../design/fruitList";
 import { themedStyles } from "../../theme/themed";
 import { GlassSurface } from "../Glass";
 import { GENRE_BAR_HEIGHT } from "./fruitsLayout";
@@ -14,7 +13,7 @@ const LENS_RADIUS = 10;
 
 // 열매 탭 모든 이야기의 장르 바(시안 reference/sian/fruits-glass-b2). 유리 바 안에서 장르를 옆으로 넘겨 보고,
 // 고른 장르에는 아래 바 '지금 있는 곳'과 같은 유리 방울이 깔리고 글자가 굵어진다(색만으로 구분하지 않음).
-// 세 개까지 함께 고르고, 하나도 고르지 않으면 "전체"가 켜진다. 세 개가 차면 남은 장르는 흐려지고 눌러도 바뀌지 않는다.
+// 장르는 하나만 고르고(toggleGenre), 고르지 않으면 "전체"가 켜진다.
 export function GenreBar({
   genres,
   selected,
@@ -27,26 +26,19 @@ export function GenreBar({
   onClear: () => void;
 }) {
   const styles = useStyles();
-  const full = selected.length >= FILTER_GENRES_MAX;
   const chip = (
     key: string,
     label: string,
     isSelected: boolean,
     onPress: () => void,
-    isDisabled = false,
   ) => (
     <Pressable
       key={key}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected: isSelected, disabled: isDisabled }}
-      accessibilityHint={
-        isDisabled
-          ? `장르는 ${FILTER_GENRES_MAX}개까지 고를 수 있어요`
-          : undefined
-      }
+      accessibilityState={{ selected: isSelected }}
       onPress={onPress}
-      style={[styles.chip, isDisabled && styles.disabled]}
+      style={styles.chip}
     >
       {isSelected && <View style={styles.lens} />}
       <Text style={[styles.label, isSelected && styles.selectedLabel]}>
@@ -68,16 +60,9 @@ export function GenreBar({
           contentContainerStyle={styles.chips}
         >
           {chip("all", "전체", selected.length === 0, onClear)}
-          {genres.map((genre) => {
-            const isSelected = selected.includes(genre);
-            return chip(
-              genre,
-              genre,
-              isSelected,
-              () => onToggle(genre),
-              full && !isSelected,
-            );
-          })}
+          {genres.map((genre) =>
+            chip(genre, genre, selected.includes(genre), () => onToggle(genre)),
+          )}
         </ScrollView>
       </View>
     </View>
@@ -98,7 +83,6 @@ const useStyles = themedStyles((colors) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  disabled: { opacity: 0.4 },
   lens: {
     position: "absolute",
     left: 0,

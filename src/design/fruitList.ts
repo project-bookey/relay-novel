@@ -2,15 +2,11 @@ import type { NovelStatus, NovelSummary } from "../api/types";
 
 // 열매 탭(전체 작품 목록)에 쓰는 계산. 화면 없이 테스트한다(tests/fruitList.test.ts).
 
-// 서버도 장르를 세 개까지만 받는다(GET /novels 의 genres).
-export const FILTER_GENRES_MAX = 3;
-
-// 장르 탭을 누를 때. 고른 장르를 다시 누르면 빼고, 세 개가 차 있으면 더 고르지 않는다.
+// 장르 탭을 누를 때. 장르는 하나만 고른다(2026-10-27 사용자 결정, 예전엔 세 개까지).
+// 다른 장르를 누르면 그 장르로 바꾸고, 고른 장르를 다시 누르면 빼서 "전체"로 돌아간다.
 export function toggleGenre(selected: string[], genre: string) {
-  if (selected.includes(genre))
-    return selected.filter((picked) => picked !== genre);
-  if (selected.length >= FILTER_GENRES_MAX) return selected;
-  return [...selected, genre];
+  if (selected.includes(genre)) return [];
+  return [genre];
 }
 
 // 표지 위에 얹는 좋아요 수. 자리가 좁아 천·만 단위는 한 자리 소수로 줄인다(버림).

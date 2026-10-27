@@ -16,12 +16,10 @@ import {
 } from "../src/design/fruitList";
 import { demoStories } from "../src/api/demo";
 
-test("genre tabs toggle and stop at three picks", () => {
+test("genre tabs keep only one pick and the same tab goes back to all", () => {
   assert.deepEqual(toggleGenre([], "무협"), ["무협"]);
-  assert.deepEqual(toggleGenre(["무협", "공포"], "무협"), ["공포"]);
-  const full = ["무협", "공포", "SF"];
-  assert.equal(toggleGenre(full, "일상"), full);
-  assert.deepEqual(toggleGenre(full, "공포"), ["무협", "SF"]);
+  assert.deepEqual(toggleGenre(["무협"], "공포"), ["공포"]);
+  assert.deepEqual(toggleGenre(["무협"], "무협"), []);
 });
 
 test("like counts shrink to one decimal of 천 and 만, rounded down", () => {

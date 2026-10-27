@@ -350,12 +350,18 @@ test("mobile demo moves between home, my page and fruits with the bottom buttons
   await expect(completed).toHaveCount(0);
   await searchBox.fill("받는");
   await expect(completed).toBeVisible();
-  // 결과는 상태·장르로 거른다(완결된 SF는 없다).
+  // 결과는 상태·장르로 거른다(완결된 SF는 없다). 장르는 하나만 골라서 다른 장르를 누르면 그 장르로 바뀌고,
+  // 고른 장르를 다시 누르면 전체로 돌아간다.
   await completedTab.click();
   await expect(completed).toBeVisible();
-  await page.getByRole("button", { name: "SF", exact: true }).click();
+  const sfTab = page.getByRole("button", { name: "SF", exact: true });
+  await sfTab.click();
   await expect(completed).toHaveCount(0);
-  await page.getByRole("button", { name: "SF", exact: true }).click();
+  await page.getByRole("button", { name: "로맨스", exact: true }).click();
+  await expect(completed).toBeVisible();
+  await sfTab.click();
+  await expect(completed).toHaveCount(0);
+  await sfTab.click();
   await expect(completed).toBeVisible();
   // 키보드의 찾기를 누르면 그 말이 최근 찾은 말에 남는다.
   await searchBox.press("Enter");

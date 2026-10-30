@@ -51,10 +51,13 @@ export function StoryTree({
   novel,
   nodes,
   height = 230,
+  groundColor,
 }: {
   novel: NovelSummary;
   nodes?: ChapterLink[];
   height?: number;
+  // 작품 색 종이 위에 그릴 때(표지 자리) 그 종이에 맞춘 땅 색. 없으면 기본 땅 색.
+  groundColor?: string;
 }) {
   const tree = useMemo(
     () =>
@@ -111,7 +114,7 @@ export function StoryTree({
           cy={trunk.start.y + 4}
           rx={TREE_WIDTH * 0.32}
           ry={10}
-          fill={colors.ground}
+          fill={groundColor ?? colors.ground}
         />
         <Path
           d={curvePath(trunk.start, trunk.control, trunk.end)}

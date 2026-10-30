@@ -1,4 +1,6 @@
 import type { NovelStatus, NovelSummary } from "../api/types";
+import { isPopular } from "./fruitGlow";
+import { isFullyRipe } from "./fruitRipeness";
 
 // 열매 탭(전체 작품 목록)에 쓰는 계산. 화면 없이 테스트한다(tests/fruitList.test.ts).
 
@@ -30,8 +32,10 @@ export function writersLine(
   return `${story.ownerNickname} 외 ${others}명`;
 }
 
-// 작품 제목 아래 진행. 모여 만들기는 한 줄기라 "몇 장 중 몇 장"이 맞지만,
-// 열매로 퍼뜨린 작품의 회차 수는 갈라진 가지를 모두 더한 값이라 목표 회차와 나누지 않는다.
+// 작품 제목 아래 진행. "얼마나 · 어떤 상태" 한 모양이다(시안 reference/sian/fruits-polish). 아직 쓴 회차가 없는
+// "작가 모집 중"만 상태 하나다.
+// 모여 만들기는 한 줄기라 "몇 장 중 몇 장"이 맞지만, 열매로 퍼뜨린 작품의 회차 수는 갈라진 가지를 모두 더한 값이라
+// 목표 회차와 나누지 않고, 읽기 화면의 "n장"(가지 깊이)과 헷갈리지 않게 "n개의 장"이라 쓴다.
 export function progressLine(
   story: Pick<
     NovelSummary,
@@ -39,13 +43,30 @@ export function progressLine(
   >,
 ) {
   const branching = story.mode === "OPEN";
-  if (story.status === "COMPLETED")
-    return branching
-      ? `${story.chapterCount}개의 장 · 완결`
-      : `${story.chapterCount}장 완결`;
+  const amount = branching
+    ? `${story.chapterCount}개의 장`
+    : `${story.chapterCount}장`;
+  if (story.status === "COMPLETED") return `${amount} · 완결`;
   if (story.status === "RECRUITING") return "작가 모집 중";
-  if (branching) return `${story.chapterCount}개의 장 · 자라는 중`;
-  return `${story.chapterCount}/${story.chapterLimit}장 · ${story.chapterCount + 1}장 쓰는 중`;
+  if (branching) return `${amount} · 자라는 중`;
+  return `${story.chapterCount}/${story.chapterLimit}장 · 쓰는 중`;
+}
+
+// 좋아요 꼬리표의 모습. 홈 열매와 같은 기준이다 — 100개부터 반짝이는 인기 열매, 1000개면 다 여문 금빛 열매.
+export type LikeMarkTone = "plain" | "popular" | "ripe";
+export function likeMarkToneOf(likeCount: number): LikeMarkTone {
+  if (isFullyRipe(likeCount)) return "ripe";
+  if (isPopular(likeCount)) return "popular";
+  return "plain";
+}
+
+// 화면 읽기에 들려줄 좋아요. 꼬리표는 색으로 여문 정도를 보이므로, 홈 열매 이름처럼 "인기"·"다 여문 열매"를 말로도 붙인다.
+export function likeHintOf(likeCount: number) {
+  const tone = likeMarkToneOf(likeCount);
+  const count = `좋아요 ${likeCount}개`;
+  if (tone === "ripe") return `다 여문 열매, ${count}`;
+  if (tone === "popular") return `인기, ${count}`;
+  return count;
 }
 
 // 서가 한 줄의 칸 수와 칸 사이(사용자가 고른 시안 reference/sian/fruits-anew A "서가").

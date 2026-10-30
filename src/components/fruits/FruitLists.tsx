@@ -21,6 +21,7 @@ import { ShelfRow, useShelfCoverWidth } from "./FruitShelf";
 import { RevealedBar, useBarReveal } from "./RevealedBar";
 import {
   BAR_REVEAL_TOP,
+  GENRE_BAR_HEIGHT,
   GENRE_BAR_OUTSET,
   LIST_SIDE,
   LIST_TOP,
@@ -138,6 +139,7 @@ function StoryList({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [headHeight, setHeadHeight] = useState(0);
+  const [listHeight, setListHeight] = useState(0);
   const { revealed, pastHead, onScrollMove } = useBarReveal(
     LIST_TOP + headHeight + BAR_GAP - BAR_REVEAL_TOP,
   );
@@ -156,6 +158,14 @@ function StoryList({
     () => [{ key: "stories", data: shelfRowsOf(stories) }],
     [stories],
   );
+  // 작품이 적으면 끝까지 내렸을 때 장르 바가 떠 있는 검색 동그라미 밑에 깔린 채 멈췄다(시안 reference/sian/fruits-polish).
+  // 장르 바가 화면 위로 다 지나갈 만큼은 늘 내려갈 수 있게 목록 높이를 잡는다. 끝에서 위로 올리면 장르 바가 다시 내려온다.
+  // 작품이 없을 때는 빈 화면까지 내려가지 않게 그대로 둔다.
+  const barBottom = LIST_TOP + headHeight + BAR_GAP + GENRE_BAR_HEIGHT;
+  const fillsPastBar =
+    stories.length > 0 && listHeight > 0
+      ? { minHeight: listHeight + barBottom }
+      : undefined;
   const renderRow = useCallback(
     ({ item, index }: { item: NovelSummary[]; index: number }) => (
       <ShelfRow stories={item} coverWidth={coverWidth} first={index === 0} />
@@ -163,7 +173,10 @@ function StoryList({
     [coverWidth],
   );
   return (
-    <View style={styles.frame}>
+    <View
+      style={styles.frame}
+      onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}
+    >
       <Animated.SectionList
         sections={sections}
         // 줄의 첫 작품으로 이름을 붙여, 덜 찬 마지막 줄이 다음 쪽을 받아 채워져도 다시 만들지 않는다.
@@ -210,6 +223,7 @@ function StoryList({
         contentContainerStyle={[
           styles.list,
           { paddingBottom: insets.bottom + BOTTOM_SPACE },
+          fillsPastBar,
         ]}
       />
       <RevealedBar shown={revealed}>{genreBar}</RevealedBar>

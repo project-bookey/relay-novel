@@ -119,7 +119,8 @@ export default function FruitsPage() {
 const useStyles = themedStyles((colors) => ({
   // 아래 흐림과 검색 유리막이 화면 끝(아래 여백까지)에 닿도록 화면 밖 틀에 겹쳐 둔다.
   page: { flex: 1, backgroundColor: colors.background },
-  allHead: { marginTop: 26 },
+  // 나를 위한 이야기와 모든 이야기 사이. 첫 화면에 서가 첫 줄이 보이게 좁혔다(시안 reference/sian/fruits-polish C).
+  allHead: { marginTop: 18 },
   // 좌우·위 여백은 목록이 갖는다.
   frame: {
     flex: 1,

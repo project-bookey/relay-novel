@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Image, View } from "react-native";
 import type { NovelSummary } from "../api/types";
-import { themedStyles } from "../theme/themed";
+import { mix, storyColorOf } from "../theme";
+import { themedStyles, useColors } from "../theme/themed";
 import { StoryTree } from "./StoryTree";
 
 // 작품 표지(3:4). 표지가 없거나 불러오지 못하면 같은 자리에 그 소설의 이야기 나무를 작게 그린다.
+// 나무 칸은 흰 종이 대신 그 작품 색(홈 열매와 같은 색)을 옅게 섞은 종이라, 표지 없는 작품끼리도 구별된다
+// (시안 reference/sian/fruits-polish). 종이가 바탕과 달라 테두리는 두지 않는다.
 export function CoverThumb({
   novel,
   width,
@@ -21,6 +24,7 @@ export function CoverThumb({
   onError?: () => void;
 }) {
   const styles = useStyles();
+  const colors = useColors();
   const [failed, setFailed] = useState(false);
   const size = { width, height: Math.round((width * 4) / 3) };
   const corner = cornerOf(radius, square);
@@ -37,9 +41,20 @@ export function CoverThumb({
         }}
       />
     );
+  const storyColor = storyColorOf(novel.id);
+  const paper = mix(colors.paper, storyColor, colors.coverTint);
+  const ground = mix(colors.paper, storyColor, colors.coverGroundTint);
   return (
-    <View style={[styles.cover, styles.treeBox, size, corner]}>
-      <StoryTree novel={novel} height={size.height - 12} />
+    <View
+      style={[
+        styles.cover,
+        styles.treeBox,
+        size,
+        corner,
+        { backgroundColor: paper },
+      ]}
+    >
+      <StoryTree novel={novel} height={size.height - 12} groundColor={ground} />
     </View>
   );
 }
@@ -53,11 +68,5 @@ function cornerOf(radius: number | undefined, square: boolean) {
 
 const useStyles = themedStyles((colors) => ({
   cover: { borderRadius: 8, backgroundColor: colors.line },
-  treeBox: {
-    backgroundColor: colors.paper,
-    borderWidth: 1,
-    borderColor: colors.line,
-    justifyContent: "center",
-    overflow: "hidden",
-  },
+  treeBox: { justifyContent: "center", overflow: "hidden" },
 }));

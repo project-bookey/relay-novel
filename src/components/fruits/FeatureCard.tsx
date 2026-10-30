@@ -9,7 +9,7 @@ import {
 import { router, useIsFocused } from "expo-router";
 import { keepWords, Text } from "../text";
 import type { NovelSummary } from "../../api/types";
-import { progressLine } from "../../design/fruitList";
+import { likeHintOf, progressLine } from "../../design/fruitList";
 import { nextFeatured } from "../../design/fruitSections";
 import { statusLabel } from "../../theme";
 import { themedStyles } from "../../theme/themed";
@@ -20,11 +20,13 @@ import { useCrossFade } from "./useCrossFade";
 
 // 큰 추천이 다음 작품으로 넘어가는 간격(사용자 결정 6초)
 const FEATURE_ROTATE_MS = 6000;
-const COVER_WIDTH = 108;
+// 사용자가 고른 C(촘촘하게 · 서가 먼저)에서 첫 화면에 서가 첫 줄이 보이도록 줄이되, 표지는 "조금 더 크게" 96으로
+// (2026-10-30 사용자 결정, 시안 reference/sian/fruits-polish C′).
+const COVER_WIDTH = 96;
 const COVER_HEIGHT = (COVER_WIDTH * 4) / 3;
 const COVER_RADIUS = 4;
 
-// 나를 위한 이야기의 큰 유리 카드(시안 reference/sian/fruits-glass-b2). 앞의 작품들이 6초마다 서서히 넘어가고,
+// 나를 위한 이야기의 큰 추천 칸(시안 reference/sian/fruits-glass-b2 → fruits-polish C). 앞의 작품들이 6초마다 서서히 넘어가고,
 // 아래 점이 지금 몇 번째인지 보인다. 누르면 그때 보이는 작품으로 간다. 손가락을 대고 있는 동안(웹은 마우스를 올려 두거나
 // 키보드 초점이 있는 동안도), 열매 탭이 가려져 있을 때, 동작 줄이기나 화면 읽기를 켰을 때는 넘어가지 않는다
 // (화면 읽기는 "다음·이전 추천 이야기" 동작으로 넘기고, 넘기면 새 제목을 읽어 준다).
@@ -85,7 +87,7 @@ export function FeatureCard({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${story.title}, ${statusLabel[story.status]}`}
-      accessibilityHint={`${story.description}, ${progressLine(story)}`}
+      accessibilityHint={`${story.description}, ${progressLine(story)}, ${likeHintOf(story.likeCount)}`}
       accessibilityActions={
         stories.length > 1
           ? [
@@ -138,11 +140,17 @@ export function FeatureCard({
                 <Text
                   style={[styles.description, keepWords.style]}
                   lineBreakStrategyIOS={keepWords.lineBreakStrategyIOS}
-                  numberOfLines={3}
+                  numberOfLines={2}
                 >
                   {each.description}
                 </Text>
-                <Text style={styles.progress} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.progress,
+                    each.status === "COMPLETED" && styles.finished,
+                  ]}
+                  numberOfLines={1}
+                >
                   {progressLine(each)}
                 </Text>
               </View>
@@ -161,6 +169,29 @@ export function FeatureCard({
         </View>
       )}
     </Pressable>
+  );
+}
+
+// 추천을 불러오는 동안 큰 추천 칸 자리에 두는 빈 칸. 크기는 진짜 칸과 같고(표지 + 점 셋 자리),
+// 표지·제목·소개 자리만 아주 옅게 둔다. 화면 읽기에서는 숨긴다.
+export function FeatureCardPlaceholder() {
+  const styles = useStyles();
+  return (
+    <View
+      style={styles.card}
+      aria-hidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <View style={[styles.slides, styles.placeholderRow]}>
+        <View style={[styles.block, styles.coverBlock]} />
+        <View style={styles.text}>
+          <View style={[styles.block, styles.titleBlock]} />
+          <View style={[styles.block, styles.lineBlock]} />
+          <View style={[styles.block, styles.shortLineBlock]} />
+        </View>
+      </View>
+      <View style={styles.dotsSpace} />
+    </View>
   );
 }
 
@@ -187,16 +218,14 @@ function useScreenReader() {
 }
 
 const useStyles = themedStyles((colors) => ({
-  // 사용자 요청 "흰색으로 하되 너무 하얗지 않게" — 순백 대신 한 톤 가라앉은 흰 유리(featureCard)
+  // 사용자 요청 "흰색으로 하되 너무 하얗지 않게" — 순백 대신 한 톤 가라앉은 흰색(featureCard).
+  // 상자 안에 상자가 겹쳐 보이지 않게 테두리·그림자 없이 바탕만 다르다.
   card: {
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingTop: 14,
     paddingBottom: 12,
     backgroundColor: colors.featureCard,
-    borderWidth: 1,
-    borderColor: colors.featureCardEdge,
-    boxShadow: colors.featureCardShadow,
   },
   pressed: { opacity: 0.85 },
   slides: { height: COVER_HEIGHT },
@@ -212,8 +241,8 @@ const useStyles = themedStyles((colors) => ({
   },
   text: { flex: 1, minWidth: 0 },
   title: {
-    fontSize: 21,
-    lineHeight: 27,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: "800",
     letterSpacing: -0.6,
     color: colors.ink,
@@ -230,6 +259,8 @@ const useStyles = themedStyles((colors) => ({
     lineHeight: 16,
     color: colors.progressInk,
   },
+  // 다 끝난 작품은 자라는 초록 대신 차분한 회색(글자 "완결"도 함께 바뀐다)
+  finished: { color: colors.progressDoneInk },
   dots: {
     flexDirection: "row",
     justifyContent: "center",
@@ -244,4 +275,16 @@ const useStyles = themedStyles((colors) => ({
   },
   // 지금 보이는 작품은 길고 진한 점(색만으로 구분하지 않음)
   shownDot: { width: 16, backgroundColor: colors.ink },
+  // 불러오는 중의 빈 칸
+  placeholderRow: { flexDirection: "row", alignItems: "flex-end", gap: 14 },
+  block: {
+    borderRadius: COVER_RADIUS,
+    backgroundColor: colors.placeholderBlock,
+  },
+  coverBlock: { width: COVER_WIDTH, height: COVER_HEIGHT },
+  titleBlock: { width: "70%", height: 20 },
+  lineBlock: { width: "100%", height: 12, marginTop: 12 },
+  shortLineBlock: { width: "86%", height: 12, marginTop: 8, marginBottom: 20 },
+  // 점 셋(위 여백 12 + 높이 6)과 같은 자리
+  dotsSpace: { marginTop: 12, height: 6 },
 }));

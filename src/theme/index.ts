@@ -26,9 +26,18 @@ const lightColors = {
   // 표지 그림은 밝게·어둡게 모드와 상관없이 같아서 어두운 팔레트도 이 값을 그대로 쓴다.
   likeTag: "rgba(30, 33, 30, 0.82)",
   likeTagInk: "#FFFFFF",
+  // 다 여문 작품(좋아요 1000개 이상)의 꼬리표는 홈의 다 여문 열매처럼 금빛(sparkle)이고, 그 위 하트·수는 짙게 둔다
+  // (시안 reference/sian/fruits-polish). 100개 이상인 인기작은 꼬리표는 그대로 두고 하트만 sparkle로 칠한다.
+  likeTagRipeInk: "#3A2E08",
+  // 표지가 없는 작품의 나무 칸은 흰 종이 대신 그 작품 색을 이만큼 섞은 종이에, 땅은 조금 더 짙게 그린다
+  // (시안 reference/sian/fruits-polish — 표지 없는 칸이 모두 같아 보이던 문제).
+  coverTint: 0.26,
+  coverGroundTint: 0.46,
   // 열매 탭 목록의 진행 글자. 앱 초록(green)은 흰 바탕에서 진한 글자(ink)와 거의 같아 보여서
   // 색으로 구분되는 맑은 초록을 따로 둔다(흰 바탕 대비 4.7:1).
   progressInk: "#557D4E",
+  // 완결된 작품의 진행 글자. 자라는 초록 대신 차분한 회색이되, 작은 글자라 흰 바탕 대비 4.5:1을 넘긴다(muted는 3.5:1).
+  progressDoneInk: "#666B61",
   // 검색 유리막에서 고른 장르·상태 글자 밑의 굵은 밑줄. 홈의 반짝이 노랑과 같고, 밤에도 그대로 둔다
   // (사용자가 고른 시안 reference/sian/fruits-anew A "서가").
   tabMark: "#F5C542",
@@ -41,14 +50,11 @@ const lightColors = {
   // (시안 reference/sian/fruits-glass-b2).
   forMeBox: "rgba(247, 247, 246, 0.62)",
   forMeBoxEdge: "rgba(255, 255, 255, 0.85)",
-  // 그 안의 큰 추천 유리 카드. 사용자 요청 "흰색으로 하되 너무 하얗지 않게" — 순백 대신 상자보다 한 톤
-  // 가라앉은 흰 유리이고, 빛 테두리와 안쪽 윗면의 빛으로 유리처럼 보인다.
+  // 그 안의 큰 추천 칸. 사용자 요청 "흰색으로 하되 너무 하얗지 않게" — 순백 대신 상자보다 한 톤 가라앉은 흰색이다.
+  // 상자 안에 상자가 겹쳐 보이지 않게 테두리·그림자 없이 바탕만 다르다(시안 reference/sian/fruits-polish C).
   featureCard: "rgba(242, 242, 239, 0.6)",
-  featureCardEdge: "rgba(255, 255, 255, 0.7)",
-  featureCardShadow: [
-    "0 8px 24px rgba(0, 0, 0, 0.06)",
-    "inset 0 1px 1px rgba(255, 255, 255, 0.7)",
-  ].join(", "),
+  // 불러오는 중에 표지·글줄이 놓일 자리. 반짝이며 흐르는 움직임 없이 아주 옅게만 둔다.
+  placeholderBlock: "rgba(48, 54, 47, 0.05)",
   // 홈 열매의 그림자. 나무 그림의 흙빛과 어울리는 따뜻한 짙은 색
   fruitShadow: "#5B5142",
   fruitShadowOpacity: 0.3,
@@ -130,13 +136,18 @@ const darkColors: Palette = {
   mint: "#5F7F70",
   // 밤은 앱 초록(green)으로도 진한 글자와 잘 구분된다.
   progressInk: "#9FC39C",
+  progressDoneInk: "#A3A89F",
   errorSurface: "#3A2622",
   errorInk: "#F0B7A4",
   ground: "#3A3E37",
   fruitShadow: "#000000",
   // 바탕이 어두운 편이라 진하게 깔아야 열매가 바닥에 붙어 보인다.
   fruitShadowOpacity: 0.7,
-  backdropGlowOpacity: 0.32,
+  // 0.32는 거의 보이지 않아 작품 색 느낌이 사라졌다(시안 reference/sian/fruits-polish). 글자가 묻히지 않는 데까지 올린다.
+  backdropGlowOpacity: 0.5,
+  // 파스텔 작품 색이 짙은 회색과 섞이면 탁해져서 밝은 모드보다 옅게 섞는다.
+  coverTint: 0.15,
+  coverGroundTint: 0.26,
   cardShadow: "rgba(0, 0, 0, 0.5)",
   scrim: "rgba(0, 0, 0, 0.55)",
   // 어두운 바탕 위의 풀과 꽃은 한 톤 가라앉힌다.
@@ -156,11 +167,7 @@ const darkColors: Palette = {
   forMeBox: "rgba(59, 62, 66, 0.55)",
   forMeBoxEdge: "rgba(255, 255, 255, 0.08)",
   featureCard: "rgba(70, 73, 78, 0.32)",
-  featureCardEdge: "rgba(255, 255, 255, 0.1)",
-  featureCardShadow: [
-    "0 8px 24px rgba(0, 0, 0, 0.3)",
-    "inset 0 1px 1px rgba(255, 255, 255, 0.08)",
-  ].join(", "),
+  placeholderBlock: "rgba(255, 255, 255, 0.05)",
   // 눈은 밝은 몸 위에 있어 그대로 두고, 바탕 위로 드러나는 다리만 밝게 한다.
   castLeg: "#D9D4C7",
   castLegFar: "#A29D91",

@@ -10,6 +10,7 @@ import { router } from "expo-router";
 import type { NovelSummary } from "../../api/types";
 import {
   SHELF_GAP,
+  likeHintOf,
   progressLine,
   shelfCoverWidth,
   writersLine,
@@ -78,7 +79,7 @@ function ShelfBook({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${story.title}, ${statusLabel[story.status]}`}
-      accessibilityHint={`${writersLine(story)}, ${progress}, 좋아요 ${story.likeCount}개`}
+      accessibilityHint={`${writersLine(story)}, ${progress}, ${likeHintOf(story.likeCount)}`}
       onPress={() => router.push(`/novel/${story.id}`)}
       style={({ pressed }) => [
         { width: coverWidth },
@@ -92,9 +93,12 @@ function ShelfBook({
       <Text style={styles.title} numberOfLines={2}>
         {story.title}
       </Text>
-      {/* 좁은 안드로이드 화면(칸 96)에서는 "9/20장 · 10장 쓰는 중"이 넘쳐서, 잘리기 전에 조금 줄여 한 줄에 넣는다(웹은 말줄임). */}
+      {/* 좁은 안드로이드 화면(칸 96)에서는 "31개의 장 · 자라는 중"이 넘쳐서, 잘리기 전에 조금 줄여 한 줄에 넣는다(웹은 말줄임). */}
       <Text
-        style={styles.progress}
+        style={[
+          styles.progress,
+          story.status === "COMPLETED" && styles.finished,
+        ]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.85}
@@ -124,4 +128,6 @@ const useStyles = themedStyles((colors) => ({
     lineHeight: 15,
     color: colors.progressInk,
   },
+  // 다 끝난 작품은 자라는 초록 대신 차분한 회색(글자 "완결"도 함께 바뀐다)
+  finished: { color: colors.progressDoneInk },
 }));

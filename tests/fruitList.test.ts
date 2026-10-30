@@ -4,6 +4,8 @@ import {
   demoRankingOf,
   filterStories,
   likeCountLabel,
+  likeHintOf,
+  likeMarkToneOf,
   rankingColumnsOf,
   rememberWord,
   splitByKeyword,
@@ -32,6 +34,21 @@ test("like counts shrink to one decimal of 천 and 만, rounded down", () => {
   assert.equal(likeCountLabel(125_900), "12.5만");
 });
 
+test("like marks follow the home fruit: popular from 100, fully ripe gold from 1000", () => {
+  assert.equal(likeMarkToneOf(0), "plain");
+  assert.equal(likeMarkToneOf(99), "plain");
+  assert.equal(likeMarkToneOf(100), "popular");
+  assert.equal(likeMarkToneOf(999), "popular");
+  assert.equal(likeMarkToneOf(1000), "ripe");
+  assert.equal(likeMarkToneOf(12_480), "ripe");
+});
+
+test("screen readers hear the like count with the same popular and ripe words as home fruits", () => {
+  assert.equal(likeHintOf(24), "좋아요 24개");
+  assert.equal(likeHintOf(311), "인기, 좋아요 311개");
+  assert.equal(likeHintOf(1024), "다 여문 열매, 좋아요 1024개");
+});
+
 test("writers show the maker and how many others joined", () => {
   assert.equal(
     writersLine({ ownerNickname: "달조각", memberCount: 4 }),
@@ -48,11 +65,11 @@ test("progress divides by the target only for one-line relays", () => {
   const open = { mode: "OPEN" as const, chapterLimit: 20 };
   assert.equal(
     progressLine({ ...circle, status: "ONGOING", chapterCount: 9 }),
-    "9/20장 · 10장 쓰는 중",
+    "9/20장 · 쓰는 중",
   );
   assert.equal(
     progressLine({ ...circle, status: "COMPLETED", chapterCount: 20 }),
-    "20장 완결",
+    "20장 · 완결",
   );
   assert.equal(
     progressLine({ ...circle, status: "RECRUITING", chapterCount: 0 }),
